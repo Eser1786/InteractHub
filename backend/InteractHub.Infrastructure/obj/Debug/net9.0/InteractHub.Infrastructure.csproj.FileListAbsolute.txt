@@ -1,0 +1,17 @@
+D:\.vscode\InteractHub\InteractHub.Infrastructure\bin\Debug\net9.0\InteractHub.Infrastructure.deps.json
+D:\.vscode\InteractHub\InteractHub.Infrastructure\bin\Debug\net9.0\InteractHub.Infrastructure.runtimeconfig.json
+D:\.vscode\InteractHub\InteractHub.Infrastructure\bin\Debug\net9.0\InteractHub.Infrastructure.dll
+D:\.vscode\InteractHub\InteractHub.Infrastructure\bin\Debug\net9.0\InteractHub.Infrastructure.pdb
+D:\.vscode\InteractHub\InteractHub.Infrastructure\bin\Debug\net9.0\InteractHub.Application.dll
+D:\.vscode\InteractHub\InteractHub.Infrastructure\bin\Debug\net9.0\InteractHub.Application.pdb
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\InteractHub.Infrastructure.csproj.AssemblyReference.cache
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\InteractHub.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\InteractHub.Infrastructure.AssemblyInfoInputs.cache
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\InteractHub.Infrastructure.AssemblyInfo.cs
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\InteractHub.Infrastructure.csproj.CoreCompileInputs.cache
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\Interact.F153051B.Up2Date
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\InteractHub.Infrastructure.dll
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\refint\InteractHub.Infrastructure.dll
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\InteractHub.Infrastructure.pdb
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\InteractHub.Infrastructure.genruntimeconfig.cache
+D:\.vscode\InteractHub\InteractHub.Infrastructure\obj\Debug\net9.0\ref\InteractHub.Infrastructure.dll

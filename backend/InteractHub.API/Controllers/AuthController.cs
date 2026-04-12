@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using InteractHub.Application.Entities;
+using InteractHub.Application.Constants;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
@@ -57,8 +58,16 @@ public class AuthController : ControllerBase
             return this.ErrorResponse($"Registration failed: {errors}", statusCode: 400);
         }
 
-        // 4️⃣ Tạo JWT token
-        var token = GenerateJwtToken(user);
+        // ✅ 4️⃣ Gán role User mặc định cho user mới
+        var roleResult = await _userManager.AddToRoleAsync(user, RoleConstants.User);
+        if (!roleResult.Succeeded)
+        {
+            var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+            return this.ErrorResponse($"Failed to assign role: {errors}", statusCode: 400);
+        }
+
+        // 5️⃣ Tạo JWT token
+        var token = await GenerateJwtToken(user);
 
         var authData = new
         {
@@ -91,8 +100,8 @@ public class AuthController : ControllerBase
         if (!result.Succeeded)
             return this.UnauthorizedResponse("Invalid username or password");
 
-        // 3️⃣ Tạo JWT token
-        var token = GenerateJwtToken(user);
+        // 3️⃣ Tạo JWT token (async)
+        var token = await GenerateJwtToken(user);
 
         var authData = new
         {
@@ -109,8 +118,8 @@ public class AuthController : ControllerBase
         return this.SuccessResponse(authData, "Login successful", 200);
     }
 
-    // ✅ Hàm helper để tạo JWT token
-    private string GenerateJwtToken(User user)
+    // ✅ Hàm helper để tạo JWT token (bao gồm roles)
+    private async Task<string> GenerateJwtToken(User user)
     {
         var jwtSettings = _configuration.GetSection("JWT");
         var secretKey = jwtSettings["SecretKey"];
@@ -122,8 +131,11 @@ public class AuthController : ControllerBase
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // 2️⃣ Tạo claims (thông tin user sẽ được encode vào token)
-        var claims = new[]
+        // 2️⃣ Lấy roles của user từ database
+        var roles = await _userManager.GetRolesAsync(user);
+
+        // 3️⃣ Tạo claims (thông tin user sẽ được encode vào token)
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
             new Claim(ClaimTypes.Name, user.UserName),
@@ -131,7 +143,13 @@ public class AuthController : ControllerBase
             new Claim("FullName", user.FullName)
         };
 
-        // 3️⃣ Tạo JWT token
+        // ✅ 4️⃣ Thêm roles vào claims (quan trọng cho authorization!)
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        // 5️⃣ Tạo JWT token
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
@@ -140,7 +158,7 @@ public class AuthController : ControllerBase
             signingCredentials: credentials
         );
 
-        // 4️⃣ Convert token thành string
+        // 6️⃣ Convert token thành string
         var tokenHandler = new JwtSecurityTokenHandler();
         return tokenHandler.WriteToken(token);
     }

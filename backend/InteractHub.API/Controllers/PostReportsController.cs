@@ -23,8 +23,10 @@ public class PostReportsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "AdminOrModerator")] // ✅ Chỉ Admin hoặc Moderator có thể xem tất cả reports
     [ProducesResponseType(typeof(ApiResponse<List<PostReportResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetAll()
     {
         var reports = await _postReportService.GetAllAsync();
@@ -94,6 +96,7 @@ public class PostReportsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = "AdminOnly")] // ✅ Chỉ Admin có thể xóa reports
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
@@ -103,10 +106,6 @@ public class PostReportsController : ControllerBase
         var report = await _postReportService.GetByIdAsync(id);
         if (report == null)
             return this.NotFoundResponse("Report not found");
-
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (report.UserId != userId)
-            return this.ForbiddenResponse();
 
         var result = await _postReportService.DeleteAsync(id);
         if (!result)

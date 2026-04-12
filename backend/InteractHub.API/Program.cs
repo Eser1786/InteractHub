@@ -4,6 +4,7 @@ using InteractHub.Infrastructure.Data;
 using InteractHub.Application.Entities;
 using InteractHub.Infrastructure.Service;
 using InteractHub.Application.Interfaces;
+using InteractHub.Application.Constants;
 using Microsoft.OpenApi.Models;
 using FluentValidation.AspNetCore;
 using InteractHub.API.DTOs.Validators;
@@ -98,11 +99,31 @@ builder.Services.AddCors(options =>
     });
 });
 
+// ✅ Add Authorization Policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole(RoleConstants.Admin));
+    
+    options.AddPolicy("UserOnly", policy =>
+        policy.RequireRole(RoleConstants.User));
+    
+    options.AddPolicy("AdminOrModerator", policy =>
+        policy.RequireRole(RoleConstants.Admin, RoleConstants.Moderator));
+});
+
 // Add Controllers
 builder.Services.AddControllers()
     .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblies(new[] { typeof(CreatePostValidator).Assembly }));
 
 var app = builder.Build();
+
+// ✅ Seed Roles and Admin User
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    await DbInitializer.SeedRolesAndAdmin(services);
+}
 
 // Add Exception Handling Middleware (must be first!)
 app.UseMiddleware<ExceptionHandlingMiddleware>();

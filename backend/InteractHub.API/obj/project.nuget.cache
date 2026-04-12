@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "+AXm2wK301w=",
+  "dgSpecHash": "whz/Y0c9BZo=",
   "success": true,
-  "projectFilePath": "D:\\.vscode\\InteractHub\\InteractHub.API\\InteractHub.API.csproj",
+  "projectFilePath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.API\\InteractHub.API.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\ACER\\.nuget\\packages\\automapper\\11.0.0\\automapper.11.0.0.nupkg.sha512",
     "C:\\Users\\ACER\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\11.0.0\\automapper.extensions.microsoft.dependencyinjection.11.0.0.nupkg.sha512",
@@ -126,9 +126,9 @@
       "code": "NU1603",
       "level": "Warning",
       "message": "InteractHub.Application depends on AutoMapper.Extensions.Microsoft.DependencyInjection (>= 9.0.0) but AutoMapper.Extensions.Microsoft.DependencyInjection 9.0.0 was not found. AutoMapper.Extensions.Microsoft.DependencyInjection 11.0.0 was resolved instead.",
-      "projectPath": "D:\\.vscode\\InteractHub\\InteractHub.API\\InteractHub.API.csproj",
+      "projectPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.API\\InteractHub.API.csproj",
       "warningLevel": 1,
-      "filePath": "D:\\.vscode\\InteractHub\\InteractHub.API\\InteractHub.API.csproj",
+      "filePath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.API\\InteractHub.API.csproj",
       "libraryId": "AutoMapper.Extensions.Microsoft.DependencyInjection",
       "targetGraphs": [
         "net9.0"
@@ -138,9 +138,9 @@
       "code": "NU1603",
       "level": "Warning",
       "message": "InteractHub.API depends on Swashbuckle.AspNetCore (>= 6.4.6) but Swashbuckle.AspNetCore 6.4.6 was not found. Swashbuckle.AspNetCore 6.5.0 was resolved instead.",
-      "projectPath": "D:\\.vscode\\InteractHub\\InteractHub.API\\InteractHub.API.csproj",
+      "projectPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.API\\InteractHub.API.csproj",
       "warningLevel": 1,
-      "filePath": "D:\\.vscode\\InteractHub\\InteractHub.API\\InteractHub.API.csproj",
+      "filePath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.API\\InteractHub.API.csproj",
       "libraryId": "Swashbuckle.AspNetCore",
       "targetGraphs": [
         "net9.0"

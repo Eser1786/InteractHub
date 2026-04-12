@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "WojxeTrAfOI=",
+  "dgSpecHash": "Fjz2Eg4DE1s=",
   "success": true,
-  "projectFilePath": "D:\\.vscode\\InteractHub\\InteractHub.Application\\InteractHub.Application.csproj",
+  "projectFilePath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.Application\\InteractHub.Application.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\ACER\\.nuget\\packages\\automapper\\11.0.0\\automapper.11.0.0.nupkg.sha512",
     "C:\\Users\\ACER\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\11.0.0\\automapper.extensions.microsoft.dependencyinjection.11.0.0.nupkg.sha512",
@@ -59,9 +59,9 @@
       "code": "NU1603",
       "level": "Warning",
       "message": "InteractHub.Application depends on AutoMapper.Extensions.Microsoft.DependencyInjection (>= 9.0.0) but AutoMapper.Extensions.Microsoft.DependencyInjection 9.0.0 was not found. AutoMapper.Extensions.Microsoft.DependencyInjection 11.0.0 was resolved instead.",
-      "projectPath": "D:\\.vscode\\InteractHub\\InteractHub.Application\\InteractHub.Application.csproj",
+      "projectPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.Application\\InteractHub.Application.csproj",
       "warningLevel": 1,
-      "filePath": "D:\\.vscode\\InteractHub\\InteractHub.Application\\InteractHub.Application.csproj",
+      "filePath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.Application\\InteractHub.Application.csproj",
       "libraryId": "AutoMapper.Extensions.Microsoft.DependencyInjection",
       "targetGraphs": [
         "net9.0"

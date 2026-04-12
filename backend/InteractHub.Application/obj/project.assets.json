@@ -2045,11 +2045,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\.vscode\\InteractHub\\InteractHub.Application\\InteractHub.Application.csproj",
+      "projectUniqueName": "D:\\.vscode\\InteractHub\\backend\\InteractHub.Application\\InteractHub.Application.csproj",
       "projectName": "InteractHub.Application",
-      "projectPath": "D:\\.vscode\\InteractHub\\InteractHub.Application\\InteractHub.Application.csproj",
+      "projectPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.Application\\InteractHub.Application.csproj",
       "packagesPath": "C:\\Users\\ACER\\.nuget\\packages\\",
-      "outputPath": "D:\\.vscode\\InteractHub\\InteractHub.Application\\obj\\",
+      "outputPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.Application\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\ACER\\AppData\\Roaming\\NuGet\\NuGet.Config"

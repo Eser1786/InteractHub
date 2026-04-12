@@ -6200,11 +6200,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\.vscode\\InteractHub\\InteractHub.API\\InteractHub.API.csproj",
+      "projectUniqueName": "D:\\.vscode\\InteractHub\\backend\\InteractHub.API\\InteractHub.API.csproj",
       "projectName": "InteractHub.API",
-      "projectPath": "D:\\.vscode\\InteractHub\\InteractHub.API\\InteractHub.API.csproj",
+      "projectPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.API\\InteractHub.API.csproj",
       "packagesPath": "C:\\Users\\ACER\\.nuget\\packages\\",
-      "outputPath": "D:\\.vscode\\InteractHub\\InteractHub.API\\obj\\",
+      "outputPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.API\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\ACER\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -6219,11 +6219,11 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "projectReferences": {
-            "D:\\.vscode\\InteractHub\\InteractHub.Application\\InteractHub.Application.csproj": {
-              "projectPath": "D:\\.vscode\\InteractHub\\InteractHub.Application\\InteractHub.Application.csproj"
+            "D:\\.vscode\\InteractHub\\backend\\InteractHub.Application\\InteractHub.Application.csproj": {
+              "projectPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.Application\\InteractHub.Application.csproj"
             },
-            "D:\\.vscode\\InteractHub\\InteractHub.Infrastructure\\InteractHub.Infrastructure.csproj": {
-              "projectPath": "D:\\.vscode\\InteractHub\\InteractHub.Infrastructure\\InteractHub.Infrastructure.csproj"
+            "D:\\.vscode\\InteractHub\\backend\\InteractHub.Infrastructure\\InteractHub.Infrastructure.csproj": {
+              "projectPath": "D:\\.vscode\\InteractHub\\backend\\InteractHub.Infrastructure\\InteractHub.Infrastructure.csproj"
             }
           }
         }

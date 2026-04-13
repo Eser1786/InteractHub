@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using InteractHub.Application.Interfaces;
 using InteractHub.Application.Entities;
+using InteractHub.Application.Entities.Enums;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
@@ -22,32 +23,27 @@ public class NotificationsController : ControllerBase
         _notificationService = notificationService;
     }
 
+    /// <summary>
+    /// Lấy chi tiết một notification
+    /// </summary>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ApiResponse<NotificationResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetById(int id)
     {
         var notification = await _notificationService.GetByIdAsync(id);
         if (notification == null)
             return this.NotFoundResponse("Notification not found");
 
-        var notificationDto = new NotificationResponseDto
-        {
-            Id = notification.Id,
-            Content = notification.Content,
-            IsRead = notification.IsRead,
-            UserId = notification.UserId,
-            CreatedAt = notification.CreatedAt
-        };
-
+        var notificationDto = MapToNotificationResponseDto(notification);
         return this.SuccessResponse(notificationDto);
     }
 
+    /// <summary>
+    /// Lấy tất cả notifications của người dùng
+    /// </summary>
     [HttpGet("user/{userId}")]
     [ProducesResponseType(typeof(ApiResponse<List<NotificationResponseDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetByUserId(string userId)
     {
         var userId_current = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -55,52 +51,46 @@ public class NotificationsController : ControllerBase
             return this.ForbiddenResponse();
 
         var notifications = await _notificationService.GetByUserIdAsync(userId);
-        var notificationDtos = notifications.Select(n => new NotificationResponseDto
-        {
-            Id = n.Id,
-            Content = n.Content,
-            IsRead = n.IsRead,
-            UserId = n.UserId,
-            CreatedAt = n.CreatedAt
-        }).ToList();
-
+        var notificationDtos = notifications.Select(MapToNotificationResponseDto).ToList();
         return this.SuccessResponse(notificationDtos);
     }
 
-    [HttpPost]
-    [ProducesResponseType(typeof(ApiResponse<NotificationResponseDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Create([FromBody] CreateNotificationDto createNotificationDto)
+    /// <summary>
+    /// Lấy notifications chưa đọc
+    /// </summary>
+    [HttpGet("user/{userId}/unread")]
+    [ProducesResponseType(typeof(ApiResponse<List<NotificationResponseDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUnreadNotifications(string userId)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return this.UnauthorizedResponse("User not authenticated");
+        var userId_current = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId != userId_current)
+            return this.ForbiddenResponse();
 
-        var notification = new Notification
-        {
-            Content = createNotificationDto.Content,
-            UserId = userId
-        };
-
-        var created = await _notificationService.CreateAsync(notification);
-
-        var notificationDto = new NotificationResponseDto
-        {
-            Id = created.Id,
-            Content = created.Content,
-            IsRead = created.IsRead,
-            UserId = created.UserId,
-            CreatedAt = created.CreatedAt
-        };
-
-        return this.CreatedResponse(notificationDto);
+        var unreadNotifications = await _notificationService.GetUnreadNotificationsAsync(userId);
+        var notificationDtos = unreadNotifications.Select(MapToNotificationResponseDto).ToList();
+        return this.SuccessResponse(notificationDtos);
     }
 
+    /// <summary>
+    /// Lấy số lượng notifications chưa đọc
+    /// </summary>
+    [HttpGet("user/{userId}/unread-count")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUnreadCount(string userId)
+    {
+        var userId_current = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId != userId_current)
+            return this.ForbiddenResponse();
+
+        var count = await _notificationService.GetUnreadCountAsync(userId);
+        return this.SuccessResponse(new { UnreadCount = count });
+    }
+
+    /// <summary>
+    /// Đánh dấu notification là đã đọc
+    /// </summary>
     [HttpPut("{id}/read")]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkAsRead(int id)
     {
@@ -116,13 +106,29 @@ public class NotificationsController : ControllerBase
         if (!result)
             return this.NotFoundResponse("Notification not found");
 
-        return this.SuccessResponse(statusCode: 204);
+        return this.SuccessResponse("Notification marked as read");
     }
 
+    /// <summary>
+    /// Đánh dấu tất cả notifications là đã đọc
+    /// </summary>
+    [HttpPut("user/{userId}/mark-all-read")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> MarkAllAsRead(string userId)
+    {
+        var userId_current = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId != userId_current)
+            return this.ForbiddenResponse();
+
+        await _notificationService.MarkAllAsReadAsync(userId);
+        return this.SuccessResponse("All notifications marked as read");
+    }
+
+    /// <summary>
+    /// Xóa notification
+    /// </summary>
     [HttpDelete("{id}")]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
@@ -138,6 +144,41 @@ public class NotificationsController : ControllerBase
         if (!result)
             return this.NotFoundResponse("Notification not found");
 
-        return this.SuccessResponse(statusCode: 204);
+        return this.SuccessResponse("Notification deleted");
+    }
+
+    /// <summary>
+    /// Xóa notifications theo type
+    /// </summary>
+    [HttpDelete("user/{userId}/by-type/{type}")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> DeleteByType(string userId, string type)
+    {
+        var userId_current = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId != userId_current)
+            return this.ForbiddenResponse();
+
+        if (!Enum.TryParse<NotificationType>(type, true, out var notificationType))
+            return this.BadRequestResponse($"Invalid notification type: {type}");
+
+        await _notificationService.DeleteNotificationsByTypeAsync(userId, notificationType);
+        return this.SuccessResponse($"Notifications of type '{type}' deleted");
+    }
+
+    // ==================== HELPERS ====================
+
+    private NotificationResponseDto MapToNotificationResponseDto(Notification notification)
+    {
+        return new NotificationResponseDto
+        {
+            Id = notification.Id,
+            Content = notification.Content,
+            IsRead = notification.IsRead,
+            Type = notification.Type.ToString(),
+            UserId = notification.UserId,
+            RelatedUserId = notification.RelatedUserId,
+            RelatedEntityId = notification.RelatedEntityId,
+            CreatedAt = notification.CreatedAt
+        };
     }
 }

@@ -10,3 +10,16 @@ D:\.vscode\InteractHub\InteractHub.Application\obj\Debug\net9.0\InteractHub.Appl
 D:\.vscode\InteractHub\InteractHub.Application\obj\Debug\net9.0\refint\InteractHub.Application.dll
 D:\.vscode\InteractHub\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.pdb
 D:\.vscode\InteractHub\InteractHub.Application\obj\Debug\net9.0\ref\InteractHub.Application.dll
+D:\.vscode\InteractHub\backend\InteractHub.Application\bin\Debug\net9.0\InteractHub.Application.deps.json
+D:\.vscode\InteractHub\backend\InteractHub.Application\bin\Debug\net9.0\InteractHub.Application.dll
+D:\.vscode\InteractHub\backend\InteractHub.Application\bin\Debug\net9.0\InteractHub.Application.pdb
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.csproj.AssemblyReference.cache
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.GeneratedMSBuildEditorConfig.editorconfig
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.AssemblyInfoInputs.cache
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.AssemblyInfo.cs
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.csproj.CoreCompileInputs.cache
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.sourcelink.json
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.dll
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\refint\InteractHub.Application.dll
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.pdb
+D:\.vscode\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\ref\InteractHub.Application.dll

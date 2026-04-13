@@ -181,7 +181,8 @@ dotnet ef migrations remove --project InteractHub.Infras/ --startup-project Inte
 dotnet ef migrations add Init --project InteractHub.Infras/ --startup-project InteractHub.API/
 -> tạo bản vẽ mới
 
-dotnet ef database update --project InteractHub.Infras/ --startup-project InteractHub.API/
+dotnet ef database update --project InteractHub.Infrastructure/ --startup-project InteractHub.API/
+
 -> update lại database mới
 
 ## Tiếp theo

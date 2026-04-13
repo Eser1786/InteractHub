@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using InteractHub.Application.Interfaces;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Entities.Enums;
+using InteractHub.Application.Helpers;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
@@ -40,31 +41,73 @@ public class FriendshipsController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy danh sách bạn bè (chỉ những người đã chấp nhận)
+    /// Lấy danh sách bạn bè (chỉ những người đã chấp nhận) - Có phân trang
     /// </summary>
     [HttpGet("user/{userId}/accepted")]
-    [ProducesResponseType(typeof(ApiResponse<List<FriendshipResponseDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAcceptedFriends(string userId)
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetAcceptedFriends(string userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
     {
-        var friends = await _friendshipService.GetAcceptedFriendsAsync(userId);
-        var friendshipDtos = friends.Select(MapToFriendshipResponseDto).ToList();
-        return this.SuccessResponse(friendshipDtos);
+        try
+        {
+            // ✅ Validate pagination parameters using PaginationHelper
+            PaginationHelper.ValidateParams(pageNumber, pageSize);
+
+            var (friends, metadata) = await _friendshipService.GetAcceptedFriendsPaginatedAsync(userId, pageNumber, pageSize);
+            var friendshipDtos = friends.Select(MapToFriendshipResponseDto).ToList();
+
+            var response = new
+            {
+                Data = friendshipDtos,
+                Pagination = metadata
+            };
+
+            return this.SuccessResponse(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("pagination", ex.Message) 
+            });
+        }
     }
 
     /// <summary>
-    /// Lấy danh sách lời mời kết bạn chờ xử lý
+    /// Lấy danh sách lời mời kết bạn chờ xử lý - Có phân trang
     /// </summary>
     [HttpGet("user/{userId}/pending")]
-    [ProducesResponseType(typeof(ApiResponse<List<FriendshipResponseDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetPendingRequests(string userId)
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetPendingRequests(string userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
     {
         var userId_current = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId != userId_current)
             return this.ForbiddenResponse();
 
-        var pendingRequests = await _friendshipService.GetPendingRequestsAsync(userId);
-        var friendshipDtos = pendingRequests.Select(MapToFriendshipResponseDto).ToList();
-        return this.SuccessResponse(friendshipDtos);
+        try
+        {
+            // ✅ Validate pagination parameters using PaginationHelper
+            PaginationHelper.ValidateParams(pageNumber, pageSize);
+
+            var (requests, metadata) = await _friendshipService.GetPendingRequestsPaginatedAsync(userId, pageNumber, pageSize);
+            var friendshipDtos = requests.Select(MapToFriendshipResponseDto).ToList();
+
+            var response = new
+            {
+                Data = friendshipDtos,
+                Pagination = metadata
+            };
+
+            return this.SuccessResponse(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("pagination", ex.Message) 
+            });
+        }
     }
 
     /// <summary>
@@ -88,7 +131,10 @@ public class FriendshipsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return this.BadRequestResponse(ex.Message);
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("friendship", ex.Message) 
+            });
         }
     }
 
@@ -108,7 +154,10 @@ public class FriendshipsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return this.BadRequestResponse(ex.Message);
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("friendship", ex.Message) 
+            });
         }
     }
 
@@ -122,9 +171,12 @@ public class FriendshipsController : ControllerBase
     {
         var result = await _friendshipService.DeclineFriendRequestAsync(id);
         if (!result)
-            return this.BadRequestResponse("Cannot decline this request");
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("friendship", "Cannot decline this request") 
+            });
 
-        return this.SuccessResponse("Friend request declined");
+        return this.SuccessResponse(message: "Friend request declined");
     }
 
     /// <summary>
@@ -143,7 +195,7 @@ public class FriendshipsController : ControllerBase
         if (!result)
             return this.NotFoundResponse("Friend not found or not in accepted state");
 
-        return this.SuccessResponse("Friend removed successfully");
+        return this.SuccessResponse(message: "Friend removed successfully");
     }
 
     /// <summary>

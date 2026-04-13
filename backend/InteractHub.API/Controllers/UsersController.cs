@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using InteractHub.Application.Interfaces;
 using InteractHub.Application.Entities;
+using InteractHub.Application.Helpers;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
@@ -22,23 +23,63 @@ public class UsersController : ControllerBase
         _userService = userService;
     }
 
+    /// <summary>
+    /// Get all users with optional search filter
+    /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponse<List<UserResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? search = null)
     {
-        var users = await _userService.GetUsersAsync();
-        var userDtos = users.Select(u => new UserResponseDto
+        try
         {
-            Id = u.Id,
-            UserName = u.UserName,
-            Email = u.Email,
-            FullName = u.FullName,
-            ProfilePictureUrl = u.ProfilePictureUrl,
-            Bio = u.Bio
-        }).ToList();
+            var users = await _userService.GetUsersAsync();
 
-        return this.SuccessResponse(userDtos, "Users retrieved successfully", 200);
+            // ✅ Apply search filter using QueryHelper
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                // Validate and sanitize search term
+                var sanitizedSearch = QueryHelper.ValidateAndSanitizeSearchTerm(search);
+                
+                if (!string.IsNullOrEmpty(sanitizedSearch))
+                {
+                    users = users.Where(u => 
+                        QueryHelper.IsFilterMatch(sanitizedSearch, u.UserName ?? string.Empty) ||
+                        QueryHelper.IsFilterMatch(sanitizedSearch, u.Email ?? string.Empty) ||
+                        QueryHelper.IsFilterMatch(sanitizedSearch, u.FullName ?? string.Empty)
+                    ).ToList();
+                }
+            }
+
+            var userDtos = users.Select(u => new UserResponseDto
+            {
+                Id = u.Id,
+                UserName = u.UserName,
+                Email = u.Email,
+                FullName = u.FullName,
+                ProfilePictureUrl = u.ProfilePictureUrl,
+                Bio = u.Bio
+            }).ToList();
+
+            // Add metadata with search info
+            var response = new
+            {
+                Data = userDtos,
+                SearchTerm = search,
+                TotalCount = userDtos.Count,
+                Filtering = !string.IsNullOrWhiteSpace(search)
+            };
+
+            return this.SuccessResponse(response, "Users retrieved successfully", 200);
+        }
+        catch (Exception ex)
+        {
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("search", ex.Message) 
+            });
+        }
     }
 
     [HttpGet("{id}")]

@@ -1,5 +1,6 @@
 using InteractHub.Application.Entities;
 using InteractHub.Application.Entities.Enums;
+using InteractHub.Application.Helpers;
 
 namespace InteractHub.Application.Interfaces;
 
@@ -52,4 +53,17 @@ public interface IFriendshipService
     /// Xóa bạn bè
     /// </summary>
     Task<bool> RemoveFriendAsync(string userId, string friendId);
+
+    // Pagination Support
+    /// <summary>
+    /// Lấy danh sách bạn bè (chỉ những người đã chấp nhận) - Có phân trang
+    /// </summary>
+    Task<(List<Friendship> Friends, PaginationMetadata Metadata)> GetAcceptedFriendsPaginatedAsync(
+        string userId, int pageNumber = 1, int pageSize = 20);
+
+    /// <summary>
+    /// Lấy danh sách lời mời kết bạn chờ xử lý - Có phân trang
+    /// </summary>
+    Task<(List<Friendship> Requests, PaginationMetadata Metadata)> GetPendingRequestsPaginatedAsync(
+        string userId, int pageNumber = 1, int pageSize = 20);
 }

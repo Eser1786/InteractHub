@@ -106,7 +106,7 @@ public class NotificationsController : ControllerBase
         if (!result)
             return this.NotFoundResponse("Notification not found");
 
-        return this.SuccessResponse("Notification marked as read");
+        return this.SuccessResponse(message: "Notification marked as read");
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ public class NotificationsController : ControllerBase
             return this.ForbiddenResponse();
 
         await _notificationService.MarkAllAsReadAsync(userId);
-        return this.SuccessResponse("All notifications marked as read");
+        return this.SuccessResponse(message: "All notifications marked as read");
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ public class NotificationsController : ControllerBase
         if (!result)
             return this.NotFoundResponse("Notification not found");
 
-        return this.SuccessResponse("Notification deleted");
+        return this.SuccessResponse(message: "Notification deleted");
     }
 
     /// <summary>
@@ -152,6 +152,7 @@ public class NotificationsController : ControllerBase
     /// </summary>
     [HttpDelete("user/{userId}/by-type/{type}")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> DeleteByType(string userId, string type)
     {
         var userId_current = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -159,10 +160,13 @@ public class NotificationsController : ControllerBase
             return this.ForbiddenResponse();
 
         if (!Enum.TryParse<NotificationType>(type, true, out var notificationType))
-            return this.BadRequestResponse($"Invalid notification type: {type}");
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("type", $"Invalid notification type: {type}") 
+            });
 
         await _notificationService.DeleteNotificationsByTypeAsync(userId, notificationType);
-        return this.SuccessResponse($"Notifications of type '{type}' deleted");
+        return this.SuccessResponse(message: $"Notifications of type '{type}' deleted");
     }
 
     // ==================== HELPERS ====================
@@ -178,7 +182,9 @@ public class NotificationsController : ControllerBase
             UserId = notification.UserId,
             RelatedUserId = notification.RelatedUserId,
             RelatedEntityId = notification.RelatedEntityId,
-            CreatedAt = notification.CreatedAt
+            CreatedAt = notification.CreatedAt,
+            // ✅ Use DateTimeExtensions to calculate user-friendly time
+            TimeAgo = notification.CreatedAt.GetTimeAgo()
         };
     }
 }

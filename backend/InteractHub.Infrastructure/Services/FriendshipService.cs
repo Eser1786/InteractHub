@@ -3,6 +3,7 @@ using InteractHub.Application.Interfaces;
 using InteractHub.Infrastructure.Data;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Entities.Enums;
+using InteractHub.Application.Helpers;
 
 namespace InteractHub.Infrastructure.Service;
 
@@ -226,5 +227,75 @@ public class FriendshipService : IFriendshipService
         _context.Friendships.Remove(friendship);
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    // ==================== PAGINATION SUPPORT ====================
+
+    /// <summary>
+    /// Lấy danh sách bạn bè (chỉ những người đã chấp nhận) - Có phân trang
+    /// </summary>
+    public async Task<(List<Friendship> Friends, PaginationMetadata Metadata)> GetAcceptedFriendsPaginatedAsync(
+        string userId, int pageNumber = 1, int pageSize = 20)
+    {
+        // ✅ Validate pagination parameters
+        PaginationHelper.ValidateParams(pageNumber, pageSize);
+
+        // 1️⃣ Lấy total count
+        var totalCount = await _context.Friendships
+            .Where(f => (f.UserId == userId || f.FriendId == userId) 
+                && f.Status == FriendshipStatus.Accepted)
+            .CountAsync();
+
+        // 2️⃣ Tính skip count
+        var skipCount = PaginationHelper.GetSkipCount(pageNumber, pageSize);
+
+        // 3️⃣ Lấy dữ liệu
+        var friends = await _context.Friendships
+            .Where(f => (f.UserId == userId || f.FriendId == userId) 
+                && f.Status == FriendshipStatus.Accepted)
+            .Include(f => f.User)
+            .Include(f => f.Friend)
+            .OrderByDescending(f => f.CreatedAt)
+            .Skip(skipCount)
+            .Take(pageSize)
+            .ToListAsync();
+
+        // 4️⃣ Tạo pagination metadata
+        var metadata = PaginationHelper.CreateMetadata(pageNumber, pageSize, totalCount);
+
+        return (friends, metadata);
+    }
+
+    /// <summary>
+    /// Lấy danh sách lời mời kết bạn chờ xử lý - Có phân trang
+    /// </summary>
+    public async Task<(List<Friendship> Requests, PaginationMetadata Metadata)> GetPendingRequestsPaginatedAsync(
+        string userId, int pageNumber = 1, int pageSize = 20)
+    {
+        // ✅ Validate pagination parameters
+        PaginationHelper.ValidateParams(pageNumber, pageSize);
+
+        // 1️⃣ Lấy total count
+        var totalCount = await _context.Friendships
+            .Where(f => f.FriendId == userId && f.Status == FriendshipStatus.Pending)
+            .CountAsync();
+
+        // 2️⃣ Tính skip count
+        var skipCount = PaginationHelper.GetSkipCount(pageNumber, pageSize);
+
+        // 3️⃣ Lấy dữ liệu
+        var requests = await _context.Friendships
+            .Where(f => f.FriendId == userId && f.Status == FriendshipStatus.Pending)
+            .Include(f => f.User)
+            .Include(f => f.Friend)
+            .OrderByDescending(f => f.CreatedAt)
+            .Skip(skipCount)
+            .Take(pageSize)
+            .ToListAsync();
+
+        // 4️⃣ Tạo pagination metadata
+        var metadata = PaginationHelper.CreateMetadata(pageNumber, pageSize, totalCount);
+
+        return (requests, metadata);
     }
 }

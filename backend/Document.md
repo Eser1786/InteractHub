@@ -69,8 +69,8 @@
     dotnet sln add InteractHub.Tests
     cd InteractHub.Tests
 
-    dotnet add package xunit --version 9.0.0
-    dotnet add package Moq --version 9.0.0
+    dotnet add package xunit
+    dotnet add package Moq
 
 # Liên kết project
 

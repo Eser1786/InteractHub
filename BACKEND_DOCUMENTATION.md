@@ -8,6 +8,7 @@
 ---
 
 ## 📑 Mục Lục
+
 1. [B1: Database Design & Entity Framework](#b1-database-design--entity-framework)
 2. [B2: RESTful API Controllers & DTOs](#b2-restful-api-controllers--dtos)
 3. [B3: JWT Authentication & Authorization](#b3-jwt-authentication--authorization)
@@ -22,6 +23,7 @@
 ## 🎯 Ý Nghĩa
 
 Entity Framework Core (EF Core) là ORM (Object-Relational Mapping) giúp chúng ta:
+
 - **Chuyển đổi dữ liệu**: Từ C# objects ↔ Database tables
 - **Giảm SQL**: Không cần viết raw SQL queries
 - **Migrations**: Quản lý schema changes một cách an toàn
@@ -33,7 +35,7 @@ Entity Framework Core (EF Core) là ORM (Object-Relational Mapping) giúp chúng
 ┌─────────────────────────────────────────────────────────────┐
 │                         InteractHub Database                │
 ├─────────────────────────────────────────────────────────────┤
-│  
+│
 │  ┌─────────────┐         ┌──────────────┐
 │  │    User     │◄────────│     Post     │
 │  │  (Identity) │  1:Many │  (Content)   │
@@ -55,7 +57,7 @@ Entity Framework Core (EF Core) là ORM (Object-Relational Mapping) giúp chúng
 │  ┌─────────┐    ┌──────────┐    ┌─────────────┐
 │  │ Hashtag │◄───┤PostHashtag│   │   Story     │
 │  └─────────┘    └──────────┘    └─────────────┘
-│                                   
+│
 │  ┌──────────────┐
 │  │ PostReport   │ (Admin: Moderation)
 │  └──────────────┘
@@ -90,6 +92,7 @@ public class User : IdentityUser
 ```
 
 **Giải thích:**
+
 - `IdentityUser`: Base class từ ASP.NET Core Identity, cung cấp Id, Email, PasswordHash, v.v.
 - `FullName`: Tên đầy đủ của người dùng
 - `ICollection<>`: Danh sách 1-to-many relationships
@@ -112,7 +115,7 @@ public class Post
 
     // Foreign Keys
     public string UserId { get; set; } = string.Empty;
-    
+
     // Navigation Properties (relationships)
     public User? User { get; set; }                    // Mối quan hệ với tác giả
     public ICollection<Comment>? Comments { get; set; }
@@ -122,6 +125,7 @@ public class Post
 ```
 
 **Ví dụ sử dụng:**
+
 ```csharp
 // Tạo post mới
 var post = new Post
@@ -172,6 +176,7 @@ public enum FriendshipStatus
 ```
 
 **Quy trình:**
+
 ```
 User A gửi lời mời → FriendshipStatus = Pending
                            ↓
@@ -219,6 +224,7 @@ public enum NotificationType
 ```
 
 **Ví dụ:**
+
 ```csharp
 // Tự động tạo thông báo khi gửi lời mời kết bạn
 var notification = new Notification
@@ -310,12 +316,14 @@ dotnet ef migrations list
 RESTful API là cách để **frontend communicate với backend** thông qua HTTP requests.
 
 **HTTP Methods:**
+
 - `GET`: Lấy dữ liệu (SELECT)
 - `POST`: Tạo dữ liệu mới (INSERT)
 - `PUT`: Cập nhật dữ liệu (UPDATE)
 - `DELETE`: Xóa dữ liệu (DELETE)
 
 **Status Codes:**
+
 - `200 OK`: Thành công
 - `201 Created`: Tạo mới thành công
 - `400 Bad Request`: Lỗi validation
@@ -362,6 +370,7 @@ public class UserResponseDto
 ```
 
 **Tại sao dùng DTOs?**
+
 - 🔒 **Bảo mật**: Không expose tất cả properties của entity
 - 📉 **Performance**: Transfer ít dữ liệu hơn
 - 🔄 **Flexibility**: Format data tùy theo yêu cầu
@@ -410,31 +419,31 @@ public class AuthController : ControllerBase
     {
         // 1️⃣ VALIDATION - Email format
         if (!ValidationHelper.IsValidEmail(registerDto.Email))
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("email", "Invalid email format") 
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                ErrorHelper.CreateValidationError("email", "Invalid email format")
             });
 
         // 2️⃣ VALIDATION - Username (3-20 chars, alphanumeric + underscore)
         if (!ValidationHelper.IsValidUsername(registerDto.UserName))
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("username", "Username must be 3-20 characters") 
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                ErrorHelper.CreateValidationError("username", "Username must be 3-20 characters")
             });
 
         // 3️⃣ VALIDATION - Password strength
         if (!ValidationHelper.IsStrongPassword(registerDto.Password))
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("password", "Password too weak") 
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                ErrorHelper.CreateValidationError("password", "Password too weak")
             });
 
         // 4️⃣ Check username exists
         var existingUser = await _userManager.FindByNameAsync(registerDto.UserName);
         if (existingUser != null)
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("username", "Username already exists") 
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                ErrorHelper.CreateValidationError("username", "Username already exists")
             });
 
         // 5️⃣ Create new user
@@ -448,7 +457,7 @@ public class AuthController : ControllerBase
         var result = await _userManager.CreateAsync(user, registerDto.Password);
         if (!result.Succeeded)
         {
-            var errors = result.Errors.Select(e => 
+            var errors = result.Errors.Select(e =>
                 new ApiError(e.Description, code: AppErrorCodes.VALIDATION_ERROR)
             ).ToList();
             return this.BadRequestResponse(errors);
@@ -565,8 +574,8 @@ public class FriendshipsController : ControllerBase
     /// </summary>
     [HttpGet("user/{userId}/accepted")]
     public async Task<IActionResult> GetAcceptedFriends(
-        string userId, 
-        [FromQuery] int pageNumber = 1, 
+        string userId,
+        [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
     {
         try
@@ -577,7 +586,7 @@ public class FriendshipsController : ControllerBase
             // Gọi service lấy dữ liệu có phân trang
             var (friends, metadata) = await _friendshipService
                 .GetAcceptedFriendsPaginatedAsync(userId, pageNumber, pageSize);
-            
+
             var friendshipDtos = friends.Select(MapToFriendshipResponseDto).ToList();
 
             var response = new
@@ -590,9 +599,9 @@ public class FriendshipsController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("pagination", ex.Message) 
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                ErrorHelper.CreateValidationError("pagination", ex.Message)
             });
         }
     }
@@ -618,9 +627,9 @@ public class FriendshipsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("friendship", ex.Message) 
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                ErrorHelper.CreateValidationError("friendship", ex.Message)
             });
         }
     }
@@ -640,9 +649,9 @@ public class FriendshipsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return this.BadRequestResponse(new List<ApiError> 
-            { 
-                ErrorHelper.CreateValidationError("friendship", ex.Message) 
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                ErrorHelper.CreateValidationError("friendship", ex.Message)
             });
         }
     }
@@ -681,7 +690,7 @@ public class ApiResponse<T>
     public int StatusCode { get; set; }
     public List<ApiError>? Errors { get; set; }
 
-    public ApiResponse(bool success, string? message, T? data, 
+    public ApiResponse(bool success, string? message, T? data,
         int statusCode, List<ApiError>? errors = null)
     {
         Success = success;
@@ -717,6 +726,7 @@ public class ApiError
 ```
 
 **Response Example:**
+
 ```json
 {
   "success": true,
@@ -744,6 +754,7 @@ public class ApiError
 **JWT (JSON Web Token)** là một chuỗi mã hóa chứa thông tin nhận dạng người dùng.
 
 **Cấu Trúc JWT:**
+
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
 │                                    │  │                                       │  │    │
@@ -751,6 +762,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4
 ```
 
 **Quy Trình:**
+
 1. **Login**: User gửi username/password
 2. **Verify**: Server kiểm tra credentials
 3. **Generate JWT**: Tạo token chứa user info + signature
@@ -868,10 +880,10 @@ private static void SeedRoles(RoleManager<Role> roleManager)
     {
         if (!roleManager.RoleExistsAsync(role).Result)
         {
-            var result = roleManager.CreateAsync(new Role 
-            { 
-                Name = role, 
-                NormalizedName = role.ToUpper() 
+            var result = roleManager.CreateAsync(new Role
+            {
+                Name = role,
+                NormalizedName = role.ToUpper()
             }).Result;
         }
     }
@@ -889,6 +901,7 @@ await userManager.AddToRoleAsync(adminUser, "Admin");
 ## 🎯 Ý Nghĩa
 
 **Services** tách business logic ra khỏi Controllers:
+
 - 🔄 **Reusability**: Cùng logic có thể được sử dụng ở nhiều endpoints
 - ✅ **Testability**: Dễ viết unit tests
 - 🧹 **Maintainability**: Code sạch, dễ bảo trì
@@ -954,7 +967,7 @@ public class FriendshipService : IFriendshipService
     private readonly INotificationService _notificationService;
 
     public FriendshipService(
-        AppDbContext context, 
+        AppDbContext context,
         INotificationService notificationService)
     {
         _context = context;
@@ -1017,7 +1030,7 @@ public class FriendshipService : IFriendshipService
     }
 
     // ✅ Pagination Support
-    public async Task<(List<Friendship> Friends, PaginationMetadata Metadata)> 
+    public async Task<(List<Friendship> Friends, PaginationMetadata Metadata)>
         GetAcceptedFriendsPaginatedAsync(string userId, int pageNumber = 1, int pageSize = 20)
     {
         // 1️⃣ Validate pagination
@@ -1025,7 +1038,7 @@ public class FriendshipService : IFriendshipService
 
         // 2️⃣ Get total count
         var totalCount = await _context.Friendships
-            .Where(f => (f.UserId == userId || f.FriendId == userId) 
+            .Where(f => (f.UserId == userId || f.FriendId == userId)
                 && f.Status == FriendshipStatus.Accepted)
             .CountAsync();
 
@@ -1034,7 +1047,7 @@ public class FriendshipService : IFriendshipService
 
         // 4️⃣ Get paginated data
         var friends = await _context.Friendships
-            .Where(f => (f.UserId == userId || f.FriendId == userId) 
+            .Where(f => (f.UserId == userId || f.FriendId == userId)
                 && f.Status == FriendshipStatus.Accepted)
             .Include(f => f.User)
             .Include(f => f.Friend)
@@ -1237,6 +1250,7 @@ public static class ValidationHelper
 ```
 
 **Sử dụng trong Controller:**
+
 ```csharp
 if (!ValidationHelper.IsValidEmail(registerDto.Email))
     return BadRequest("Invalid email");
@@ -1308,6 +1322,7 @@ public class PaginationMetadata
 ```
 
 **Ví dụ:**
+
 ```csharp
 // Page 2, size 20
 int skip = PaginationHelper.GetSkipCount(2, 20);  // = 20
@@ -1350,6 +1365,7 @@ public static class DateTimeExtensions
 ```
 
 **Ở NotificationsController:**
+
 ```csharp
 var notificationDto = new NotificationResponseDto
 {
@@ -1400,12 +1416,13 @@ public static class QueryHelper
 ```
 
 **Sử dụng trong UsersController:**
+
 ```csharp
 if (!string.IsNullOrWhiteSpace(search))
 {
     var sanitized = QueryHelper.ValidateAndSanitizeSearchTerm(search);
-    
-    users = users.Where(u => 
+
+    users = users.Where(u =>
         QueryHelper.IsFilterMatch(sanitized, u.UserName ?? "") ||
         QueryHelper.IsFilterMatch(sanitized, u.Email ?? "")
     ).ToList();
@@ -1721,4 +1738,3 @@ Header: Authorization: Bearer <token>
 
 **Documentation Generated:** April 13, 2026  
 **Backend Status:** ✅ 100% Complete (Ready for Testing & Deployment)
-

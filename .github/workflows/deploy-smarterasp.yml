@@ -30,6 +30,15 @@ jobs:
     - name: Build and Publish
       run: dotnet publish backend/InteractHub.API/InteractHub.API.csproj -c Release -o ./publish /p:UseAppHost=false
       
+    - name: Create app_offline.htm (Stop IIS)
+      run: echo "<html><body><h1>Hệ thống đang được cập nhật (Deploying...), vui lòng quay lại sau ít phút.</h1></body></html>" > app_offline.htm
+
+    - name: Upload app_offline.htm to lock IIS
+      run: curl -T app_offline.htm ftp://${{ secrets.FTP_SERVER }}/site1/app_offline.htm --user ${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}
+
+    - name: Sleep for 5s to ensure App Pool is stopped
+      run: sleep 5
+
     - name: Deploy via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -39,3 +48,6 @@ jobs:
         local-dir: ./publish/
         # Thư mục gốc trên SmarterASP thường được tạo là site1
         server-dir: /site1/
+
+    - name: Remove app_offline.htm to start IIS
+      run: curl -Q "DELE /site1/app_offline.htm" ftp://${{ secrets.FTP_SERVER }}/ --user ${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }} || true

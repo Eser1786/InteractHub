@@ -5,6 +5,11 @@ on:
     branches:
       - main
       - dev
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.png'
+      - '**/*.jpg'
+      - '**/*.jpeg'
 
 jobs:
   build-and-deploy:

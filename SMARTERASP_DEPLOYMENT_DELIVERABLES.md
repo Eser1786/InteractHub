@@ -69,7 +69,7 @@ jobs:
         server-dir: /site1/
 ```
 
-📸 **[HÃY XÓA DÒNG NÀY VÀ DÁN ẢNH CHỤP MÀN HÌNH CÁC CHECK MARK XANH THÀNH CÔNG TRONG TAB GITHUB ACTIONS CỦA BẠN VÀO ĐÂY]**
+![alt text](<Screenshot 2026-04-17 144910.png>)
 
 ---
 

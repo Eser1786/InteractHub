@@ -138,11 +138,9 @@ using (var scope = app.Services.CreateScope())
 // Add Exception Handling Middleware (must be first!)
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Cho phép Swagger hiển thị công khai trên Production để nộp bài
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowLocalhost");

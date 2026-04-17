@@ -31,6 +31,7 @@ builder.Services.AddScoped<IFriendshipService, FriendshipService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPostReportService, PostReportService>();
 builder.Services.AddScoped<IHashtagService, HashtagService>();
+builder.Services.AddScoped<IFileService, CloudinaryService>();
 
 builder.Services.AddSwaggerGen(c =>
 {

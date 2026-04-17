@@ -123,7 +123,16 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    await DbInitializer.SeedRolesAndAdmin(services);
+    try 
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        await context.Database.MigrateAsync();
+        await DbInitializer.SeedRolesAndAdmin(services);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Lỗi khi Migrate hoặc Seed DB lúc khởi động: {ex.Message}");
+    }
 }
 
 // Add Exception Handling Middleware (must be first!)

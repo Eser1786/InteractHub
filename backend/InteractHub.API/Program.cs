@@ -31,6 +31,7 @@ builder.Services.AddScoped<IFriendshipService, FriendshipService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPostReportService, PostReportService>();
 builder.Services.AddScoped<IHashtagService, HashtagService>();
+builder.Services.AddScoped<IFileService, CloudinaryService>();
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -122,17 +123,24 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    await DbInitializer.SeedRolesAndAdmin(services);
+    try 
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        await context.Database.MigrateAsync();
+        await DbInitializer.SeedRolesAndAdmin(services);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Lỗi khi Migrate hoặc Seed DB lúc khởi động: {ex.Message}");
+    }
 }
 
 // Add Exception Handling Middleware (must be first!)
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Cho phép Swagger hiển thị công khai trên Production để nộp bài
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowLocalhost");

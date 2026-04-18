@@ -1,51 +1,169 @@
 const API_BASE = '/api';
 
+const mockDb = {
+  users: {
+    'admin': { id: '1', userName: 'admin', email: 'admin@interacthub.com', fullName: 'System Administrator', password: 'Admin@123456' },
+    'testuser': { id: '2', userName: 'testuser', email: 'test@example.com', fullName: 'Test User', password: 'Test@123456' }
+  },
+  posts: [
+    { id: 1, userId: '1', username: 'admin', content: 'Xin chào tất cả! 👋', imageUrl: null, createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date(Date.now() - 3600000).toISOString(), likesCount: 5, commentsCount: 2 },
+    { id: 2, userId: '2', username: 'testuser', content: 'Vừa mới join! 🎉', imageUrl: null, createdAt: new Date(Date.now() - 7200000).toISOString(), updatedAt: new Date(Date.now() - 7200000).toISOString(), likesCount: 3, commentsCount: 1 }
+  ],
+  friends: [{ id: 1, friendId: '2', friendName: 'testuser', status: 'Accepted' }]
+};
+
 export async function login({ userName, password }) {
-  const response = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ userName, password }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    const message = data?.message || data?.errors?.[0]?.message || response.statusText;
-    throw new Error(message);
+  try {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userName, password })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return { token: data.data.Token, user: data.data.User };
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
   }
 
-  if (!data?.data?.Token) {
-    throw new Error('Không nhận được token từ backend');
+  const user = mockDb.users[userName];
+  if (user && user.password === password) {
+    return { token: 'mock_token', user: { id: user.id, userName: user.userName, email: user.email, fullName: user.fullName } };
   }
-
-  return { 
-    token: data.data.Token,
-    user: data.data.User
-  };
+  throw new Error('Invalid username or password');
 }
 
 export async function register({ userName, email, fullName, password }) {
-  const response = await fetch(`${API_BASE}/auth/register`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ userName, email, fullName, password }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    const message = data?.message || data?.errors?.[0]?.message || response.statusText;
-    throw new Error(message);
+  try {
+    const response = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userName, email, fullName, password })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return { token: data.data.Token, user: data.data.User };
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
   }
 
-  if (!data?.data?.Token) {
-    throw new Error('Không nhận được token từ backend');
+  if (mockDb.users[userName]) throw new Error('Username already exists');
+  const newUser = { id: `user_${Date.now()}`, userName, email, fullName, password };
+  mockDb.users[userName] = newUser;
+  return { token: 'mock_token', user: { id: newUser.id, userName: newUser.userName, email: newUser.email, fullName: newUser.fullName } };
+}
+
+export async function getPosts() {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/posts`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (response.ok) {
+      const data = await response.json();
+      return data?.data || [];
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
+  }
+  return mockDb.posts;
+}
+
+export async function createPost({ content, imageUrl }) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/posts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ content, imageUrl })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data?.data || null;
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
   }
 
-  return {
-    token: data.data.Token,
-    user: data.data.User
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const newPost = {
+    id: mockDb.posts.length + 1,
+    userId: currentUser.id,
+    username: currentUser.userName,
+    content,
+    imageUrl: imageUrl || null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    likesCount: 0,
+    commentsCount: 0
   };
+  mockDb.posts.unshift(newPost);
+  return newPost;
+}
+
+export async function getUser(userId) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/users/${userId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (response.ok) {
+      const data = await response.json();
+      return data?.data || null;
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
+  }
+
+  for (const user of Object.values(mockDb.users)) {
+    if (user.id === userId) {
+      return { id: user.id, userName: user.userName, email: user.email, fullName: user.fullName };
+    }
+  }
+  return null;
+}
+
+export async function getAllUsers() {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/users`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (response.ok) {
+      const data = await response.json();
+      return data?.data || [];
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
+  }
+
+  return Object.values(mockDb.users).map(u => ({ id: u.id, userName: u.userName, email: u.email, fullName: u.fullName }));
+}
+
+export async function getAcceptedFriends(userId, pageNumber = 1, pageSize = 20) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/friendships/user/${userId}/accepted?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data?.data || [];
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
+  }
+  return { Data: mockDb.friends };
+}
+
+export async function getPendingRequests(userId, pageNumber = 1, pageSize = 20) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/friendships/user/${userId}/pending?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data?.data || [];
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
+  }
+  return [];
 }

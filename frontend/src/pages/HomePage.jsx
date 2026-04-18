@@ -1,0 +1,256 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getPosts, getAcceptedFriends, getAllUsers, createPost, getUser } from '../api';
+import Header from '../components/Header';
+import '../styles/HomePage.css';
+
+export default function HomePage() {
+  const [posts, setPosts] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [suggestedUsers, setSuggestedUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [newPostImage, setNewPostImage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [postType, setPostType] = useState('text'); // 'text' or 'image'
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const userData = JSON.parse(localStorage.getItem('user'));
+        setCurrentUser(userData);
+
+        // Load posts
+        const postsData = await getPosts();
+        setPosts(postsData || []);
+
+        // Load friends
+        const friendsData = await getAcceptedFriends(userData.id, 1, 10);
+        setFriends(friendsData?.Data || []);
+
+        // Load suggested users
+        const allUsers = await getAllUsers();
+        const friendIds = (friendsData?.Data || []).map(f => f.friendId);
+        const suggested = allUsers.filter(
+          u => u.id !== userData.id && !friendIds.includes(u.id)
+        ).slice(0, 5);
+        setSuggestedUsers(suggested);
+      } catch (err) {
+        console.error('Error loading data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const handleCreatePost = async (e) => {
+    e.preventDefault();
+    if (!newPostContent.trim() && !newPostImage.trim()) {
+      setError('Vui lòng nhập nội dung hoặc chọn hình ảnh');
+      return;
+    }
+
+    setPosting(true);
+    try {
+      await createPost({
+        content: newPostContent,
+        imageUrl: newPostImage
+      });
+      
+      setNewPostContent('');
+      setNewPostImage('');
+      setPostType('text');
+      
+      // Reload posts
+      const postsData = await getPosts();
+      setPosts(postsData || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
+  if (loading) {
+    return <div className="home-container"><p>Đang tải...</p></div>;
+  }
+
+  return (
+    <div className="home-wrapper">
+      <Header onLogout={handleLogout} />
+      <div className="home-container">
+        {/* Left Sidebar */}
+        <aside className="sidebar-left">
+          <nav className="sidebar-nav">
+            <div className="nav-item active">
+              <span className="nav-icon">👥</span>
+              <span>Tất cả bạn bè</span>
+            </div>
+            <div className="nav-item">
+              <span className="nav-icon">📬</span>
+              <span>Lời mời kết bạn</span>
+            </div>
+            <div className="nav-item">
+              <span className="nav-icon">➕</span>
+              <span>Thêm bạn bè</span>
+            </div>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="main-content">
+          {error && <div className="error-message">{error}</div>}
+
+          {/* Create Post Section */}
+          <section className="create-post-section">
+            <div className="create-post-header">
+              <div className="user-avatar">
+                <div className="avatar-placeholder">👤</div>
+              </div>
+              <p className="create-post-prompt">
+                Bạn đang nghĩ gì? Hãy chia sẻ cảm nghĩ của bạn đến bạn bè thông qua...
+              </p>
+            </div>
+
+            <div className="create-post-tabs">
+              <button 
+                className={`tab ${postType === 'text' ? 'active' : ''}`}
+                onClick={() => setPostType('text')}
+              >
+                <span className="tab-icon">📝</span>
+                <span>Văn bản</span>
+              </button>
+              <button 
+                className={`tab ${postType === 'image' ? 'active' : ''}`}
+                onClick={() => setPostType('image')}
+              >
+                <span className="tab-icon">🖼️</span>
+                <span>Hình ảnh</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePost} className="create-post-form">
+              {postType === 'text' ? (
+                <textarea
+                  value={newPostContent}
+                  onChange={(e) => setNewPostContent(e.target.value)}
+                  placeholder="Chia sẻ suy nghĩ của bạn..."
+                  className="post-textarea"
+                  rows="4"
+                />
+              ) : (
+                <div className="image-input-wrapper">
+                  <input
+                    type="text"
+                    value={newPostImage}
+                    onChange={(e) => setNewPostImage(e.target.value)}
+                    placeholder="Nhập URL hình ảnh"
+                    className="post-image-input"
+                  />
+                  {newPostImage && (
+                    <img src={newPostImage} alt="Preview" className="image-preview" />
+                  )}
+                </div>
+              )}
+              <button 
+                type="submit" 
+                className="btn-post"
+                disabled={posting}
+              >
+                {posting ? 'Đang đăng...' : 'Đăng'}
+              </button>
+            </form>
+          </section>
+
+          {/* Suggested Friends Slider */}
+          {suggestedUsers.length > 0 && (
+            <section className="suggested-friends-section">
+              <div className="suggested-friends-slider">
+                {suggestedUsers.map((user) => (
+                  <div key={user.id} className="suggested-friend-card">
+                    <div className="friend-avatar">👤</div>
+                    <p className="friend-name">{user.fullName}</p>
+                    <button className="btn-add-friend">Kết bạn</button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Posts Feed */}
+          <section className="posts-feed">
+            {posts.length === 0 ? (
+              <p className="no-posts">Chưa có bài viết nào. Hãy tạo bài viết đầu tiên!</p>
+            ) : (
+              posts.map((post) => (
+                <div key={post.id} className="post-card">
+                  <div className="post-header">
+                    <div className="post-user-info">
+                      <div className="post-avatar">👤</div>
+                      <div className="post-user-details">
+                        <p className="post-username">{post.username || 'Người dùng'}</p>
+                        <p className="post-time">
+                          {new Date(post.createdAt).toLocaleDateString('vi-VN')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="post-content">
+                    <p>{post.content}</p>
+                    {post.imageUrl && (
+                      <img src={post.imageUrl} alt="Post" className="post-image" />
+                    )}
+                  </div>
+
+                  <div className="post-stats">
+                    <span>❤️ {post.likesCount} lượt thích</span>
+                    <span>💬 {post.commentsCount} bình luận</span>
+                  </div>
+
+                  <div className="post-actions">
+                    <button className="post-action-btn">
+                      <span>👍</span> Thích
+                    </button>
+                    <button className="post-action-btn">
+                      <span>💬</span> Bình luận
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </section>
+        </main>
+
+        {/* Right Sidebar - Friends List */}
+        <aside className="sidebar-right">
+          <h3 className="sidebar-title">Danh sách bạn bè</h3>
+          <div className="friends-list">
+            {friends.length === 0 ? (
+              <p className="no-friends">Chưa có bạn bè</p>
+            ) : (
+              friends.map((friend) => (
+                <div key={friend.id} className="friend-item">
+                  <div className="friend-avatar-small">👤</div>
+                  <p className="friend-name-small">{friend.friendName || 'Bạn'}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}

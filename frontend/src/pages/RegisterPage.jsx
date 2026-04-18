@@ -39,7 +39,7 @@ export default function RegisterPage() {
       });
       localStorage.setItem('token', result.token);
       localStorage.setItem('user', JSON.stringify(result.user));
-      navigate('/');
+      navigate('/home');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -53,7 +53,7 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-container">
-      <Header />
+      <Header showControls={false} />
       <div className="auth-page">
         <div className="auth-form-wrapper register-form-wrapper">
           <h2 className="auth-title">Tạo Tài Khoản</h2>

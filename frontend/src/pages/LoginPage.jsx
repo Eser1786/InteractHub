@@ -20,7 +20,7 @@ export default function LoginPage() {
       const result = await login({ userName: username, password });
       localStorage.setItem('token', result.token);
       localStorage.setItem('user', JSON.stringify(result.user));
-      navigate('/');
+      navigate('/home');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   return (
     <div className="auth-container">
-      <Header />
+      <Header showControls={false} />
       <div className="auth-page">
         <div className="auth-form-wrapper">
           <h2 className="auth-title">Đăng Nhập</h2>

@@ -4,7 +4,7 @@ import { login } from '../api';
 import Header from '../components/Header';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -17,8 +17,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Backend expects userName, not email
-      const result = await login({ userName: email, password });
+      const result = await login({ userName: username, password });
       localStorage.setItem('token', result.token);
       localStorage.setItem('user', JSON.stringify(result.user));
       navigate('/');
@@ -44,13 +43,13 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="email" className="form-label">Email:</label>
+              <label htmlFor="username" className="form-label">Tên đăng nhập:</label>
               <input
-                id="email"
+                id="username"
                 type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Nhập email hoặc tên đăng nhập"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Nhập tên đăng nhập"
                 className="form-input"
                 required
               />

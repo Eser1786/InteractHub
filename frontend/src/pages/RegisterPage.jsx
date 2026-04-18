@@ -9,8 +9,7 @@ export default function RegisterPage() {
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
-    gender: 'M'
+    password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -63,7 +62,7 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="auth-form register-form">
             <div className="form-group">
-              <label htmlFor="userName" className="form-label">Tên:</label>
+              <label htmlFor="userName" className="form-label">Tên đăng nhập:</label>
               <input
                 id="userName"
                 type="text"
@@ -78,14 +77,14 @@ export default function RegisterPage() {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="firstName" className="form-label">Họ:</label>
+                <label htmlFor="firstName" className="form-label">Họ và đệm:</label>
                 <input
                   id="firstName"
                   type="text"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  placeholder="Họ"
+                  placeholder="Họ và đệm"
                   className="form-input"
                   required
                 />
@@ -105,33 +104,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="dob" className="form-label">Sinh Nhật:</label>
-                <div className="date-input-wrapper">
-                  <input
-                    id="dob"
-                    type="date"
-                    className="form-input"
-                  />
-                  <span className="date-icon">📅</span>
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="gender" className="form-label">Giới Tính:</label>
-                <select
-                  id="gender"
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleInputChange}
-                  className="form-input"
-                >
-                  <option value="M">Nam</option>
-                  <option value="F">Nữ</option>
-                  <option value="O">Khác</option>
-                </select>
-              </div>
-            </div>
+
 
             <div className="form-group">
               <label htmlFor="email" className="form-label">Email:</label>

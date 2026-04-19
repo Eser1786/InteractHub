@@ -72,7 +72,7 @@ export default function HomePage() {
 
     setPosting(true);
     try {
-      await createPost({
+      const newPost = await createPost({
         content: newPostContent,
         imageUrl: newPostImage
       });
@@ -81,8 +81,10 @@ export default function HomePage() {
       setNewPostImage('');
       setPostType('text');
       
-      const postsData = await getPosts();
-      setPosts(postsData || []);
+      // Add new post to the beginning of the list with current timestamp
+      if (newPost) {
+        setPosts([newPost, ...posts]);
+      }
     } catch (err) {
       setError(err.message);
     } finally {

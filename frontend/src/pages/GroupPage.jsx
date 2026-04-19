@@ -1,0 +1,164 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Header from '../components/Header';
+import '../styles/GroupPage.css';
+
+export default function GroupPage() {
+  const [groups, setGroups] = useState([]);
+  const [selectedNav, setSelectedNav] = useState('my-groups');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem('user'));
+    setCurrentUser(userData);
+
+    // Mock groups data
+    const mockGroups = [
+      {
+        id: '1',
+        name: 'Nhóm lập trình Java',
+        description: 'Vừa vào',
+        images: ['img1', 'img2', 'img3'],
+        likes: 5,
+        comments: 36,
+        isJoined: true
+      },
+      {
+        id: '2',
+        name: 'Nhóm giải tích',
+        description: '2 tuần trước',
+        images: ['img1', 'img2', 'img3'],
+        likes: 5,
+        comments: 36,
+        isJoined: true
+      },
+      {
+        id: '3',
+        name: 'Nhóm thiết kế đồ họa',
+        description: '1 ngày trước',
+        images: ['img1', 'img2', 'img3'],
+        likes: 12,
+        comments: 48,
+        isJoined: false
+      },
+      {
+        id: '4',
+        name: 'Nhóm phát triển web',
+        description: '3 ngày trước',
+        images: ['img1', 'img2', 'img3'],
+        likes: 8,
+        comments: 24,
+        isJoined: false
+      }
+    ];
+
+    setGroups(mockGroups);
+    setLoading(false);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
+  const filteredGroups = searchQuery.trim() 
+    ? groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : selectedNav === 'my-groups' 
+      ? groups.filter(g => g.isJoined)
+      : groups.filter(g => !g.isJoined);
+
+  if (loading) {
+    return <div className="group-wrapper"><p>Đang tải...</p></div>;
+  }
+
+  return (
+    <div className="group-wrapper">
+      <Header onLogout={handleLogout} />
+      <div className="group-container">
+        {/* Left Sidebar */}
+        <aside className="group-sidebar-left">
+          <div className="group-search-wrapper">
+            <input
+              type="text"
+              placeholder="Tìm kiếm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="group-search-input"
+            />
+            <span className="group-search-icon">🔍</span>
+          </div>
+
+          <nav className="group-nav">
+            <div 
+              className={`group-nav-item ${selectedNav === 'my-groups' ? 'active' : ''}`}
+              onClick={() => setSelectedNav('my-groups')}
+            >
+              <span className="group-nav-icon">👥</span>
+              <span>Nhóm của bạn</span>
+            </div>
+            <div 
+              className={`group-nav-item ${selectedNav === 'discover' ? 'active' : ''}`}
+              onClick={() => setSelectedNav('discover')}
+            >
+              <span className="group-nav-icon">🔍</span>
+              <span>Khám phá</span>
+            </div>
+            <div className="group-nav-item create-group">
+              <span className="group-nav-icon">➕</span>
+              <span>Tạo nhóm mới</span>
+            </div>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="group-main-content">
+          <h2 className="group-title">{selectedNav === 'my-groups' ? 'Nhóm của bạn' : 'Khám phá nhóm'}</h2>
+          
+          <div className="group-list">
+            {filteredGroups.length === 0 ? (
+              <p className="no-groups">
+                {searchQuery.trim() ? 'Không tìm thấy nhóm nào' : 'Chưa có nhóm nào'}
+              </p>
+            ) : (
+              filteredGroups.map((group) => (
+                <div key={group.id} className="group-card">
+                  <div className="group-images">
+                    {group.images.map((_, idx) => (
+                      <div key={idx} className="group-image-placeholder"></div>
+                    ))}
+                  </div>
+
+                  <div className="group-info">
+                    <h3 className="group-name">{group.name}</h3>
+                    <p className="group-time">{group.description}</p>
+                  </div>
+
+                  <div className="group-stats">
+                    <span className="group-likes">❤️ {group.likes}</span>
+                    <span className="group-comments">{group.comments} Bình luận</span>
+                  </div>
+
+                  <div className="group-actions">
+                    <button className="group-action-btn">
+                      <span>🤍</span> Thích
+                    </button>
+                    <button className="group-action-btn">
+                      <span>💬</span> Bình luận
+                    </button>
+                    <button className="group-action-btn">
+                      <span>↗️</span> Chia sẻ
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}

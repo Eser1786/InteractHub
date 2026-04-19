@@ -1,8 +1,9 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/Header.css';
 
 export default function Header({ onLogout, showControls = true }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     if (onLogout) {
@@ -34,10 +35,18 @@ export default function Header({ onLogout, showControls = true }) {
             </div>
 
             <div className="header-actions">
-              <button className="header-icon-btn active" title="Home">
+              <button 
+                className={`header-icon-btn ${location.pathname === '/home' ? 'active' : ''}`}
+                onClick={() => navigate('/home')}
+                title="Home"
+              >
                 <span className="icon-home">🏠</span>
               </button>
-              <button className="header-icon-btn" title="Friends">
+              <button 
+                className={`header-icon-btn ${location.pathname === '/group' ? 'active' : ''}`}
+                onClick={() => navigate('/group')}
+                title="Groups"
+              >
                 <span className="icon-friends">👥</span>
               </button>
               <button className="header-icon-btn" title="Messages">

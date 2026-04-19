@@ -49,7 +49,11 @@ export default function Header({ onLogout, showControls = true }) {
               >
                 <span className="icon-friends">👥</span>
               </button>
-              <button className="header-icon-btn" title="Messages">
+              <button 
+                className={`header-icon-btn ${location.pathname === '/message' ? 'active' : ''}`}
+                onClick={() => navigate('/message')}
+                title="Messages"
+              >
                 <span className="icon-messages">✉️</span>
               </button>
               <button 

@@ -1,6 +1,8 @@
 const API_BASE = '/api';
+const MOCK_DB_STORAGE_KEY = 'interacthub_mockdb';
 
-const mockDb = {
+// Default mock data
+const defaultMockDb = {
   users: {
     'admin': { id: '1', userName: 'admin', email: 'admin@interacthub.com', fullName: 'System Administrator', password: 'Admin@123456' },
     'testuser': { id: '2', userName: 'testuser', email: 'test@example.com', fullName: 'Test User', password: 'Test@123456' }
@@ -11,6 +13,30 @@ const mockDb = {
   ],
   friends: [{ id: 1, friendId: '2', friendName: 'testuser', status: 'Accepted' }]
 };
+
+// Initialize mockDb from localStorage or use defaults
+function initializeMockDb() {
+  try {
+    const stored = localStorage.getItem(MOCK_DB_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (err) {
+    console.log('Error loading from localStorage:', err);
+  }
+  return JSON.parse(JSON.stringify(defaultMockDb));
+}
+
+let mockDb = initializeMockDb();
+
+// Save mockDb to localStorage
+function saveMockDb() {
+  try {
+    localStorage.setItem(MOCK_DB_STORAGE_KEY, JSON.stringify(mockDb));
+  } catch (err) {
+    console.log('Error saving to localStorage:', err);
+  }
+}
 
 export async function login({ userName, password }) {
   try {
@@ -52,6 +78,7 @@ export async function register({ userName, email, fullName, password }) {
   if (mockDb.users[userName]) throw new Error('Username already exists');
   const newUser = { id: `user_${Date.now()}`, userName, email, fullName, password };
   mockDb.users[userName] = newUser;
+  saveMockDb();
   return { token: 'mock_token', user: { id: newUser.id, userName: newUser.userName, email: newUser.email, fullName: newUser.fullName } };
 }
 
@@ -98,6 +125,7 @@ export async function createPost({ content, imageUrl }) {
     commentsCount: 0
   };
   mockDb.posts.unshift(newPost);
+  saveMockDb();
   return newPost;
 }
 
@@ -166,4 +194,11 @@ export async function getPendingRequests(userId, pageNumber = 1, pageSize = 20) 
     console.log('Backend unavailable');
   }
   return [];
+}
+
+// Helper function to reset mock database to defaults
+export function resetMockDatabase() {
+  mockDb = JSON.parse(JSON.stringify(defaultMockDb));
+  saveMockDb();
+  console.log('Mock database reset to defaults');
 }

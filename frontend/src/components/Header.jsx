@@ -63,7 +63,11 @@ export default function Header({ onLogout, showControls = true }) {
               >
                 <span className="icon-logout">🚪</span>
               </button>
-              <button className="header-icon-btn profile-btn" title="Profile">
+              <button 
+                className={`header-icon-btn profile-btn ${location.pathname === '/profile' ? 'active' : ''}`}
+                onClick={() => navigate('/profile')}
+                title="Profile"
+              >
                 <span className="icon-profile">👤</span>
               </button>
             </div>

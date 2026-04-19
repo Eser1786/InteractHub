@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, getAcceptedFriends, getAllUsers, createPost, getUser } from '../api';
+import { getPosts, getAcceptedFriends, getAllUsers, createPost, getUser, getPendingRequests } from '../api';
 import Header from '../components/Header';
 import '../styles/HomePage.css';
 
@@ -8,6 +8,7 @@ export default function HomePage() {
   const [posts, setPosts] = useState([]);
   const [friends, setFriends] = useState([]);
   const [suggestedUsers, setSuggestedUsers] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostImage, setNewPostImage] = useState('');
@@ -15,6 +16,7 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [posting, setPosting] = useState(false);
   const [postType, setPostType] = useState('text'); // 'text' or 'image'
+  const [selectedNav, setSelectedNav] = useState('friends'); // 'friends' or 'requests'
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,6 +32,10 @@ export default function HomePage() {
         // Load friends
         const friendsData = await getAcceptedFriends(userData.id, 1, 10);
         setFriends(friendsData?.Data || []);
+
+        // Load pending friend requests
+        const requestsData = await getPendingRequests(userData.id, 1, 20);
+        setPendingRequests(requestsData || []);
 
         // Load suggested users
         const allUsers = await getAllUsers();
@@ -94,11 +100,11 @@ export default function HomePage() {
         {/* Left Sidebar */}
         <aside className="sidebar-left">
           <nav className="sidebar-nav">
-            <div className="nav-item active">
+            <div className={`nav-item ${selectedNav === 'friends' ? 'active' : ''}`} onClick={() => setSelectedNav('friends')}>
               <span className="nav-icon">👥</span>
               <span>Tất cả bạn bè</span>
             </div>
-            <div className="nav-item">
+            <div className={`nav-item ${selectedNav === 'requests' ? 'active' : ''}`} onClick={() => setSelectedNav('requests')}>
               <span className="nav-icon">📬</span>
               <span>Lời mời kết bạn</span>
             </div>
@@ -234,21 +240,47 @@ export default function HomePage() {
           </section>
         </main>
 
-        {/* Right Sidebar - Friends List */}
+        {/* Right Sidebar - Friends List or Pending Requests */}
         <aside className="sidebar-right">
-          <h3 className="sidebar-title">Danh sách bạn bè</h3>
-          <div className="friends-list">
-            {friends.length === 0 ? (
-              <p className="no-friends">Chưa có bạn bè</p>
-            ) : (
-              friends.map((friend) => (
-                <div key={friend.id} className="friend-item">
-                  <div className="friend-avatar-small">👤</div>
-                  <p className="friend-name-small">{friend.friendName || 'Bạn'}</p>
-                </div>
-              ))
-            )}
-          </div>
+          {selectedNav === 'requests' ? (
+            <>
+              <h3 className="sidebar-title">Lời mời kết bạn</h3>
+              <div className="friends-list">
+                {pendingRequests.length === 0 ? (
+                  <p className="no-friends">Hiện chưa có lời mời kết bạn</p>
+                ) : (
+                  pendingRequests.map((request) => (
+                    <div key={request.id} className="friend-request-item">
+                      <div className="request-header">
+                        <div className="friend-avatar-small">👤</div>
+                        <p className="friend-name-small">{request.requesterName || 'Người dùng'}</p>
+                      </div>
+                      <div className="request-actions">
+                        <button className="btn-accept">Xác nhận</button>
+                        <button className="btn-reject">Xóa bỏ</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="sidebar-title">Danh sách bạn bè</h3>
+              <div className="friends-list">
+                {friends.length === 0 ? (
+                  <p className="no-friends">Chưa có bạn bè</p>
+                ) : (
+                  friends.map((friend) => (
+                    <div key={friend.id} className="friend-item">
+                      <div className="friend-avatar-small">👤</div>
+                      <p className="friend-name-small">{friend.friendName || 'Bạn'}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </aside>
       </div>
     </div>

@@ -450,6 +450,64 @@
   white-space: nowrap;
 }
 
+.friend-request-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f9f7ff;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.friend-request-item:hover {
+  background: #f0e6ff;
+}
+
+.request-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-accept,
+.btn-reject {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-accept {
+  background: #00a86b;
+  color: white;
+}
+
+.btn-accept:hover {
+  background: #008856;
+  transform: scale(1.05);
+}
+
+.btn-reject {
+  background: #ff6b6b;
+  color: white;
+}
+
+.btn-reject:hover {
+  background: #ee5a52;
+  transform: scale(1.05);
+}
+
 .error-message {
   background: #fee;
   color: #c33;

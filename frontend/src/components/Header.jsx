@@ -43,15 +43,15 @@ export default function Header({ onLogout, showControls = true }) {
               <button className="header-icon-btn" title="Messages">
                 <span className="icon-messages">✉️</span>
               </button>
-              <button className="header-icon-btn" title="Profile">
-                <span className="icon-profile">👤</span>
-              </button>
               <button 
                 className="header-icon-btn logout-btn" 
                 onClick={handleLogout}
                 title="Logout"
               >
                 <span className="icon-logout">🚪</span>
+              </button>
+              <button className="header-icon-btn profile-btn" title="Profile">
+                <span className="icon-profile">👤</span>
               </button>
             </div>
           </>

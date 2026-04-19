@@ -83,12 +83,13 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .header-icon-btn {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: white;
   border: none;
   cursor: pointer;
@@ -117,6 +118,17 @@
 
 .logout-btn:hover {
   background: #ee5a52;
+}
+
+.profile-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 24px;
+}
+
+.profile-btn:hover {
+  transform: scale(1.08);
 }
 
 /* Responsive */

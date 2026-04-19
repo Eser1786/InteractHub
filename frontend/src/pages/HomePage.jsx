@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, getAcceptedFriends, getAllUsers, createPost, getUser, getPendingRequests } from '../api';
+import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests } from '../api';
 import Header from '../components/Header';
 import '../styles/HomePage.css';
 
@@ -8,6 +8,7 @@ export default function HomePage() {
   const [posts, setPosts] = useState([]);
   const [friends, setFriends] = useState([]);
   const [suggestedUsers, setSuggestedUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [newPostContent, setNewPostContent] = useState('');
@@ -15,8 +16,9 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [posting, setPosting] = useState(false);
-  const [postType, setPostType] = useState('text'); // 'text' or 'image'
-  const [selectedNav, setSelectedNav] = useState('friends'); // 'friends' or 'requests'
+  const [postType, setPostType] = useState('text');
+  const [selectedNav, setSelectedNav] = useState('friends');
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,22 +27,19 @@ export default function HomePage() {
         const userData = JSON.parse(localStorage.getItem('user'));
         setCurrentUser(userData);
 
-        // Load posts
         const postsData = await getPosts();
         setPosts(postsData || []);
 
-        // Load friends
         const friendsData = await getAcceptedFriends(userData.id, 1, 10);
         setFriends(friendsData?.Data || []);
 
-        // Load pending friend requests
         const requestsData = await getPendingRequests(userData.id, 1, 20);
         setPendingRequests(requestsData || []);
 
-        // Load suggested users
-        const allUsers = await getAllUsers();
+        const allUsersData = await getAllUsers();
+        setAllUsers(allUsersData);
         const friendIds = (friendsData?.Data || []).map(f => f.friendId);
-        const suggested = allUsers.filter(
+        const suggested = allUsersData.filter(
           u => u.id !== userData.id && !friendIds.includes(u.id)
         ).slice(0, 5);
         setSuggestedUsers(suggested);
@@ -73,7 +72,6 @@ export default function HomePage() {
       setNewPostImage('');
       setPostType('text');
       
-      // Reload posts
       const postsData = await getPosts();
       setPosts(postsData || []);
     } catch (err) {
@@ -93,6 +91,14 @@ export default function HomePage() {
     return <div className="home-container"><p>Đang tải...</p></div>;
   }
 
+  const filteredUsers = searchQuery.trim() ? 
+    allUsers.filter(u => 
+      u.id !== currentUser?.id &&
+      !friends.some(f => f.friendId === u.id) &&
+      (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       u.userName.toLowerCase().includes(searchQuery.toLowerCase()))
+    ) : suggestedUsers;
+
   return (
     <div className="home-wrapper">
       <Header onLogout={handleLogout} />
@@ -108,7 +114,7 @@ export default function HomePage() {
               <span className="nav-icon">📬</span>
               <span>Lời mời kết bạn</span>
             </div>
-            <div className="nav-item">
+            <div className={`nav-item ${selectedNav === 'add-friends' ? 'active' : ''}`} onClick={() => setSelectedNav('add-friends')}>
               <span className="nav-icon">➕</span>
               <span>Thêm bạn bè</span>
             </div>
@@ -119,7 +125,6 @@ export default function HomePage() {
         <main className="main-content">
           {error && <div className="error-message">{error}</div>}
 
-          {/* Create Post Section */}
           <section className="create-post-section">
             <div className="create-post-header">
               <div className="user-avatar">
@@ -180,7 +185,6 @@ export default function HomePage() {
             </form>
           </section>
 
-          {/* Suggested Friends Slider */}
           {suggestedUsers.length > 0 && (
             <section className="suggested-friends-section">
               <div className="suggested-friends-slider">
@@ -195,7 +199,6 @@ export default function HomePage() {
             </section>
           )}
 
-          {/* Posts Feed */}
           <section className="posts-feed">
             {posts.length === 0 ? (
               <p className="no-posts">Chưa có bài viết nào. Hãy tạo bài viết đầu tiên!</p>
@@ -240,9 +243,44 @@ export default function HomePage() {
           </section>
         </main>
 
-        {/* Right Sidebar - Friends List or Pending Requests */}
+        {/* Right Sidebar */}
         <aside className="sidebar-right">
-          {selectedNav === 'requests' ? (
+          {selectedNav === 'add-friends' ? (
+            <>
+              <h3 className="sidebar-title">Thêm bạn bè</h3>
+              <div className="add-friends-container">
+                <div className="search-wrapper">
+                  <input
+                    type="text"
+                    placeholder="Tìm bạn bè..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="add-friends-search"
+                  />
+                  <span className="search-icon">🔍</span>
+                </div>
+                
+                <div className="search-results">
+                  {filteredUsers.length > 0 ? (
+                    <>
+                      {searchQuery.trim() === '' && <h4 className="suggestions-title">Gợi ý bạn bè</h4>}
+                      {filteredUsers.map(user => (
+                        <div key={user.id} className="suggested-friend-card">
+                          <div className="friend-avatar">👤</div>
+                          <p className="friend-name">{user.fullName}</p>
+                          <button className="btn-add-friend">Kết bạn</button>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <p className="no-results">
+                      {searchQuery.trim() ? 'Không tìm thấy người dùng' : 'Không có gợi ý bạn bè'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : selectedNav === 'requests' ? (
             <>
               <h3 className="sidebar-title">Lời mời kết bạn</h3>
               <div className="friends-list">

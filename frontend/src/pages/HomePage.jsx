@@ -19,6 +19,7 @@ export default function HomePage() {
   const [postType, setPostType] = useState('text');
   const [selectedNav, setSelectedNav] = useState('friends');
   const [searchQuery, setSearchQuery] = useState('');
+  const [stories, setStories] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,6 +44,14 @@ export default function HomePage() {
           u => u.id !== userData.id && !friendIds.includes(u.id)
         ).slice(0, 5);
         setSuggestedUsers(suggested);
+
+        // Load stories from friends
+        const friendStories = (friendsData?.Data || []).map((friend, idx) => ({
+          id: friend.friendId,
+          userName: friend.friendName || `Bạn ${idx + 1}`,
+          createdAt: new Date().toISOString()
+        }));
+        setStories(friendStories);
       } catch (err) {
         console.error('Error loading data:', err);
         setError(err.message);
@@ -185,19 +194,28 @@ export default function HomePage() {
             </form>
           </section>
 
-          {suggestedUsers.length > 0 && (
-            <section className="suggested-friends-section">
-              <div className="suggested-friends-slider">
-                {suggestedUsers.map((user) => (
-                  <div key={user.id} className="suggested-friend-card">
-                    <div className="friend-avatar">👤</div>
-                    <p className="friend-name">{user.fullName}</p>
-                    <button className="btn-add-friend">Kết bạn</button>
+
+          {/* Stories Section - Only show if there are stories or always show create story */}
+          {friends.length > 0 || stories.length > 0 ? (
+            <section className="stories-section">
+              <div className="stories-carousel">
+                {/* Create Story Card */}
+                <div className="story-card create-story-card">
+                  <div className="story-create-icon">+</div>
+                  <p className="story-label">Tạo tin</p>
+                </div>
+
+                {/* Friend Stories */}
+                {stories.map((story) => (
+                  <div key={story.id} className="story-card">
+                    <div className="story-background"></div>
+                    <div className="story-avatar">👤</div>
+                    <p className="story-label">{story.userName}</p>
                   </div>
                 ))}
               </div>
             </section>
-          )}
+          ) : null}
 
           <section className="posts-feed">
             {posts.length === 0 ? (

@@ -576,6 +576,118 @@
   font-size: 13px;
 }
 
+/* Stories Section */
+.stories-section {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stories-carousel {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 5px 0;
+  scroll-behavior: smooth;
+}
+
+.stories-carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.stories-carousel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stories-carousel::-webkit-scrollbar-thumb {
+  background: #d0c4e0;
+  border-radius: 3px;
+}
+
+.story-card {
+  flex-shrink: 0;
+  width: 100px;
+  height: 140px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e0d5f0 0%, #f5f0ff 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.story-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(107, 79, 199, 0.2);
+}
+
+.story-card.create-story-card {
+  background: linear-gradient(135deg, #d9cae8 0%, #ebe3f5 100%);
+  border: 2px dashed #6b4fc7;
+}
+
+.story-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(224, 213, 240, 0.5) 0%, rgba(245, 240, 255, 0.5) 100%);
+}
+
+.story-create-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #6b4fc7;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.story-card.create-story-card:hover .story-create-icon {
+  background: #5a40a8;
+  transform: scale(1.1);
+}
+
+.story-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  z-index: 1;
+}
+
+.story-label {
+  margin: 0;
+  color: #333;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  z-index: 1;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .home-container {

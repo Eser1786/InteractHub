@@ -286,6 +286,9 @@ export default function HomePage() {
                     <button className="post-action-btn">
                       <span>💬</span> Bình luận
                     </button>
+                    <button className="post-action-btn">
+                      <span>↗️</span> Chia sẻ
+                    </button>
                   </div>
                 </div>
               ))

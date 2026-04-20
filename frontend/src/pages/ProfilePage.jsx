@@ -167,9 +167,6 @@ export default function ProfilePage() {
                     <button className="post-action-btn-profile">
                       <span>💬</span> Bình luận
                     </button>
-                    <button className="post-action-btn-profile">
-                      <span>↗️</span> Chia sẻ
-                    </button>
                   </div>
                 </div>
               ))

@@ -128,6 +128,13 @@ export default function HomePage() {
     return <div className="home-container"><p>Đang tải...</p></div>;
   }
 
+  // Debug: log all users
+  console.log('=== DEBUG: All Users ===');
+  console.log('Total users:', allUsers.length);
+  console.log('All users:', allUsers);
+  console.log('Current user:', currentUser);
+  console.log('Friends:', friends);
+
   const filteredUsers = searchQuery.trim() ? 
     allUsers.filter(u => 
       u.id !== currentUser?.id &&
@@ -135,6 +142,9 @@ export default function HomePage() {
       (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
        u.userName.toLowerCase().includes(searchQuery.toLowerCase()))
     ) : suggestedUsers;
+
+  console.log('Search query:', searchQuery);
+  console.log('Filtered users:', filteredUsers);
 
   return (
     <div className="home-wrapper">

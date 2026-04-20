@@ -36,3 +36,16 @@ C:\csharp_project\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\I
 C:\csharp_project\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\refint\InteractHub.Application.dll
 C:\csharp_project\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.pdb
 C:\csharp_project\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\ref\InteractHub.Application.dll
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\bin\Debug\net9.0\InteractHub.Application.deps.json
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\bin\Debug\net9.0\InteractHub.Application.dll
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\bin\Debug\net9.0\InteractHub.Application.pdb
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.csproj.AssemblyReference.cache
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.AssemblyInfoInputs.cache
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.AssemblyInfo.cs
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.csproj.CoreCompileInputs.cache
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.sourcelink.json
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.dll
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\refint\InteractHub.Application.dll
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\InteractHub.Application.pdb
+C:\GitHub\a\InteractHub\backend\InteractHub.Application\obj\Debug\net9.0\ref\InteractHub.Application.dll

@@ -297,6 +297,12 @@
   color: #6b4fc7;
 }
 
+.post-action-btn-profile.liked {
+  background: #f0d5e8;
+  color: #d63384;
+  font-weight: 600;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .profile-container {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests } from '../api';
+import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost } from '../api';
 import Header from '../components/Header';
 import '../styles/HomePage.css';
 
@@ -96,6 +96,32 @@ export default function HomePage() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
+  };
+
+  const handleLike = async (post) => {
+    if (!currentUser) {
+      console.warn('No current user');
+      return;
+    }
+    
+    try {
+      const likedBy = post.likedBy || [];
+      const isLiked = likedBy.includes(currentUser.id);
+      console.log('Like status:', { postId: post.id, userId: currentUser.id, isLiked, likedBy });
+      
+      if (isLiked) {
+        await unlikePost(post.id, currentUser.id);
+      } else {
+        await likePost(post.id, currentUser.id);
+      }
+      
+      // Reload posts to get updated like count
+      const postsData = await getPosts();
+      setPosts(postsData || []);
+      console.log('Posts updated after like/unlike');
+    } catch (err) {
+      console.error('Error liking post:', err);
+    }
   };
 
   if (loading) {
@@ -250,8 +276,12 @@ export default function HomePage() {
                   </div>
 
                   <div className="post-actions">
-                    <button className="post-action-btn">
-                      <span>👍</span> Thích
+                    <button 
+                      className={`post-action-btn ${(post.likedBy || []).includes(currentUser?.id) ? 'liked' : ''}`}
+                      onClick={() => handleLike(post)}
+                    >
+                      <span>{(post.likedBy || []).includes(currentUser?.id) ? '❤️' : '🤍'}</span> 
+                      {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn">
                       <span>💬</span> Bình luận

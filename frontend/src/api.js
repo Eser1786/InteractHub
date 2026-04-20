@@ -8,8 +8,8 @@ const defaultMockDb = {
     'testuser': { id: '2', userName: 'testuser', email: 'test@example.com', fullName: 'Test User', password: 'Test@123456' }
   },
   posts: [
-    { id: 1, userId: '1', username: 'admin', content: 'Xin chào tất cả! 👋', imageUrl: null, createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date(Date.now() - 3600000).toISOString(), likesCount: 5, commentsCount: 2 },
-    { id: 2, userId: '2', username: 'testuser', content: 'Vừa mới join! 🎉', imageUrl: null, createdAt: new Date(Date.now() - 7200000).toISOString(), updatedAt: new Date(Date.now() - 7200000).toISOString(), likesCount: 3, commentsCount: 1 }
+    { id: 1, userId: '1', username: 'admin', content: 'Xin chào tất cả! 👋', imageUrl: null, createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date(Date.now() - 3600000).toISOString(), likesCount: 5, commentsCount: 2, likedBy: [] },
+    { id: 2, userId: '2', username: 'testuser', content: 'Vừa mới join! 🎉', imageUrl: null, createdAt: new Date(Date.now() - 7200000).toISOString(), updatedAt: new Date(Date.now() - 7200000).toISOString(), likesCount: 3, commentsCount: 1, likedBy: [] }
   ],
   friends: [{ id: 1, friendId: '2', friendName: 'testuser', status: 'Accepted' }]
 };
@@ -19,7 +19,15 @@ function initializeMockDb() {
   try {
     const stored = localStorage.getItem(MOCK_DB_STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const data = JSON.parse(stored);
+      // Ensure all posts have likedBy array
+      if (data.posts) {
+        data.posts = data.posts.map(post => ({
+          ...post,
+          likedBy: post.likedBy || []
+        }));
+      }
+      return data;
     }
   } catch (err) {
     console.log('Error loading from localStorage:', err);
@@ -93,7 +101,14 @@ export async function getPosts() {
   } catch (err) {
     console.log('Backend unavailable');
   }
-  return mockDb.posts;
+  
+  // Ensure all posts have likedBy array
+  const posts = mockDb.posts.map(post => ({
+    ...post,
+    likedBy: post.likedBy || []
+  }));
+  
+  return posts;
 }
 
 export async function createPost({ content, imageUrl }) {
@@ -122,11 +137,74 @@ export async function createPost({ content, imageUrl }) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     likesCount: 0,
-    commentsCount: 0
+    commentsCount: 0,
+    likedBy: []
   };
   mockDb.posts.unshift(newPost);
   saveMockDb();
   return newPost;
+}
+
+export async function likePost(postId, userId) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/likes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ postId, userId })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data?.data || null;
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
+  }
+
+  const post = mockDb.posts.find(p => p.id === postId);
+  if (post) {
+    // Ensure likedBy array exists
+    if (!post.likedBy) {
+      post.likedBy = [];
+    }
+    if (!post.likedBy.includes(userId)) {
+      post.likedBy.push(userId);
+      post.likesCount += 1;
+      saveMockDb();
+    }
+  }
+  return post || null;
+}
+
+export async function unlikePost(postId, userId) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/likes/${postId}/${userId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data?.data || null;
+    }
+  } catch (err) {
+    console.log('Backend unavailable');
+  }
+
+  const post = mockDb.posts.find(p => p.id === postId);
+  if (post) {
+    // Ensure likedBy array exists
+    if (!post.likedBy) {
+      post.likedBy = [];
+    }
+    const index = post.likedBy.indexOf(userId);
+    if (index > -1) {
+      post.likedBy.splice(index, 1);
+      post.likesCount -= 1;
+      saveMockDb();
+    }
+  }
+  return post || null;
 }
 
 export async function getUser(userId) {

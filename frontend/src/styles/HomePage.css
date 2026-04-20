@@ -381,6 +381,12 @@
   color: #6b4fc7;
 }
 
+.post-action-btn.liked {
+  background: #f0d5e8;
+  color: #d63384;
+  font-weight: 600;
+}
+
 /* Right Sidebar - Friends List */
 .sidebar-right {
   background: white;

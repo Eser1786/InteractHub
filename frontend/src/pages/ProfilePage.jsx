@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts } from '../api';
+import { getPosts, likePost, unlikePost } from '../api';
 import Header from '../components/Header';
 import '../styles/ProfilePage.css';
 
@@ -34,6 +34,30 @@ export default function ProfilePage() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
+  };
+
+  const handleLike = async (post) => {
+    if (!currentUser) {
+      console.warn('No current user');
+      return;
+    }
+    
+    try {
+      const likedBy = post.likedBy || [];
+      const isLiked = likedBy.includes(currentUser.id);
+      
+      if (isLiked) {
+        await unlikePost(post.id, currentUser.id);
+      } else {
+        await likePost(post.id, currentUser.id);
+      }
+      
+      // Reload posts to get updated like count
+      const postsData = await getPosts();
+      setPosts(postsData || []);
+    } catch (err) {
+      console.error('Error liking post:', err);
+    }
   };
 
   const filteredPosts = selectedTab === 'all' 
@@ -133,8 +157,12 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="post-actions-profile">
-                    <button className="post-action-btn-profile">
-                      <span>🤍</span> Thích
+                    <button 
+                      className={`post-action-btn-profile ${(post.likedBy || []).includes(currentUser?.id) ? 'liked' : ''}`}
+                      onClick={() => handleLike(post)}
+                    >
+                      <span>{(post.likedBy || []).includes(currentUser?.id) ? '❤️' : '🤍'}</span> 
+                      {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn-profile">
                       <span>💬</span> Bình luận

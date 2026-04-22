@@ -29,8 +29,24 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore backend/InteractHub.sln
 
-      - name: Build and Publish
+      - name: Build and Publish Backend
         run: dotnet publish backend/InteractHub.API/InteractHub.API.csproj -c Release -o ./publish /p:UseAppHost=false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Copy Frontend Build to Publish Folder
+        run: |
+          mkdir -p ./publish/wwwroot
+          cp -r frontend/dist/* ./publish/wwwroot/
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2

@@ -143,9 +143,17 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+
+// ✅ Phục vụ các file tĩnh của React (JS, CSS, HTML)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors("AllowLocalhost");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// ✅ Chuyển hướng các đường dẫn (Router) của React về trang chủ index.html
+app.MapFallbackToFile("index.html");
 
 app.Run();

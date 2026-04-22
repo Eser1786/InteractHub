@@ -1,5 +1,7 @@
 # Hướng Dẫn Triển Khai (Deploy) Hệ Thống InteractHub Lên Microsoft Azure
 
+**🌍 Link Truy Cập Ứng Dụng (Live Demo):** [https://interacthub123.azurewebsites.net/home](https://interacthub123.azurewebsites.net/home)
+
 Tài liệu này mô tả chi tiết quy trình đưa ứng dụng **InteractHub** (bao gồm Backend .NET 9 và Frontend React Vite) lên hạ tầng điện toán đám mây **Microsoft Azure**. Mô hình triển khai là **SPA Integration** (Tích hợp Frontend tĩnh vào thẳng máy chủ Backend) để chạy chung trên một tên miền (Domain) duy nhất.
 
 ---

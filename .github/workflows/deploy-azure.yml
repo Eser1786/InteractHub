@@ -10,7 +10,7 @@ on:
       - '**/*.png'
 
 env:
-  AZURE_WEBAPP_NAME: 'interacthub'
+  AZURE_WEBAPP_NAME: 'interacthub123'
   DOTNET_VERSION: '9.0.x' 
 
 jobs:

@@ -52,15 +52,30 @@ export default function MessagePage() {
   }, []);
 
   const loadMessages = (conversation) => {
-    // Mock messages for the conversation
-    const mockMessages = [
-      { id: 1, senderId: conversation.id, text: 'Chào bạn!', timestamp: '10:30' },
-      { id: 2, senderId: currentUser?.id, text: 'Chào, bạn khỏe không?', timestamp: '10:31' },
-      { id: 3, senderId: conversation.id, text: 'Khỏe, cảm ơn! Bạn thì sao?', timestamp: '10:32' },
-      { id: 4, senderId: currentUser?.id, text: 'Tôi cũng khỏe, cảm ơn', timestamp: '10:33' },
-      { id: 5, senderId: conversation.id, text: 'Bạn có rảnh không? Gặp nhau nào', timestamp: '10:35' },
-    ];
-    setMessages(mockMessages);
+    // Load messages from localStorage or use mock messages
+    const allMessages = JSON.parse(localStorage.getItem('messages') || '{}');
+    
+    if (allMessages[conversation.id]) {
+      // Use saved messages
+      setMessages(allMessages[conversation.id]);
+    } else {
+      // Use mock messages for first time
+      const currentUserId = currentUser?.id || JSON.parse(localStorage.getItem('user') || '{}').id;
+      const today = new Date().toLocaleDateString('vi-VN');
+      const mockMessages = [
+        { id: 1, senderId: conversation.id, text: 'Chào bạn!', timestamp: '10:30', date: today },
+        { id: 2, senderId: currentUserId, text: 'Chào, bạn khỏe không?', timestamp: '10:31', date: today },
+        { id: 3, senderId: conversation.id, text: 'Khỏe, cảm ơn! Bạn thì sao?', timestamp: '10:32', date: today },
+        { id: 4, senderId: currentUserId, text: 'Tôi cũng khỏe, cảm ơn', timestamp: '10:33', date: today },
+        { id: 5, senderId: conversation.id, text: 'Bạn có rảnh không? Gặp nhau nào', timestamp: '10:35', date: today },
+      ];
+      
+      // Save mock messages to localStorage for this conversation
+      allMessages[conversation.id] = mockMessages;
+      localStorage.setItem('messages', JSON.stringify(allMessages));
+      
+      setMessages(mockMessages);
+    }
   };
 
   const handleSelectConversation = (conversation) => {
@@ -70,14 +85,23 @@ export default function MessagePage() {
 
   const handleSendMessage = () => {
     if (newMessage.trim() && selectedConversation) {
+      const now = new Date();
       const message = {
         id: messages.length + 1,
         senderId: currentUser?.id,
         text: newMessage,
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        timestamp: now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        date: now.toLocaleDateString('vi-VN')
       };
-      setMessages([...messages, message]);
+      
+      const updatedMessages = [...messages, message];
+      setMessages(updatedMessages);
       setNewMessage('');
+      
+      // Save to localStorage
+      const allMessages = JSON.parse(localStorage.getItem('messages') || '{}');
+      allMessages[selectedConversation.id] = updatedMessages;
+      localStorage.setItem('messages', JSON.stringify(allMessages));
     }
   };
 
@@ -184,20 +208,31 @@ export default function MessagePage() {
 
               {/* Messages Area */}
               <div className="messages-area">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`message-item ${message.senderId === currentUser?.id ? 'sent' : 'received'}`}
-                  >
-                    {message.senderId !== currentUser?.id && (
-                      <div className="message-avatar-small">{selectedConversation.avatar}</div>
-                    )}
-                    <div className={`message-bubble ${message.senderId === currentUser?.id ? 'sent-bubble' : 'received-bubble'}`}>
-                      <p>{message.text}</p>
-                      <span className="message-time">{message.timestamp}</span>
+                {messages.map((message, index) => {
+                  // Check if we need to show date separator
+                  const showDateSeparator = index === 0 || messages[index - 1].date !== message.date;
+                  
+                  return (
+                    <div key={message.id}>
+                      {showDateSeparator && (
+                        <div className="message-date-separator">
+                          {message.date}
+                        </div>
+                      )}
+                      <div
+                        className={`message-item ${message.senderId === currentUser?.id ? 'sent' : 'received'}`}
+                      >
+                        {message.senderId !== currentUser?.id && (
+                          <div className="message-avatar-small">{selectedConversation.avatar}</div>
+                        )}
+                        <div className={`message-bubble ${message.senderId === currentUser?.id ? 'sent-bubble' : 'received-bubble'}`}>
+                          <p>{message.text}</p>
+                          <span className="message-time">{message.timestamp}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Message Input */}

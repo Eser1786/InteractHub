@@ -244,6 +244,34 @@
   gap: 12px;
 }
 
+.message-date-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0 8px 0;
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.message-date-separator::before,
+.message-date-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0d5f0;
+}
+
+.message-date-separator::before {
+  margin-right: 12px;
+}
+
+.message-date-separator::after {
+  margin-left: 12px;
+}
+
 .message-item {
   display: flex;
   gap: 8px;

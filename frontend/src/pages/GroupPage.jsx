@@ -143,14 +143,9 @@ export default function GroupPage() {
                   </div>
 
                   <div className="group-actions">
-                    <button className="group-action-btn">
-                      <span>🤍</span> Thích
-                    </button>
-                    <button className="group-action-btn">
-                      <span>💬</span> Bình luận
-                    </button>
-                    <button className="group-action-btn">
-                      <span>↗️</span> Chia sẻ
+                    <button className={`group-action-btn view-btn ${selectedNav === 'discover' && !group.isJoined ? 'join-btn' : ''}`}>
+                      <span>{selectedNav === 'discover' && !group.isJoined ? '➕' : '👁️'}</span> 
+                      {selectedNav === 'discover' && !group.isJoined ? 'Tham gia' : 'Xem'}
                     </button>
                   </div>
                 </div>

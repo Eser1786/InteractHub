@@ -19,7 +19,14 @@ export default function ProfilePage() {
 
         // Load user's posts
         const postsData = await getPosts();
-        setPosts(postsData || []);
+        
+        // Apply localStorage likes to posts
+        const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
+        const updatedPostsData = (postsData || []).map(p => ({
+          ...p,
+          likedBy: likedPosts[p.id] || []
+        }));
+        setPosts(updatedPostsData || []);
       } catch (err) {
         console.error('Error loading profile:', err);
       } finally {
@@ -46,15 +53,37 @@ export default function ProfilePage() {
       const likedBy = post.likedBy || [];
       const isLiked = likedBy.includes(currentUser.id);
       
+      // Update likes in localStorage
+      const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
       if (isLiked) {
         await unlikePost(post.id, currentUser.id);
+        // Remove from localStorage
+        if (likedPosts[post.id]) {
+          likedPosts[post.id] = likedPosts[post.id].filter(id => id !== currentUser.id);
+          if (likedPosts[post.id].length === 0) {
+            delete likedPosts[post.id];
+          }
+        }
       } else {
         await likePost(post.id, currentUser.id);
+        // Add to localStorage
+        if (!likedPosts[post.id]) {
+          likedPosts[post.id] = [];
+        }
+        if (!likedPosts[post.id].includes(currentUser.id)) {
+          likedPosts[post.id].push(currentUser.id);
+        }
       }
+      localStorage.setItem('liked_posts', JSON.stringify(likedPosts));
       
       // Reload posts to get updated like count
       const postsData = await getPosts();
-      setPosts(postsData || []);
+      // Apply localStorage likes to posts
+      const updatedPosts = (postsData || []).map(p => ({
+        ...p,
+        likedBy: likedPosts[p.id] || []
+      }));
+      setPosts(updatedPosts);
     } catch (err) {
       console.error('Error liking post:', err);
     }

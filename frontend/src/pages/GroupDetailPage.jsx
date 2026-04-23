@@ -85,7 +85,14 @@ export default function GroupDetailPage() {
       setGroup(foundGroup);
       // Filter posts for this group
       const groupPosts = mockPosts.filter(p => p.groupId === foundGroup.id);
-      setPosts(groupPosts);
+      
+      // Apply localStorage likes to posts
+      const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
+      const updatedPosts = groupPosts.map(p => ({
+        ...p,
+        likedBy: likedPosts[p.id] || []
+      }));
+      setPosts(updatedPosts);
     }
 
     setLoading(false);
@@ -102,11 +109,22 @@ export default function GroupDetailPage() {
     const newPosts = posts.map(p => {
       if (p.id === post.id) {
         const isLiked = p.likedBy.includes(currentUser?.id);
+        const updatedLikedBy = isLiked
+          ? p.likedBy.filter(id => id !== currentUser?.id)
+          : [...p.likedBy, currentUser?.id];
+        
+        // Save to localStorage
+        const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
+        if (updatedLikedBy.length > 0) {
+          likedPosts[p.id] = updatedLikedBy;
+        } else {
+          delete likedPosts[p.id];
+        }
+        localStorage.setItem('liked_posts', JSON.stringify(likedPosts));
+        
         return {
           ...p,
-          likedBy: isLiked
-            ? p.likedBy.filter(id => id !== currentUser?.id)
-            : [...p.likedBy, currentUser?.id],
+          likedBy: updatedLikedBy,
           likesCount: isLiked ? p.likesCount - 1 : p.likesCount + 1
         };
       }

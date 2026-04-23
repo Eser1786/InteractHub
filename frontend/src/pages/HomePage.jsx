@@ -29,7 +29,14 @@ export default function HomePage() {
         setCurrentUser(userData);
 
         const postsData = await getPosts();
-        setPosts(postsData || []);
+        
+        // Apply localStorage likes to posts
+        const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
+        const updatedPostsData = (postsData || []).map(p => ({
+          ...p,
+          likedBy: likedPosts[p.id] || []
+        }));
+        setPosts(updatedPostsData || []);
 
         const friendsData = await getAcceptedFriends(userData.id, 1, 10);
         setFriends(friendsData?.Data || []);
@@ -109,15 +116,37 @@ export default function HomePage() {
       const isLiked = likedBy.includes(currentUser.id);
       console.log('Like status:', { postId: post.id, userId: currentUser.id, isLiked, likedBy });
       
+      // Update likes in localStorage
+      const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
       if (isLiked) {
         await unlikePost(post.id, currentUser.id);
+        // Remove from localStorage
+        if (likedPosts[post.id]) {
+          likedPosts[post.id] = likedPosts[post.id].filter(id => id !== currentUser.id);
+          if (likedPosts[post.id].length === 0) {
+            delete likedPosts[post.id];
+          }
+        }
       } else {
         await likePost(post.id, currentUser.id);
+        // Add to localStorage
+        if (!likedPosts[post.id]) {
+          likedPosts[post.id] = [];
+        }
+        if (!likedPosts[post.id].includes(currentUser.id)) {
+          likedPosts[post.id].push(currentUser.id);
+        }
       }
+      localStorage.setItem('liked_posts', JSON.stringify(likedPosts));
       
       // Reload posts to get updated like count
       const postsData = await getPosts();
-      setPosts(postsData || []);
+      // Apply localStorage likes to posts
+      const updatedPosts = (postsData || []).map(p => ({
+        ...p,
+        likedBy: likedPosts[p.id] || []
+      }));
+      setPosts(updatedPosts);
       console.log('Posts updated after like/unlike');
     } catch (err) {
       console.error('Error liking post:', err);

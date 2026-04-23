@@ -89,6 +89,15 @@ export default function StoryPage() {
       <Header onLogout={handleLogout} />
       
       <div className="story-page-container">
+        {/* Back Button */}
+        <button 
+          className="story-back-btn"
+          onClick={() => navigate('/home')}
+          title="Quay lại"
+        >
+          ←
+        </button>
+
         {/* Left Sidebar */}
         <aside className="story-sidebar">
           <div className="sidebar-section">

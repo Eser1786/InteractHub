@@ -107,7 +107,11 @@ export default function GroupPage() {
               <span className="group-nav-icon">🔍</span>
               <span>Khám phá</span>
             </div>
-            <div className="group-nav-item create-group">
+            <div 
+              className="group-nav-item create-group"
+              onClick={() => navigate('/creategroup')}
+              style={{ cursor: 'pointer' }}
+            >
               <span className="group-nav-icon">➕</span>
               <span>Tạo nhóm mới</span>
             </div>

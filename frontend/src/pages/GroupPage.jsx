@@ -138,12 +138,6 @@ export default function GroupPage() {
 
                   <div className="group-info">
                     <h3 className="group-name">{group.name}</h3>
-                    <p className="group-time">{group.description}</p>
-                  </div>
-
-                  <div className="group-stats">
-                    <span className="group-likes">❤️ {group.likes}</span>
-                    <span className="group-comments">{group.comments} Bình luận</span>
                   </div>
 
                   <div className="group-actions">

@@ -65,7 +65,9 @@ builder.Services.AddIdentity<User, IdentityRole>()
 
 // Add JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JWT");
-var secretKey = jwtSettings["SecretKey"];
+var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey is not configured in appsettings.json");
+var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT Issuer is not configured in appsettings.json");
+var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT Audience is not configured in appsettings.json");
 
 builder.Services
     .AddAuthentication(options =>
@@ -80,9 +82,9 @@ builder.Services
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
             ValidateIssuer = true,
-            ValidIssuer = jwtSettings["Issuer"],
+            ValidIssuer = issuer,
             ValidateAudience = true,
-            ValidAudience = jwtSettings["Audience"],
+            ValidAudience = audience,
             ValidateLifetime = true
         };
     });

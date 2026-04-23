@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../api';
+import { getAllUsers, initializeUserData } from '../utils/userDataManager';
 import Header from '../components/Header';
 
 export default function LoginPage() {
@@ -17,12 +18,37 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Check local users first
+      const allUsers = getAllUsers();
+      const foundUser = allUsers.find(u => u.userName === username || u.email === username);
+      
+      if (foundUser) {
+        // Verify password (simple comparison for local users)
+        if (foundUser.password === password) {
+          // Initialize user data if not exists
+          const userData = localStorage.getItem(`user_data_${foundUser.id}`);
+          if (!userData) {
+            initializeUserData(foundUser.id);
+          }
+          
+          localStorage.setItem('token', `mock_token_${foundUser.id}`);
+          localStorage.setItem('user', JSON.stringify(foundUser));
+          navigate('/home');
+          return;
+        } else {
+          setError('Mật khẩu không chính xác');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // If not found locally, try backend
       const result = await login({ userName: username, password });
       localStorage.setItem('token', result.token);
       localStorage.setItem('user', JSON.stringify(result.user));
       navigate('/home');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Đăng nhập thất bại');
     } finally {
       setLoading(false);
     }

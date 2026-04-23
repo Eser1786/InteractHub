@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPosts, likePost, unlikePost } from '../api';
+import { getPostsForUser, getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
 import Header from '../components/Header';
 import '../styles/ProfilePage.css';
 
@@ -18,13 +19,13 @@ export default function ProfilePage() {
         setCurrentUser(userData);
 
         // Load user's posts
-        const postsData = await getPosts();
+        const userPosts = getPostsForUser(userData.id);
         
-        // Apply localStorage likes to posts
-        const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
-        const updatedPostsData = (postsData || []).map(p => ({
+        // Apply liked posts from user's data
+        const userLikedPosts = getLikedPostsForUser(userData.id);
+        const updatedPostsData = userPosts.map(p => ({
           ...p,
-          likedBy: likedPosts[p.id] || []
+          likedBy: userLikedPosts[p.id] || []
         }));
         setPosts(updatedPostsData || []);
       } catch (err) {
@@ -53,11 +54,12 @@ export default function ProfilePage() {
       const likedBy = post.likedBy || [];
       const isLiked = likedBy.includes(currentUser.id);
       
-      // Update likes in localStorage
-      const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
+      // Get current user data
+      const userData = getUserData(currentUser.id);
+      const likedPosts = userData.likedPosts || {};
+      
+      // Update liked posts
       if (isLiked) {
-        await unlikePost(post.id, currentUser.id);
-        // Remove from localStorage
         if (likedPosts[post.id]) {
           likedPosts[post.id] = likedPosts[post.id].filter(id => id !== currentUser.id);
           if (likedPosts[post.id].length === 0) {
@@ -65,8 +67,6 @@ export default function ProfilePage() {
           }
         }
       } else {
-        await likePost(post.id, currentUser.id);
-        // Add to localStorage
         if (!likedPosts[post.id]) {
           likedPosts[post.id] = [];
         }
@@ -74,16 +74,24 @@ export default function ProfilePage() {
           likedPosts[post.id].push(currentUser.id);
         }
       }
-      localStorage.setItem('liked_posts', JSON.stringify(likedPosts));
       
-      // Reload posts to get updated like count
-      const postsData = await getPosts();
-      // Apply localStorage likes to posts
-      const updatedPosts = (postsData || []).map(p => ({
-        ...p,
-        likedBy: likedPosts[p.id] || []
-      }));
+      // Update user data
+      updateUserData(currentUser.id, { likedPosts });
+      
+      // Update local posts state
+      const updatedPosts = posts.map(p => {
+        if (p.id === post.id) {
+          return {
+            ...p,
+            likedBy: likedPosts[p.id] || [],
+            likesCount: (likedPosts[p.id] || []).length
+          };
+        }
+        return p;
+      });
       setPosts(updatedPosts);
+      
+      console.log('Like/Unlike successful');
     } catch (err) {
       console.error('Error liking post:', err);
     }

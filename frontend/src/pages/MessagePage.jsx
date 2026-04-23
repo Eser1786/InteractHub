@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAcceptedFriends } from '../api';
+import { getFriendsForUser, addMessage, getMessagesForConversation } from '../utils/userDataManager';
 import Header from '../components/Header';
 import '../styles/MessagePage.css';
 
@@ -22,14 +23,13 @@ export default function MessagePage() {
         const userData = JSON.parse(localStorage.getItem('user'));
         setCurrentUser(userData);
 
-        // Load friends as conversations
-        const friendsData = await getAcceptedFriends(userData.id, 1, 100);
-        const friends = friendsData?.Data || [];
-
-        // Mock conversations with friends
-        const conversationList = friends.map((friend, idx) => ({
-          id: friend.friendId,
-          name: friend.friendName || 'Bạn',
+        // Load user's friends as conversations
+        const userFriends = getFriendsForUser(userData.id);
+        
+        // Create conversations from friends
+        const conversationList = userFriends.map((friend, idx) => ({
+          id: friend.id || `friend_${idx}`,
+          name: friend.name || friend.fullName || 'Bạn',
           lastMessage: ['Tôi nằp lí một lúc Trần', 'May vừa vào', 'Bạn ơi, bạn khỏe không?', 'OK, see you!'][idx % 4],
           lastTime: ['2 phút', '5 phút', '30 phút', '1 giờ'][idx % 4],
           isUnread: idx % 2 === 0,
@@ -40,7 +40,7 @@ export default function MessagePage() {
         setConversations(conversationList);
         if (conversationList.length > 0) {
           setSelectedConversation(conversationList[0]);
-          loadMessages(conversationList[0]);
+          loadMessages(conversationList[0], userData.id);
         }
       } catch (err) {
         console.error('Error loading messages:', err);
@@ -59,28 +59,28 @@ export default function MessagePage() {
     }
   }, [messages]);
 
-  const loadMessages = (conversation) => {
-    // Load messages from localStorage or use mock messages
-    const allMessages = JSON.parse(localStorage.getItem('messages') || '{}');
+  const loadMessages = (conversation, userId) => {
+    // Load messages from userDataManager
+    const conversationMessages = getMessagesForConversation(userId, conversation.id);
     
-    if (allMessages[conversation.id]) {
+    if (conversationMessages && conversationMessages.length > 0) {
       // Use saved messages
-      setMessages(allMessages[conversation.id]);
+      setMessages(conversationMessages);
     } else {
       // Use mock messages for first time
-      const currentUserId = currentUser?.id || JSON.parse(localStorage.getItem('user') || '{}').id;
       const today = new Date().toLocaleDateString('vi-VN');
       const mockMessages = [
         { id: 1, senderId: conversation.id, text: 'Chào bạn!', timestamp: '10:30', date: today },
-        { id: 2, senderId: currentUserId, text: 'Chào, bạn khỏe không?', timestamp: '10:31', date: today },
+        { id: 2, senderId: userId, text: 'Chào, bạn khỏe không?', timestamp: '10:31', date: today },
         { id: 3, senderId: conversation.id, text: 'Khỏe, cảm ơn! Bạn thì sao?', timestamp: '10:32', date: today },
-        { id: 4, senderId: currentUserId, text: 'Tôi cũng khỏe, cảm ơn', timestamp: '10:33', date: today },
+        { id: 4, senderId: userId, text: 'Tôi cũng khỏe, cảm ơn', timestamp: '10:33', date: today },
         { id: 5, senderId: conversation.id, text: 'Bạn có rảnh không? Gặp nhau nào', timestamp: '10:35', date: today },
       ];
       
-      // Save mock messages to localStorage for this conversation
-      allMessages[conversation.id] = mockMessages;
-      localStorage.setItem('messages', JSON.stringify(allMessages));
+      // Save mock messages to userDataManager for this conversation
+      mockMessages.forEach(msg => {
+        addMessage(userId, conversation.id, msg);
+      });
       
       setMessages(mockMessages);
     }
@@ -88,28 +88,26 @@ export default function MessagePage() {
 
   const handleSelectConversation = (conversation) => {
     setSelectedConversation(conversation);
-    loadMessages(conversation);
+    loadMessages(conversation, currentUser?.id);
   };
 
   const handleSendMessage = () => {
-    if (newMessage.trim() && selectedConversation) {
+    if (newMessage.trim() && selectedConversation && currentUser) {
       const now = new Date();
       const message = {
         id: messages.length + 1,
-        senderId: currentUser?.id,
+        senderId: currentUser.id,
         text: newMessage,
         timestamp: now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         date: now.toLocaleDateString('vi-VN')
       };
       
+      // Save to userDataManager
+      addMessage(currentUser.id, selectedConversation.id, message);
+      
       const updatedMessages = [...messages, message];
       setMessages(updatedMessages);
       setNewMessage('');
-      
-      // Save to localStorage
-      const allMessages = JSON.parse(localStorage.getItem('messages') || '{}');
-      allMessages[selectedConversation.id] = updatedMessages;
-      localStorage.setItem('messages', JSON.stringify(allMessages));
     }
   };
 

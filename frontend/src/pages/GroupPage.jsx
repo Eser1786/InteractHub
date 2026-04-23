@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getGroupMembershipsForUser } from '../utils/userDataManager';
 import Header from '../components/Header';
 import '../styles/GroupPage.css';
 
@@ -59,7 +60,17 @@ export default function GroupPage() {
       }
     ];
 
-    setGroups(mockGroups);
+    // Load user's group memberships from userDataManager
+    const userGroupMemberships = getGroupMembershipsForUser(userData.id);
+    const userGroupIds = userGroupMemberships.map(g => g.id);
+    
+    // Update isJoined status based on user's memberships
+    const updatedGroups = mockGroups.map(g => ({
+      ...g,
+      isJoined: userGroupIds.includes(g.id)
+    }));
+
+    setGroups(updatedGroups);
     setLoading(false);
   }, []);
 

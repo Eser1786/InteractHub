@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
 import Header from '../components/Header';
 import '../styles/GroupDetailPage.css';
 
@@ -75,6 +76,23 @@ export default function GroupDetailPage() {
     }
   ];
 
+  // Helper function to get total likes for a post from all users
+  const getTotalLikesForPost = (postId) => {
+    const likeCounts = JSON.parse(localStorage.getItem('post_likes') || '{}');
+    return likeCounts[postId] || 0;
+  };
+
+  // Helper function to save total likes for a post
+  const saveTotalLikesForPost = (postId, count) => {
+    const likeCounts = JSON.parse(localStorage.getItem('post_likes') || '{}');
+    if (count > 0) {
+      likeCounts[postId] = count;
+    } else {
+      delete likeCounts[postId];
+    }
+    localStorage.setItem('post_likes', JSON.stringify(likeCounts));
+  };
+
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
     setCurrentUser(userData);
@@ -86,13 +104,23 @@ export default function GroupDetailPage() {
       // Filter posts for this group
       const groupPosts = mockPosts.filter(p => p.groupId === foundGroup.id);
       
-      // Apply localStorage likes to posts
-      const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
-      const updatedPosts = groupPosts.map(p => ({
-        ...p,
-        likedBy: likedPosts[p.id] || []
-      }));
-      setPosts(updatedPosts);
+      // Apply user's liked posts to posts (check userData exists first)
+      if (userData && userData.id) {
+        const userLikedPosts = getLikedPostsForUser(userData.id);
+        const updatedPosts = groupPosts.map(p => {
+          const likedByArray = userLikedPosts[p.id] || [];
+          const totalLikes = getTotalLikesForPost(p.id);
+          return {
+            ...p,
+            likedBy: likedByArray,
+            likesCount: totalLikes > 0 ? totalLikes : likedByArray.length
+          };
+        });
+        setPosts(updatedPosts);
+      } else {
+        // If no user, just show posts without liked info
+        setPosts(groupPosts);
+      }
     }
 
     setLoading(false);
@@ -105,32 +133,62 @@ export default function GroupDetailPage() {
   };
 
   const handleLike = (post) => {
-    // Toggle like
-    const newPosts = posts.map(p => {
-      if (p.id === post.id) {
-        const isLiked = p.likedBy.includes(currentUser?.id);
-        const updatedLikedBy = isLiked
-          ? p.likedBy.filter(id => id !== currentUser?.id)
-          : [...p.likedBy, currentUser?.id];
-        
-        // Save to localStorage
-        const likedPosts = JSON.parse(localStorage.getItem('liked_posts') || '{}');
-        if (updatedLikedBy.length > 0) {
-          likedPosts[p.id] = updatedLikedBy;
-        } else {
-          delete likedPosts[p.id];
+    if (!currentUser) {
+      console.warn('No current user');
+      return;
+    }
+
+    try {
+      const likedBy = post.likedBy || [];
+      const isLiked = likedBy.includes(currentUser.id);
+      
+      // Get current user data
+      const userData = getUserData(currentUser.id);
+      const likedPosts = userData.likedPosts || {};
+      
+      let newLikesCount = post.likesCount || 0;
+      
+      // Update liked posts
+      if (isLiked) {
+        if (likedPosts[post.id]) {
+          likedPosts[post.id] = likedPosts[post.id].filter(id => id !== currentUser.id);
+          if (likedPosts[post.id].length === 0) {
+            delete likedPosts[post.id];
+          }
         }
-        localStorage.setItem('liked_posts', JSON.stringify(likedPosts));
-        
-        return {
-          ...p,
-          likedBy: updatedLikedBy,
-          likesCount: isLiked ? p.likesCount - 1 : p.likesCount + 1
-        };
+        newLikesCount = Math.max(0, newLikesCount - 1);
+      } else {
+        if (!likedPosts[post.id]) {
+          likedPosts[post.id] = [];
+        }
+        if (!likedPosts[post.id].includes(currentUser.id)) {
+          likedPosts[post.id].push(currentUser.id);
+        }
+        newLikesCount = newLikesCount + 1;
       }
-      return p;
-    });
-    setPosts(newPosts);
+      
+      // Update user data
+      updateUserData(currentUser.id, { likedPosts });
+      
+      // Save total likes count for this post
+      saveTotalLikesForPost(post.id, newLikesCount);
+      
+      // Update local posts state
+      const newPosts = posts.map(p => {
+        if (p.id === post.id) {
+          return {
+            ...p,
+            likedBy: likedPosts[p.id] || [],
+            likesCount: newLikesCount
+          };
+        }
+        return p;
+      });
+      setPosts(newPosts);
+      console.log('Like/Unlike successful');
+    } catch (err) {
+      console.error('Error liking post:', err);
+    }
   };
 
   const handleBackToGroup = () => {

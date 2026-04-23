@@ -245,7 +245,12 @@ export default function HomePage() {
 
                 {/* Friend Stories */}
                 {stories.map((story) => (
-                  <div key={story.id} className="story-card">
+                  <div 
+                    key={story.id} 
+                    className="story-card"
+                    onClick={() => navigate('/story')}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div className="story-background"></div>
                     <div className="story-avatar">👤</div>
                     <p className="story-label">{story.userName}</p>

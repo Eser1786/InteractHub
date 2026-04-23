@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAcceptedFriends } from '../api';
 import Header from '../components/Header';
@@ -14,6 +14,7 @@ export default function MessagePage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -50,6 +51,13 @@ export default function MessagePage() {
 
     loadData();
   }, []);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   const loadMessages = (conversation) => {
     // Load messages from localStorage or use mock messages
@@ -233,6 +241,7 @@ export default function MessagePage() {
                     </div>
                   );
                 })}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Message Input */}

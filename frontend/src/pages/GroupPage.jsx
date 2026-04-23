@@ -20,6 +20,7 @@ export default function GroupPage() {
       {
         id: '1',
         name: 'Nhóm lập trình Java',
+        slug: 'nhom-lap-trinh-java',
         description: 'Vừa vào',
         images: ['img1', 'img2', 'img3'],
         likes: 5,
@@ -29,6 +30,7 @@ export default function GroupPage() {
       {
         id: '2',
         name: 'Nhóm giải tích',
+        slug: 'nhom-giai-tich',
         description: '2 tuần trước',
         images: ['img1', 'img2', 'img3'],
         likes: 5,
@@ -38,6 +40,7 @@ export default function GroupPage() {
       {
         id: '3',
         name: 'Nhóm thiết kế đồ họa',
+        slug: 'nhom-thiet-ke-do-hoa',
         description: '1 ngày trước',
         images: ['img1', 'img2', 'img3'],
         likes: 12,
@@ -47,6 +50,7 @@ export default function GroupPage() {
       {
         id: '4',
         name: 'Nhóm phát triển web',
+        slug: 'nhom-phat-trien-web',
         description: '3 ngày trước',
         images: ['img1', 'img2', 'img3'],
         likes: 8,
@@ -141,7 +145,10 @@ export default function GroupPage() {
                   </div>
 
                   <div className="group-actions">
-                    <button className={`group-action-btn view-btn ${selectedNav === 'discover' && !group.isJoined ? 'join-btn' : ''}`}>
+                    <button 
+                      className={`group-action-btn view-btn ${selectedNav === 'discover' && !group.isJoined ? 'join-btn' : ''}`}
+                      onClick={() => navigate(`/group/${group.slug || group.name.toLowerCase().replace(/\s+/g, '-')}`)}
+                    >
                       <span>{selectedNav === 'discover' && !group.isJoined ? '➕' : '👁️'}</span> 
                       {selectedNav === 'discover' && !group.isJoined ? 'Tham gia' : 'Xem'}
                     </button>

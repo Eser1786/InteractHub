@@ -97,8 +97,17 @@ export default function GroupDetailPage() {
     const userData = JSON.parse(localStorage.getItem('user'));
     setCurrentUser(userData);
 
+    // Load joined groups from localStorage
+    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
+    
+    // Update isJoined status based on localStorage
+    const updatedMockGroups = mockGroups.map(group => ({
+      ...group,
+      isJoined: group.isJoined || userJoinedGroups.includes(group.id)
+    }));
+
     // Find group by slug
-    const foundGroup = mockGroups.find(g => g.slug === groupSlug);
+    const foundGroup = updatedMockGroups.find(g => g.slug === groupSlug);
     if (foundGroup) {
       setGroup(foundGroup);
       // Filter posts for this group

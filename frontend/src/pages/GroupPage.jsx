@@ -59,7 +59,16 @@ export default function GroupPage() {
       }
     ];
 
-    setGroups(mockGroups);
+    // Load joined groups from localStorage
+    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
+    
+    // Update isJoined status based on localStorage
+    const updatedGroups = mockGroups.map(group => ({
+      ...group,
+      isJoined: group.isJoined || userJoinedGroups.includes(group.id)
+    }));
+
+    setGroups(updatedGroups);
     setLoading(false);
   }, []);
 
@@ -71,8 +80,19 @@ export default function GroupPage() {
 
   const handleJoinGroup = (group) => {
     if (!group.isJoined) {
-      // TODO: Implement join group functionality
-      console.log('Join group:', group.name);
+      // Update group state to mark as joined
+      setGroups(prevGroups =>
+        prevGroups.map(g =>
+          g.id === group.id ? { ...g, isJoined: true } : g
+        )
+      );
+
+      // Save to localStorage
+      const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
+      if (!userJoinedGroups.includes(group.id)) {
+        userJoinedGroups.push(group.id);
+        localStorage.setItem('userJoinedGroups', JSON.stringify(userJoinedGroups));
+      }
     }
   };
 

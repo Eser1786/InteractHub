@@ -141,6 +141,10 @@ export default function GroupDetailPage() {
     navigate('/login');
   };
 
+  const handleBackToGroup = () => {
+    navigate('/group');
+  };
+
   const handleLike = (post) => {
     if (!currentUser) {
       console.warn('No current user');
@@ -200,7 +204,13 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleBackToGroup = () => {
+  const handleLeaveGroup = () => {
+    // Remove from joined groups
+    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
+    const updatedGroups = userJoinedGroups.filter(id => id !== group.id);
+    localStorage.setItem('userJoinedGroups', JSON.stringify(updatedGroups));
+    
+    // Navigate back to group list
     navigate('/group');
   };
 
@@ -260,10 +270,15 @@ export default function GroupDetailPage() {
         <main className="group-detail-main">
           {/* Group Header */}
           <div className="group-detail-header">
-            <button className="btn-back" onClick={handleBackToGroup}>
-              ← Quay lại
+            <div className="group-header-left">
+              <button className="btn-back" onClick={handleBackToGroup}>
+                ← Quay lại
+              </button>
+              <h1 className="group-title">{group.name}</h1>
+            </div>
+            <button className="btn-leave-group" onClick={handleLeaveGroup}>
+              ✕ Rời nhóm
             </button>
-            <h1 className="group-title">{group.name}</h1>
           </div>
 
           {/* Posts Feed */}

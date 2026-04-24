@@ -105,10 +105,17 @@
 .group-detail-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
   margin-bottom: 30px;
   padding-bottom: 20px;
   border-bottom: 1px solid #f0f0f0;
+}
+
+.group-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .btn-back {
@@ -125,6 +132,23 @@
 
 .btn-back:hover {
   background: #e0e0e0;
+}
+
+.btn-leave-group {
+  padding: 8px 16px;
+  background: #ff6b6b;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-leave-group:hover {
+  background: #ff5252;
 }
 
 .group-title {

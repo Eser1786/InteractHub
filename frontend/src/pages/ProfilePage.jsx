@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPosts, likePost, unlikePost } from '../api';
-import { getPostsForUser, getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
 import Header from '../components/Header';
 import '../styles/ProfilePage.css';
 
@@ -19,15 +18,8 @@ export default function ProfilePage() {
         setCurrentUser(userData);
 
         // Load user's posts
-        const userPosts = getPostsForUser(userData.id);
-        
-        // Apply liked posts from user's data
-        const userLikedPosts = getLikedPostsForUser(userData.id);
-        const updatedPostsData = userPosts.map(p => ({
-          ...p,
-          likedBy: userLikedPosts[p.id] || []
-        }));
-        setPosts(updatedPostsData || []);
+        const postsData = await getPosts();
+        setPosts(postsData || []);
       } catch (err) {
         console.error('Error loading profile:', err);
       } finally {
@@ -54,44 +46,15 @@ export default function ProfilePage() {
       const likedBy = post.likedBy || [];
       const isLiked = likedBy.includes(currentUser.id);
       
-      // Get current user data
-      const userData = getUserData(currentUser.id);
-      const likedPosts = userData.likedPosts || {};
-      
-      // Update liked posts
       if (isLiked) {
-        if (likedPosts[post.id]) {
-          likedPosts[post.id] = likedPosts[post.id].filter(id => id !== currentUser.id);
-          if (likedPosts[post.id].length === 0) {
-            delete likedPosts[post.id];
-          }
-        }
+        await unlikePost(post.id, currentUser.id);
       } else {
-        if (!likedPosts[post.id]) {
-          likedPosts[post.id] = [];
-        }
-        if (!likedPosts[post.id].includes(currentUser.id)) {
-          likedPosts[post.id].push(currentUser.id);
-        }
+        await likePost(post.id, currentUser.id);
       }
       
-      // Update user data
-      updateUserData(currentUser.id, { likedPosts });
-      
-      // Update local posts state
-      const updatedPosts = posts.map(p => {
-        if (p.id === post.id) {
-          return {
-            ...p,
-            likedBy: likedPosts[p.id] || [],
-            likesCount: (likedPosts[p.id] || []).length
-          };
-        }
-        return p;
-      });
-      setPosts(updatedPosts);
-      
-      console.log('Like/Unlike successful');
+      // Reload posts to get updated like count
+      const postsData = await getPosts();
+      setPosts(postsData || []);
     } catch (err) {
       console.error('Error liking post:', err);
     }

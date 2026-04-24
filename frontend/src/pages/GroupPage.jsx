@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getGroupMembershipsForUser } from '../utils/userDataManager';
 import Header from '../components/Header';
 import '../styles/GroupPage.css';
 
@@ -21,7 +20,6 @@ export default function GroupPage() {
       {
         id: '1',
         name: 'Nhóm lập trình Java',
-        slug: 'nhom-lap-trinh-java',
         description: 'Vừa vào',
         images: ['img1', 'img2', 'img3'],
         likes: 5,
@@ -31,7 +29,6 @@ export default function GroupPage() {
       {
         id: '2',
         name: 'Nhóm giải tích',
-        slug: 'nhom-giai-tich',
         description: '2 tuần trước',
         images: ['img1', 'img2', 'img3'],
         likes: 5,
@@ -41,7 +38,6 @@ export default function GroupPage() {
       {
         id: '3',
         name: 'Nhóm thiết kế đồ họa',
-        slug: 'nhom-thiet-ke-do-hoa',
         description: '1 ngày trước',
         images: ['img1', 'img2', 'img3'],
         likes: 12,
@@ -51,7 +47,6 @@ export default function GroupPage() {
       {
         id: '4',
         name: 'Nhóm phát triển web',
-        slug: 'nhom-phat-trien-web',
         description: '3 ngày trước',
         images: ['img1', 'img2', 'img3'],
         likes: 8,
@@ -60,17 +55,7 @@ export default function GroupPage() {
       }
     ];
 
-    // Load user's group memberships from userDataManager
-    const userGroupMemberships = getGroupMembershipsForUser(userData.id);
-    const userGroupIds = userGroupMemberships.map(g => g.id);
-    
-    // Update isJoined status based on user's memberships
-    const updatedGroups = mockGroups.map(g => ({
-      ...g,
-      isJoined: userGroupIds.includes(g.id)
-    }));
-
-    setGroups(updatedGroups);
+    setGroups(mockGroups);
     setLoading(false);
   }, []);
 
@@ -122,11 +107,7 @@ export default function GroupPage() {
               <span className="group-nav-icon">🔍</span>
               <span>Khám phá</span>
             </div>
-            <div 
-              className="group-nav-item create-group"
-              onClick={() => navigate('/creategroup')}
-              style={{ cursor: 'pointer' }}
-            >
+            <div className="group-nav-item create-group">
               <span className="group-nav-icon">➕</span>
               <span>Tạo nhóm mới</span>
             </div>
@@ -156,12 +137,8 @@ export default function GroupPage() {
                   </div>
 
                   <div className="group-actions">
-                    <button 
-                      className={`group-action-btn view-btn ${selectedNav === 'discover' && !group.isJoined ? 'join-btn' : ''}`}
-                      onClick={() => navigate(`/group/${group.slug || group.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                    >
-                      <span>{selectedNav === 'discover' && !group.isJoined ? '➕' : '👁️'}</span> 
-                      {selectedNav === 'discover' && !group.isJoined ? 'Tham gia' : 'Xem'}
+                    <button className="group-action-btn">
+                      <span>{group.isJoined ? '👁️' : '➕'}</span> {group.isJoined ? 'Xem' : 'Tham gia'}
                     </button>
                   </div>
                 </div>

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost } from '../api';
-import { getPostsForUser, getFriendsForUser, getLikedPostsForUser, updateUserData, getUserData, getAllUsers as getAllRegisteredUsers, addPost, addFriend } from '../utils/userDataManager';
 import Header from '../components/Header';
 import '../styles/HomePage.css';
 
@@ -27,61 +26,29 @@ export default function HomePage() {
     const loadData = async () => {
       try {
         const userData = JSON.parse(localStorage.getItem('user'));
-        
-        // Check if user is logged in
-        if (!userData || !userData.id) {
-          setError('Vui lòng đăng nhập');
-          setLoading(false);
-          return;
-        }
-        
         setCurrentUser(userData);
 
-        // Load user's posts
-        let userPosts = getPostsForUser(userData.id);
-        
-        // Update userName for all posts to match current user's fullName
-        userPosts = userPosts.map(p => ({
-          ...p,
-          userName: userData.fullName,
-          username: userData.fullName
-        }));
-        
-        // Apply liked posts from user's data and total likes from storage
-        const userLikedPosts = getLikedPostsForUser(userData.id);
-        const updatedPostsData = userPosts.map(p => {
-          const totalLikes = getTotalLikesForPost(p.id);
-          return {
-            ...p,
-            likedBy: userLikedPosts[p.id] || [],
-            likesCount: totalLikes > 0 ? totalLikes : p.likesCount
-          };
-        });
-        setPosts(updatedPostsData);
+        const postsData = await getPosts();
+        setPosts(postsData || []);
 
-        // Load user's friends
-        const userFriends = getFriendsForUser(userData.id);
-        setFriends(userFriends);
+        const friendsData = await getAcceptedFriends(userData.id, 1, 10);
+        setFriends(friendsData?.Data || []);
 
-        // Load all registered users as suggested users
-        const registeredUsers = getAllRegisteredUsers();
-        const currentUserFriendIds = userFriends.map(f => f.id);
-        const suggested = registeredUsers
-          .filter(u => u.id !== userData.id && !currentUserFriendIds.includes(u.id))
-          .slice(0, 5)
-          .map(u => ({
-            id: u.id,
-            fullName: u.fullName,
-            userName: u.userName,
-            avatar: '👤'
-          }));
+        const requestsData = await getPendingRequests(userData.id, 1, 20);
+        setPendingRequests(requestsData || []);
+
+        const allUsersData = await getAllUsers();
+        setAllUsers(allUsersData);
+        const friendIds = (friendsData?.Data || []).map(f => f.friendId);
+        const suggested = allUsersData.filter(
+          u => u.id !== userData.id && !friendIds.includes(u.id)
+        ).slice(0, 5);
         setSuggestedUsers(suggested);
-        setAllUsers(registeredUsers);
 
         // Load stories from friends
-        const friendStories = userFriends.map((friend, idx) => ({
-          id: friend.id,
-          userName: friend.name || friend.fullName || `Bạn ${idx + 1}`,
+        const friendStories = (friendsData?.Data || []).map((friend, idx) => ({
+          id: friend.friendId,
+          userName: friend.friendName || `Bạn ${idx + 1}`,
           createdAt: new Date().toISOString()
         }));
         setStories(friendStories);
@@ -105,32 +72,19 @@ export default function HomePage() {
 
     setPosting(true);
     try {
-      const newPost = {
-        id: `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      const newPost = await createPost({
         content: newPostContent,
-        imageUrl: newPostImage || null,
-        createdAt: new Date().toISOString(),
-        userId: currentUser.id,
-        userName: currentUser.fullName,
-        avatar: '👤',
-        likesCount: 0,
-        commentsCount: 0,
-        likedBy: []
-      };
-      
-      // Add post to user data
-      addPost(currentUser.id, newPost);
-      
-      // Save total likes for this new post
-      saveTotalLikesForPost(newPost.id, 0);
+        imageUrl: newPostImage
+      });
       
       setNewPostContent('');
       setNewPostImage('');
       setPostType('text');
       
-      // Add new post to the beginning of the list
-      setPosts([newPost, ...posts]);
-      console.log('Post created successfully');
+      // Add new post to the beginning of the list with current timestamp
+      if (newPost) {
+        setPosts([newPost, ...posts]);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -144,62 +98,6 @@ export default function HomePage() {
     navigate('/login');
   };
 
-  const handleAddFriend = (userToAdd) => {
-    if (!currentUser) return;
-    
-    try {
-      // Add friend to current user's friends list
-      addFriend(currentUser.id, {
-        id: userToAdd.id,
-        fullName: userToAdd.fullName,
-        userName: userToAdd.userName,
-        avatar: '👤'
-      });
-      
-      // Update local friends state
-      const newFriends = [...friends, {
-        id: userToAdd.id,
-        fullName: userToAdd.fullName,
-        userName: userToAdd.userName,
-        avatar: '👤'
-      }];
-      setFriends(newFriends);
-      
-      // Reload suggested users to remove the just-added friend
-      const registeredUsers = getAllRegisteredUsers();
-      const currentUserFriendIds = newFriends.map(f => f.id);
-      const suggested = registeredUsers
-        .filter(u => u.id !== currentUser.id && !currentUserFriendIds.includes(u.id))
-        .slice(0, 5)
-        .map(u => ({
-          id: u.id,
-          fullName: u.fullName,
-          userName: u.userName,
-          avatar: '👤'
-        }));
-      setSuggestedUsers(suggested);
-    } catch (err) {
-      console.error('Error adding friend:', err);
-    }
-  };
-
-  // Helper function to get total likes for a post from all users
-  const getTotalLikesForPost = (postId) => {
-    const likeCounts = JSON.parse(localStorage.getItem('post_likes') || '{}');
-    return likeCounts[postId] || 0;
-  };
-
-  // Helper function to save total likes for a post
-  const saveTotalLikesForPost = (postId, count) => {
-    const likeCounts = JSON.parse(localStorage.getItem('post_likes') || '{}');
-    if (count > 0) {
-      likeCounts[postId] = count;
-    } else {
-      delete likeCounts[postId];
-    }
-    localStorage.setItem('post_likes', JSON.stringify(likeCounts));
-  };
-
   const handleLike = async (post) => {
     if (!currentUser) {
       console.warn('No current user');
@@ -209,52 +107,18 @@ export default function HomePage() {
     try {
       const likedBy = post.likedBy || [];
       const isLiked = likedBy.includes(currentUser.id);
+      console.log('Like status:', { postId: post.id, userId: currentUser.id, isLiked, likedBy });
       
-      // Get current user data
-      const userData = getUserData(currentUser.id);
-      const likedPosts = userData.likedPosts || {};
-      
-      let newLikesCount = post.likesCount || 0;
-      
-      // Update liked posts
       if (isLiked) {
-        if (likedPosts[post.id]) {
-          likedPosts[post.id] = likedPosts[post.id].filter(id => id !== currentUser.id);
-          if (likedPosts[post.id].length === 0) {
-            delete likedPosts[post.id];
-          }
-        }
-        newLikesCount = Math.max(0, newLikesCount - 1);
+        await unlikePost(post.id, currentUser.id);
       } else {
-        if (!likedPosts[post.id]) {
-          likedPosts[post.id] = [];
-        }
-        if (!likedPosts[post.id].includes(currentUser.id)) {
-          likedPosts[post.id].push(currentUser.id);
-        }
-        newLikesCount = newLikesCount + 1;
+        await likePost(post.id, currentUser.id);
       }
       
-      // Update user data
-      updateUserData(currentUser.id, { likedPosts });
-      
-      // Save total likes count for this post
-      saveTotalLikesForPost(post.id, newLikesCount);
-      
-      // Update local posts state
-      const updatedPosts = posts.map(p => {
-        if (p.id === post.id) {
-          return {
-            ...p,
-            likedBy: likedPosts[p.id] || [],
-            likesCount: newLikesCount
-          };
-        }
-        return p;
-      });
-      setPosts(updatedPosts);
-      
-      console.log('Like/Unlike successful');
+      // Reload posts to get updated like count
+      const postsData = await getPosts();
+      setPosts(postsData || []);
+      console.log('Posts updated after like/unlike');
     } catch (err) {
       console.error('Error liking post:', err);
     }
@@ -264,36 +128,23 @@ export default function HomePage() {
     return <div className="home-container"><p>Đang tải...</p></div>;
   }
 
-  if (error) {
-    return (
-      <div className="home-container">
-        <div style={{ padding: '20px', color: 'red' }}>
-          <h2>Lỗi:</h2>
-          <p>{error}</p>
-          <button onClick={() => navigate('/login')}>Quay lại đăng nhập</button>
-        </div>
-      </div>
-    );
-  }
-
   // Debug: log all users
   console.log('=== DEBUG: All Users ===');
-  console.log('Total allUsers:', allUsers.length);
-  console.log('allUsers content:', allUsers);
+  console.log('Total users:', allUsers.length);
+  console.log('All users:', allUsers);
   console.log('Current user:', currentUser);
-  console.log('Current user ID:', currentUser?.id);
   console.log('Friends:', friends);
-  console.log('Search Query:', searchQuery);
 
-  const filteredUsersList = searchQuery.trim() ? 
+  const filteredUsers = searchQuery.trim() ? 
     allUsers.filter(u => 
       u.id !== currentUser?.id &&
-      !friends.some(f => f.id === u.id) &&
+      !friends.some(f => f.friendId === u.id) &&
       (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
        u.userName.toLowerCase().includes(searchQuery.toLowerCase()))
     ) : suggestedUsers;
 
-  console.log('Final filtered users list:', filteredUsersList);
+  console.log('Search query:', searchQuery);
+  console.log('Filtered users:', filteredUsers);
 
   return (
     <div className="home-wrapper">
@@ -394,12 +245,7 @@ export default function HomePage() {
 
                 {/* Friend Stories */}
                 {stories.map((story) => (
-                  <div 
-                    key={story.id} 
-                    className="story-card"
-                    onClick={() => navigate('/story')}
-                    style={{ cursor: 'pointer' }}
-                  >
+                  <div key={story.id} className="story-card">
                     <div className="story-background"></div>
                     <div className="story-avatar">👤</div>
                     <p className="story-label">{story.userName}</p>
@@ -419,7 +265,7 @@ export default function HomePage() {
                     <div className="post-user-info">
                       <div className="post-avatar">👤</div>
                       <div className="post-user-details">
-                        <p className="post-username">{post.userName || post.username || 'Người dùng'}</p>
+                        <p className="post-username">{post.username || 'Người dùng'}</p>
                         <p className="post-time">
                           {new Date(post.createdAt).toLocaleDateString('vi-VN')}
                         </p>
@@ -478,19 +324,14 @@ export default function HomePage() {
                 </div>
                 
                 <div className="search-results">
-                  {filteredUsersList.length > 0 ? (
+                  {filteredUsers.length > 0 ? (
                     <>
                       {searchQuery.trim() === '' && <h4 className="suggestions-title">Gợi ý bạn bè</h4>}
-                      {filteredUsersList.map(user => (
+                      {filteredUsers.map(user => (
                         <div key={user.id} className="suggested-friend-card">
                           <div className="friend-avatar">👤</div>
                           <p className="friend-name">{user.fullName}</p>
-                          <button 
-                            className="btn-add-friend"
-                            onClick={() => handleAddFriend(user)}
-                          >
-                            Kết bạn
-                          </button>
+                          <button className="btn-add-friend">Kết bạn</button>
                         </div>
                       ))}
                     </>

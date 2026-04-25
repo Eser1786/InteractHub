@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPosts, likePost, unlikePost } from '../api';
 import Header from '../components/Header';
+import CommentSection from '../components/CommentSection';
 import '../styles/ProfilePage.css';
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [selectedTab, setSelectedTab] = useState('all');
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
+  const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -29,6 +32,10 @@ export default function ProfilePage() {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('postComments', JSON.stringify(commentsByPost));
+  }, [commentsByPost]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -58,6 +65,27 @@ export default function ProfilePage() {
     } catch (err) {
       console.error('Error liking post:', err);
     }
+  };
+
+  const handleToggleComments = (post) => {
+    setActiveCommentPostId((current) => (current === post.id ? null : post.id));
+  };
+
+  const handleAddComment = (postId, content) => {
+    const newComment = {
+      id: `${postId}-${Date.now()}`,
+      userName: currentUser?.fullName || currentUser?.userName || 'Bạn',
+      content,
+      createdAt: 'Vừa xong',
+      replies: []
+    };
+
+    setCommentsByPost((prev) => ({
+      ...prev,
+      [postId]: [newComment, ...(prev[postId] || [])]
+    }));
+
+    setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p));
   };
 
   const filteredPosts = selectedTab === 'all' 
@@ -164,10 +192,18 @@ export default function ProfilePage() {
                       <span>{(post.likedBy || []).includes(currentUser?.id) ? '❤️' : '🤍'}</span> 
                       {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
-                    <button className="post-action-btn-profile">
+                    <button className="post-action-btn-profile" onClick={() => handleToggleComments(post)}>
                       <span>💬</span> Bình luận
                     </button>
                   </div>
+                  {activeCommentPostId === post.id && (
+                    <CommentSection
+                      post={post}
+                      comments={commentsByPost[post.id] || []}
+                      onClose={() => setActiveCommentPostId(null)}
+                      onAddComment={handleAddComment}
+                    />
+                  )}
                 </div>
               ))
             )}

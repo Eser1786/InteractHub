@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost } from '../api';
 import Header from '../components/Header';
+import CommentSection from '../components/CommentSection';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
@@ -20,6 +21,8 @@ export default function HomePage() {
   const [selectedNav, setSelectedNav] = useState('friends');
   const [searchQuery, setSearchQuery] = useState('');
   const [stories, setStories] = useState([]);
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
+  const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -62,6 +65,10 @@ export default function HomePage() {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('postComments', JSON.stringify(commentsByPost));
+  }, [commentsByPost]);
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
@@ -122,6 +129,27 @@ export default function HomePage() {
     } catch (err) {
       console.error('Error liking post:', err);
     }
+  };
+
+  const handleToggleComments = (post) => {
+    setActiveCommentPostId((current) => (current === post.id ? null : post.id));
+  };
+
+  const handleAddComment = (postId, content) => {
+    const newComment = {
+      id: `${postId}-${Date.now()}`,
+      userName: currentUser?.fullName || currentUser?.userName || 'Bạn',
+      content,
+      createdAt: 'Vừa xong',
+      replies: []
+    };
+
+    setCommentsByPost((prev) => ({
+      ...prev,
+      [postId]: [newComment, ...(prev[postId] || [])]
+    }));
+
+    setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p));
   };
 
   if (loading) {
@@ -293,13 +321,21 @@ export default function HomePage() {
                       <span>{(post.likedBy || []).includes(currentUser?.id) ? '❤️' : '🤍'}</span> 
                       {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
-                    <button className="post-action-btn">
+                    <button className="post-action-btn" onClick={() => handleToggleComments(post)}>
                       <span>💬</span> Bình luận
                     </button>
                     <button className="post-action-btn">
                       <span>↗️</span> Chia sẻ
                     </button>
                   </div>
+                  {activeCommentPostId === post.id && (
+                    <CommentSection
+                      post={post}
+                      comments={commentsByPost[post.id] || []}
+                      onClose={() => setActiveCommentPostId(null)}
+                      onAddComment={handleAddComment}
+                    />
+                  )}
                 </div>
               ))
             )}

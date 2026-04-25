@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
 import { useGroups } from '../contexts/GroupsContext';
 import Header from '../components/Header';
+import CommentSection from '../components/CommentSection';
 import '../styles/GroupDetailPage.css';
 
 export default function GroupDetailPage() {
@@ -10,6 +11,8 @@ export default function GroupDetailPage() {
   const [group, setGroup] = useState(null);
   const [posts, setPosts] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
+  const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { groups, leaveGroup } = useGroups();
@@ -92,6 +95,10 @@ export default function GroupDetailPage() {
     setLoading(false);
   }, [groupSlug, groups]);
 
+  useEffect(() => {
+    localStorage.setItem('postComments', JSON.stringify(commentsByPost));
+  }, [commentsByPost]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -165,6 +172,27 @@ export default function GroupDetailPage() {
     leaveGroup(group.id);
     // Navigate back to group list with discover tab selected
     navigate('/group', { state: { tab: 'discover' } });
+  };
+
+  const handleToggleComments = (post) => {
+    setActiveCommentPostId((current) => (current === post.id ? null : post.id));
+  };
+
+  const handleAddComment = (postId, content) => {
+    const newComment = {
+      id: `${postId}-${Date.now()}`,
+      userName: currentUser?.fullName || currentUser?.userName || 'Bạn',
+      content,
+      createdAt: 'Vừa xong',
+      replies: []
+    };
+
+    setCommentsByPost((prev) => ({
+      ...prev,
+      [postId]: [newComment, ...(prev[postId] || [])]
+    }));
+
+    setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p));
   };
 
   if (loading) {
@@ -273,13 +301,21 @@ export default function GroupDetailPage() {
                       <span>{(post.likedBy || []).includes(currentUser?.id) ? '❤️' : '🤍'}</span> 
                       {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
-                    <button className="post-action-btn">
+                    <button className="post-action-btn" onClick={() => handleToggleComments(post)}>
                       <span>💬</span> Bình luận
                     </button>
                     <button className="post-action-btn">
                       <span>↗️</span> Chia sẻ
                     </button>
                   </div>
+                  {activeCommentPostId === post.id && (
+                    <CommentSection
+                      post={post}
+                      comments={commentsByPost[post.id] || []}
+                      onClose={() => setActiveCommentPostId(null)}
+                      onAddComment={handleAddComment}
+                    />
+                  )}
                 </div>
               ))
             )}

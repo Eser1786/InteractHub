@@ -33,7 +33,7 @@ export default function MessagePage() {
           lastTime: ['2 phút', '5 phút', '30 phút', '1 giờ'][idx % 4],
           isUnread: idx % 2 === 0,
           isActive: idx % 3 !== 0,
-          avatar: '👤'
+          avatar: <i className="fa-solid fa-user"></i>
         }));
 
         setConversations(conversationList);

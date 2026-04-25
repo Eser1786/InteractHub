@@ -60,7 +60,7 @@ export default function CreateGroupPage() {
 
           {/* Current User */}
           <div className="member-item current-member">
-            <div className="member-avatar">👤</div>
+            <div className="member-avatar"><i className="fa-solid fa-user"></i></div>
             <div className="member-info">
               <p className="member-name">{currentUser?.fullName || 'Người dùng'}</p>
               <p className="member-status">Quản lý nhóm</p>
@@ -84,7 +84,7 @@ export default function CreateGroupPage() {
           {/* Additional Members */}
           {members.slice(1).map((member) => (
             <div key={member.id} className="member-item">
-              <div className="member-avatar">👤</div>
+              <div className="member-avatar"><i className="fa-solid fa-user"></i></div>
               <div className="member-info">
                 <p className="member-name">{member.fullName}</p>
               </div>
@@ -147,7 +147,7 @@ export default function CreateGroupPage() {
             {/* Comment Section */}
             <div className="comment-section">
               <div className="comment-input-wrapper">
-                <div className="comment-avatar">👤</div>
+                <div className="comment-avatar"><i className="fa-solid fa-user"></i></div>
                 <input
                   type="text"
                   value={commentInput}

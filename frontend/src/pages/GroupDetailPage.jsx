@@ -310,7 +310,7 @@ export default function GroupDetailPage() {
           <section className="create-post-section">
             <div className="create-post-header">
               <div className="user-avatar">
-                <div className="avatar-placeholder">👤</div>
+                <div className="avatar-placeholder"><i className="fa-solid fa-user"></i></div>
               </div>
               <p className="create-post-prompt">
                 Bạn đang nghĩ gì? Hãy chia sẻ cảm nghĩ của bạn đến thành viên nhóm...
@@ -322,7 +322,7 @@ export default function GroupDetailPage() {
                 className={`tab ${postType === 'text' ? 'active' : ''}`}
                 onClick={() => setPostType('text')}
               >
-                <span className="tab-icon">📝</span>
+                <span className="tab-icon"><i className="fa-solid fa-pen"></i></span>
                 <span>Văn bản</span>
               </button>
               <button 
@@ -378,7 +378,7 @@ export default function GroupDetailPage() {
                 <div key={post.id} className="post-card">
                   <div className="post-header">
                     <div className="post-user-info">
-                      <div className="post-avatar">👤</div>
+                      <div className="post-avatar"><i className="fa-solid fa-user"></i></div>
                       <div className="post-user-details">
                         <p className="post-username">{post.username}</p>
                         <p className="post-time">
@@ -397,7 +397,7 @@ export default function GroupDetailPage() {
 
                   <div className="post-stats">
                     <span>❤️ {post.likesCount} lượt thích</span>
-                    <span>💬 {(commentsByPost[post.id]?.length ?? 0)} bình luận</span>
+                    <span><i className="fa-solid fa-comments"></i> {(commentsByPost[post.id]?.length ?? 0)} bình luận</span>
                   </div>
 
                   <div className="post-actions">
@@ -409,7 +409,7 @@ export default function GroupDetailPage() {
                       {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn" onClick={() => handleToggleComments(post)}>
-                      <span>💬</span> Bình luận
+                      <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
                     <button className="post-action-btn">
                       <span>↗️</span> Chia sẻ

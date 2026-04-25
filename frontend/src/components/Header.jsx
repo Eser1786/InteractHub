@@ -1,4 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import logoImage from '../assets/logo.png';
+import logoTextImage from '../assets/chữ logo.png';
 import '../styles/Header.css';
 
 export default function Header({ onLogout, showControls = true }) {
@@ -19,8 +21,8 @@ export default function Header({ onLogout, showControls = true }) {
     <header className="header">
       <div className="header-content">
         <div className="header-logo">
-          <div className="logo-circle"></div>
-          <span className="logo-text">Logo</span>
+          <img src={logoImage} alt="Logo icon" className="logo-icon" />
+          <img src={logoTextImage} alt="Logo text" className="logo-text-image" />
         </div>
 
         {showControls && (
@@ -47,28 +49,28 @@ export default function Header({ onLogout, showControls = true }) {
                 onClick={() => navigate('/group')}
                 title="Groups"
               >
-                <span className="icon-friends">👥</span>
+                <span className="icon-friends"><i className="fa-solid fa-users"></i></span>
               </button>
               <button 
                 className={`header-icon-btn ${location.pathname === '/message' ? 'active' : ''}`}
                 onClick={() => navigate('/message')}
                 title="Messages"
               >
-                <span className="icon-messages">✉️</span>
+                <span className="icon-messages"><i class="fa-regular fa-envelope"></i></span>
               </button>
               <button 
                 className="header-icon-btn logout-btn" 
                 onClick={handleLogout}
                 title="Logout"
               >
-                <span className="icon-logout">🚪</span>
+                <span className="icon-logout"><i className="fa-solid fa-arrow-right-from-bracket"></i></span>
               </button>
               <button 
                 className={`header-icon-btn profile-btn ${location.pathname === '/profile' ? 'active' : ''}`}
                 onClick={() => navigate('/profile')}
                 title="Profile"
               >
-                <span className="icon-profile">👤</span>
+                <span className="icon-profile"><i className="fa-solid fa-user"></i></span>
               </button>
             </div>
           </>

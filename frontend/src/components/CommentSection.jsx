@@ -71,7 +71,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
             <div className="comment-thread">
               {comments.map((comment) => (
                 <div key={comment.id} className="comment-item">
-                  <div className="comment-avatar">👤</div>
+                  <div className="comment-avatar"><i className="fa-solid fa-user"></i></div>
                   <div className="comment-content-wrapper">
                     <div className="comment-top-row">
                       <strong>{comment.userName}</strong>
@@ -86,7 +86,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
                       <div className="comment-replies">
                         {comment.replies.map((reply) => (
                           <div key={reply.id} className="comment-reply-item">
-                            <div className="comment-avatar">👤</div>
+                            <div className="comment-avatar"><i className="fa-solid fa-user"></i></div>
                             <div className="comment-content-wrapper">
                               <div className="comment-top-row">
                                 <strong>{reply.userName}</strong>
@@ -110,7 +110,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
         </div>
 
         <div className="comment-input-wrapper">
-          <div className="comment-avatar">👤</div>
+          <div className="comment-avatar"><i className="fa-solid fa-user"></i></div>
           <input
             type="text"
             value={newComment}

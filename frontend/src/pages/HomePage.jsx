@@ -183,7 +183,7 @@ export default function HomePage() {
         <aside className="sidebar-left">
           <nav className="sidebar-nav">
             <div className={`nav-item ${selectedNav === 'friends' ? 'active' : ''}`} onClick={() => setSelectedNav('friends')}>
-              <span className="nav-icon">👥</span>
+              <span className="nav-icon"><i class="fa-solid fa-people-pulling"></i></span>
               <span>Tất cả bạn bè</span>
             </div>
             <div className={`nav-item ${selectedNav === 'requests' ? 'active' : ''}`} onClick={() => setSelectedNav('requests')}>
@@ -204,7 +204,7 @@ export default function HomePage() {
           <section className="create-post-section">
             <div className="create-post-header">
               <div className="user-avatar">
-                <div className="avatar-placeholder">👤</div>
+                <div className="avatar-placeholder"><i className="fa-solid fa-user"></i></div>
               </div>
               <p className="create-post-prompt">
                 Bạn đang nghĩ gì? Hãy chia sẻ cảm nghĩ của bạn đến bạn bè thông qua...
@@ -216,7 +216,7 @@ export default function HomePage() {
                 className={`tab ${postType === 'text' ? 'active' : ''}`}
                 onClick={() => setPostType('text')}
               >
-                <span className="tab-icon">📝</span>
+                <span className="tab-icon"><i className="fa-solid fa-pen"></i></span>
                 <span>Văn bản</span>
               </button>
               <button 
@@ -276,7 +276,7 @@ export default function HomePage() {
                 {stories.map((story) => (
                   <div key={story.id} className="story-card">
                     <div className="story-background"></div>
-                    <div className="story-avatar">👤</div>
+                    <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
                     <p className="story-label">{story.userName}</p>
                   </div>
                 ))}
@@ -292,7 +292,7 @@ export default function HomePage() {
                 <div key={post.id} className="post-card">
                   <div className="post-header">
                     <div className="post-user-info">
-                      <div className="post-avatar">👤</div>
+                      <div className="post-avatar"><i className="fa-solid fa-user"></i></div>
                       <div className="post-user-details">
                         <p className="post-username">{post.username || 'Người dùng'}</p>
                         <p className="post-time">
@@ -311,7 +311,7 @@ export default function HomePage() {
 
                   <div className="post-stats">
                     <span>❤️ {post.likesCount} lượt thích</span>
-                    <span>💬 {(commentsByPost[post.id]?.length ?? 0)} bình luận</span>
+                    <span><i className="fa-solid fa-comments"></i> {(commentsByPost[post.id]?.length ?? 0)} bình luận</span>
                   </div>
 
                   <div className="post-actions">
@@ -323,7 +323,7 @@ export default function HomePage() {
                       {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn" onClick={() => handleToggleComments(post)}>
-                      <span>💬</span> Bình luận
+                      <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
                     <button className="post-action-btn">
                       <span>↗️</span> Chia sẻ
@@ -366,7 +366,7 @@ export default function HomePage() {
                       {searchQuery.trim() === '' && <h4 className="suggestions-title">Gợi ý bạn bè</h4>}
                       {filteredUsers.map(user => (
                         <div key={user.id} className="suggested-friend-card">
-                          <div className="friend-avatar">👤</div>
+                          <div className="friend-avatar"><i className="fa-solid fa-user"></i></div>
                           <p className="friend-name">{user.fullName}</p>
                           <button className="btn-add-friend">Kết bạn</button>
                         </div>
@@ -390,7 +390,7 @@ export default function HomePage() {
                   pendingRequests.map((request) => (
                     <div key={request.id} className="friend-request-item">
                       <div className="request-header">
-                        <div className="friend-avatar-small">👤</div>
+                        <div className="friend-avatar-small"><i className="fa-solid fa-user"></i></div>
                         <p className="friend-name-small">{request.requesterName || 'Người dùng'}</p>
                       </div>
                       <div className="request-actions">
@@ -411,7 +411,7 @@ export default function HomePage() {
                 ) : (
                   friends.map((friend) => (
                     <div key={friend.id} className="friend-item">
-                      <div className="friend-avatar-small">👤</div>
+                      <div className="friend-avatar-small"><i className="fa-solid fa-user"></i></div>
                       <p className="friend-name-small">{friend.friendName || 'Bạn'}</p>
                     </div>
                   ))

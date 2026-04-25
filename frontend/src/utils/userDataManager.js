@@ -36,8 +36,8 @@ export const createUser = (userData) => {
 export const initializeUserData = (userId) => {
   // Create mock friends for new user
   const mockFriends = [
-    { id: 'friend1', name: 'Nguyễn Văn A', fullName: 'Nguyễn Văn A', avatar: '👤', isActive: true },
-    { id: 'friend2', name: 'Trần Thị B', fullName: 'Trần Thị B', avatar: '👤', isActive: false },
+    { id: 'friend1', name: 'Nguyễn Văn A', fullName: 'Nguyễn Văn A', avatar: 'user', isActive: true },
+    { id: 'friend2', name: 'Trần Thị B', fullName: 'Trần Thị B', avatar: 'user', isActive: false },
   ];
   
   // Create mock posts for new user

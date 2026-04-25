@@ -106,7 +106,7 @@ export default function ProfilePage() {
           <div className="profile-cover"></div>
           
           <div className="profile-info-section">
-            <div className="profile-avatar-large">👤</div>
+            <div className="profile-avatar-large"><i className="fa-solid fa-user"></i></div>
             
             <div className="profile-user-info">
               <h1 className="profile-username">{currentUser?.fullName || currentUser?.userName}</h1>
@@ -150,7 +150,7 @@ export default function ProfilePage() {
                 <div key={post.id} className="profile-post-card">
                   <div className="post-header-profile">
                     <div className="post-user-info-profile">
-                      <div className="post-avatar-profile">👤</div>
+                      <div className="post-avatar-profile"><i className="fa-solid fa-user"></i></div>
                       <div className="post-user-details-profile">
                         <p className="post-username-profile">{post.username || 'Người dùng'}</p>
                         <p className="post-time-profile">
@@ -182,7 +182,7 @@ export default function ProfilePage() {
 
                   <div className="post-stats-profile">
                     <span>❤️ {post.likesCount}</span>
-                    <span>{commentsByPost[post.id]?.length ?? 0} Bình luận</span>
+                    <span><i className="fa-solid fa-comments"></i> {commentsByPost[post.id]?.length ?? 0} Bình luận</span>
                   </div>
 
                   <div className="post-actions-profile">
@@ -194,7 +194,7 @@ export default function ProfilePage() {
                       {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn-profile" onClick={() => handleToggleComments(post)}>
-                      <span>💬</span> Bình luận
+                      <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
                   </div>
                   {activeCommentPostId === post.id && (

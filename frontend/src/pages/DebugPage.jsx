@@ -44,8 +44,8 @@ export default function DebugPage() {
     const userData = JSON.parse(localStorage.getItem(`user_data_${user.id}`) || '{}');
     if (!userData.posts || !userData.friends) {
       const mockFriends = [
-        { id: 'friend1', name: 'Nguyễn Văn A', fullName: 'Nguyễn Văn A', avatar: '👤', isActive: true },
-        { id: 'friend2', name: 'Trần Thị B', fullName: 'Trần Thị B', avatar: '👤', isActive: false },
+        { id: 'friend1', name: 'Nguyễn Văn A', fullName: 'Nguyễn Văn A', avatar: <i className="fa-solid fa-user"></i>, isActive: true },
+        { id: 'friend2', name: 'Trần Thị B', fullName: 'Trần Thị B', avatar: <i className="fa-solid fa-user"></i>, isActive: false },
       ];
       const mockPosts = [
         {
@@ -84,7 +84,7 @@ export default function DebugPage() {
         {/* Current User */}
         {currentUser && (
           <section className="debug-section current-user">
-            <h2>👤 Tài khoản hiện tại:</h2>
+            <h2><i className="fa-solid fa-user"></i> Tài khoản hiện tại:</h2>
             <div className="user-card highlighted">
               <p><strong>Tên:</strong> {currentUser.fullName}</p>
               <p><strong>Username:</strong> {currentUser.userName}</p>
@@ -108,7 +108,7 @@ export default function DebugPage() {
               {allUsers.map(user => (
                 <div key={user.id} className="user-card">
                   <div className="user-info">
-                    <p><strong>👤 Tên:</strong> {user.fullName}</p>
+                    <p><strong><i className="fa-solid fa-user"></i> Tên:</strong> {user.fullName}</p>
                     <p><strong>📧 Username:</strong> {user.userName}</p>
                     <p><strong>📨 Email:</strong> {user.email}</p>
                     <p><strong>🔑 Password:</strong> {user.password}</p>

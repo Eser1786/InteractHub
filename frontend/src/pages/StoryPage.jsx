@@ -21,7 +21,7 @@ export default function StoryPage() {
         id: '1',
         userId: '2',
         userName: 'Trần Siu Ngàu',
-        userAvatar: '👤',
+        userAvatar: <i className="fa-solid fa-user"></i>,
         content: 'Hôm nay thời tiết tuyệt vời!',
         imageUrl: null,
         createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -31,7 +31,7 @@ export default function StoryPage() {
         id: '2',
         userId: '3',
         userName: 'Thái Anh Gay',
-        userAvatar: '👤',
+        userAvatar: <i className="fa-solid fa-user"></i>,
         content: 'Vừa mới hoàn thành một dự án lớn 🎉',
         imageUrl: null,
         createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
@@ -41,7 +41,7 @@ export default function StoryPage() {
         id: '3',
         userId: '4',
         userName: 'Meo Lành Mạnh',
-        userAvatar: '👤',
+        userAvatar: <i className="fa-solid fa-user"></i>,
         content: 'Đi du lịch tại đảo Phú Quốc',
         imageUrl: 'https://via.placeholder.com/400x300?text=Beach',
         createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
@@ -51,7 +51,7 @@ export default function StoryPage() {
         id: '4',
         userId: '5',
         userName: 'Sang Không Long',
-        userAvatar: '👤',
+        userAvatar: <i className="fa-solid fa-user"></i>,
         content: 'Mình yêu lập trình React!',
         imageUrl: null,
         createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
@@ -123,7 +123,7 @@ export default function StoryPage() {
                   className={`story-item ${currentStoryIndex === idx ? 'active' : ''}`}
                   onClick={() => setCurrentStoryIndex(idx)}
                 >
-                  <div className="story-avatar">👤</div>
+                  <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
                   <span className="story-name">{story.userName}</span>
                 </div>
               ))}
@@ -138,7 +138,7 @@ export default function StoryPage() {
               {/* Story Header */}
               <div className="story-header">
                 <div className="story-user-info">
-                  <div className="story-user-avatar">👤</div>
+                  <div className="story-user-avatar"><i className="fa-solid fa-user"></i></div>
                   <div className="story-user-details">
                     <p className="story-username">{activeStory.userName}</p>
                     <p className="story-time">

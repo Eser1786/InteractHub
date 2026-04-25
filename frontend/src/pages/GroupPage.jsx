@@ -1,76 +1,29 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useGroups } from '../contexts/GroupsContext';
 import Header from '../components/Header';
 import '../styles/GroupPage.css';
 
 export default function GroupPage() {
-  const [groups, setGroups] = useState([]);
   const [selectedNav, setSelectedNav] = useState('my-groups');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { groups, joinGroup } = useGroups();
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
     setCurrentUser(userData);
 
-    // Mock groups data
-    const mockGroups = [
-      {
-        id: '1',
-        name: 'Nhóm lập trình Java',
-        slug: 'nhom-lap-trinh-java',
-        description: 'Vừa vào',
-        images: ['img1', 'img2', 'img3'],
-        likes: 5,
-        comments: 36,
-        isJoined: true
-      },
-      {
-        id: '2',
-        name: 'Nhóm giải tích',
-        slug: 'nhom-giai-tich',
-        description: '2 tuần trước',
-        images: ['img1', 'img2', 'img3'],
-        likes: 5,
-        comments: 36,
-        isJoined: true
-      },
-      {
-        id: '3',
-        name: 'Nhóm thiết kế đồ họa',
-        slug: 'nhom-thiet-ke-do-hoa',
-        description: '1 ngày trước',
-        images: ['img1', 'img2', 'img3'],
-        likes: 12,
-        comments: 48,
-        isJoined: false
-      },
-      {
-        id: '4',
-        name: 'Nhóm phát triển web',
-        slug: 'nhom-phat-trien-web',
-        description: '3 ngày trước',
-        images: ['img1', 'img2', 'img3'],
-        likes: 8,
-        comments: 24,
-        isJoined: false
-      }
-    ];
+    // Check if there's a tab to select from navigation state
+    if (location.state?.tab) {
+      setSelectedNav(location.state.tab);
+    }
 
-    // Load joined groups from localStorage
-    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
-    
-    // Update isJoined status based on localStorage
-    const updatedGroups = mockGroups.map(group => ({
-      ...group,
-      isJoined: group.isJoined || userJoinedGroups.includes(group.id)
-    }));
-
-    setGroups(updatedGroups);
     setLoading(false);
-  }, []);
+  }, [location.state]);
 
   const handleViewGroup = (group) => {
     if (group.isJoined) {
@@ -80,19 +33,7 @@ export default function GroupPage() {
 
   const handleJoinGroup = (group) => {
     if (!group.isJoined) {
-      // Update group state to mark as joined
-      setGroups(prevGroups =>
-        prevGroups.map(g =>
-          g.id === group.id ? { ...g, isJoined: true } : g
-        )
-      );
-
-      // Save to localStorage
-      const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
-      if (!userJoinedGroups.includes(group.id)) {
-        userJoinedGroups.push(group.id);
-        localStorage.setItem('userJoinedGroups', JSON.stringify(userJoinedGroups));
-      }
+      joinGroup(group.id);
     }
   };
 

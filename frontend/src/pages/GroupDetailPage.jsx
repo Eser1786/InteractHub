@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
+import { useGroups } from '../contexts/GroupsContext';
 import Header from '../components/Header';
 import '../styles/GroupDetailPage.css';
 
@@ -11,42 +12,7 @@ export default function GroupDetailPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
-  // Mock groups data - same as in GroupPage
-  const mockGroups = [
-    {
-      id: '1',
-      name: 'Nhóm lập trình Java',
-      slug: 'nhom-lap-trinh-java',
-      description: 'Vừa vào',
-      images: ['img1', 'img2', 'img3'],
-      isJoined: true
-    },
-    {
-      id: '2',
-      name: 'Nhóm giải tích',
-      slug: 'nhom-giai-tich',
-      description: '2 tuần trước',
-      images: ['img1', 'img2', 'img3'],
-      isJoined: true
-    },
-    {
-      id: '3',
-      name: 'Nhóm thiết kế đồ họa',
-      slug: 'nhom-thiet-ke-do-hoa',
-      description: '1 ngày trước',
-      images: ['img1', 'img2', 'img3'],
-      isJoined: false
-    },
-    {
-      id: '4',
-      name: 'Nhóm phát triển web',
-      slug: 'nhom-phat-trien-web',
-      description: '3 ngày trước',
-      images: ['img1', 'img2', 'img3'],
-      isJoined: false
-    }
-  ];
+  const { groups, leaveGroup } = useGroups();
 
   // Mock posts data
   const mockPosts = [
@@ -97,17 +63,8 @@ export default function GroupDetailPage() {
     const userData = JSON.parse(localStorage.getItem('user'));
     setCurrentUser(userData);
 
-    // Load joined groups from localStorage
-    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
-    
-    // Update isJoined status based on localStorage
-    const updatedMockGroups = mockGroups.map(group => ({
-      ...group,
-      isJoined: group.isJoined || userJoinedGroups.includes(group.id)
-    }));
-
-    // Find group by slug
-    const foundGroup = updatedMockGroups.find(g => g.slug === groupSlug);
+    // Find group by slug from context
+    const foundGroup = groups.find(g => g.slug === groupSlug);
     if (foundGroup) {
       setGroup(foundGroup);
       // Filter posts for this group
@@ -133,7 +90,7 @@ export default function GroupDetailPage() {
     }
 
     setLoading(false);
-  }, [groupSlug]);
+  }, [groupSlug, groups]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -205,13 +162,9 @@ export default function GroupDetailPage() {
   };
 
   const handleLeaveGroup = () => {
-    // Remove from joined groups
-    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
-    const updatedGroups = userJoinedGroups.filter(id => id !== group.id);
-    localStorage.setItem('userJoinedGroups', JSON.stringify(updatedGroups));
-    
-    // Navigate back to group list
-    navigate('/group');
+    leaveGroup(group.id);
+    // Navigate back to group list with discover tab selected
+    navigate('/group', { state: { tab: 'discover' } });
   };
 
   if (loading) {

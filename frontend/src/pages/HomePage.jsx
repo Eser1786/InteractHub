@@ -34,7 +34,7 @@ export default function HomePage() {
         const postsData = await getPosts();
         setPosts((postsData || []).map((post) => ({
           ...post,
-          commentsCount: commentsByPost[post.id]?.length ?? post.commentsCount ?? 0
+          commentsCount: commentsByPost[post.id]?.length ?? 0
         })));
 
         const friendsData = await getAcceptedFriends(userData.id, 1, 10);
@@ -151,8 +151,6 @@ export default function HomePage() {
       ...prev,
       [postId]: [newComment, ...(prev[postId] || [])]
     }));
-
-    setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p));
   };
 
   if (loading) {
@@ -313,7 +311,7 @@ export default function HomePage() {
 
                   <div className="post-stats">
                     <span>❤️ {post.likesCount} lượt thích</span>
-                    <span>💬 {(commentsByPost[post.id]?.length ?? post.commentsCount ?? 0)} bình luận</span>
+                    <span>💬 {(commentsByPost[post.id]?.length ?? 0)} bình luận</span>
                   </div>
 
                   <div className="post-actions">

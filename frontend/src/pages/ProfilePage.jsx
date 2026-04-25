@@ -24,7 +24,7 @@ export default function ProfilePage() {
         const postsData = await getPosts();
         setPosts((postsData || []).map((post) => ({
           ...post,
-          commentsCount: commentsByPost[post.id]?.length ?? post.commentsCount ?? 0
+          commentsCount: commentsByPost[post.id]?.length ?? 0
         })));
       } catch (err) {
         console.error('Error loading profile:', err);
@@ -87,8 +87,6 @@ export default function ProfilePage() {
       ...prev,
       [postId]: [newComment, ...(prev[postId] || [])]
     }));
-
-    setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p));
   };
 
   const filteredPosts = selectedTab === 'all' 
@@ -184,7 +182,7 @@ export default function ProfilePage() {
 
                   <div className="post-stats-profile">
                     <span>❤️ {post.likesCount}</span>
-                    <span>{commentsByPost[post.id]?.length ?? post.commentsCount ?? 0} Bình luận</span>
+                    <span>{commentsByPost[post.id]?.length ?? 0} Bình luận</span>
                   </div>
 
                   <div className="post-actions-profile">

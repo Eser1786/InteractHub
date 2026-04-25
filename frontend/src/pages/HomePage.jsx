@@ -187,7 +187,7 @@ export default function HomePage() {
               <span>Tất cả bạn bè</span>
             </div>
             <div className={`nav-item ${selectedNav === 'requests' ? 'active' : ''}`} onClick={() => setSelectedNav('requests')}>
-              <span className="nav-icon">📬</span>
+              <span className="nav-icon"><i class="fa-solid fa-address-book"></i></span>
               <span>Lời mời kết bạn</span>
             </div>
             <div className={`nav-item ${selectedNav === 'add-friends' ? 'active' : ''}`} onClick={() => setSelectedNav('add-friends')}>
@@ -223,7 +223,7 @@ export default function HomePage() {
                 className={`tab ${postType === 'image' ? 'active' : ''}`}
                 onClick={() => setPostType('image')}
               >
-                <span className="tab-icon">🖼️</span>
+                <span className="tab-icon"><i class="fa-solid fa-image"></i></span>
                 <span>Hình ảnh</span>
               </button>
             </div>
@@ -326,7 +326,7 @@ export default function HomePage() {
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
                     <button className="post-action-btn">
-                      <span>↗️</span> Chia sẻ
+                      <span><i class="fa-solid fa-share"></i></span> Chia sẻ
                     </button>
                   </div>
                   {activeCommentPostId === post.id && (
@@ -357,7 +357,7 @@ export default function HomePage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="add-friends-search"
                   />
-                  <span className="search-icon">🔍</span>
+                  <span className="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
                 </div>
                 
                 <div className="search-results">

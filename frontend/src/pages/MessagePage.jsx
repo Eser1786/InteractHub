@@ -113,7 +113,7 @@ export default function MessagePage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="message-search-input"
             />
-            <span className="message-search-icon">🔍</span>
+            <span className="message-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
           </div>
 
           <div className="message-tabs">

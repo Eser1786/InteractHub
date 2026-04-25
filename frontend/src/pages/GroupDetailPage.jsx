@@ -269,15 +269,15 @@ export default function GroupDetailPage() {
                 placeholder="Tìm kiếm"
                 className="search-input"
               />
-              <span className="search-icon">🔍</span>
+              <span className="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
             </div>
 
             <div className="nav-item active">
-              <span className="nav-icon">👥</span>
+              <span className="nav-icon"><i class="fa-solid fa-users"></i></span>
               <span>Nhóm của bạn</span>
             </div>
             <div className="nav-item">
-              <span className="nav-icon">🔍</span>
+              <span className="nav-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
               <span>Khám phá</span>
             </div>
             <div 
@@ -329,7 +329,7 @@ export default function GroupDetailPage() {
                 className={`tab ${postType === 'image' ? 'active' : ''}`}
                 onClick={() => setPostType('image')}
               >
-                <span className="tab-icon">🖼️</span>
+                <span className="tab-icon"><i class="fa-solid fa-image"></i></span>
                 <span>Hình ảnh</span>
               </button>
             </div>
@@ -412,7 +412,7 @@ export default function GroupDetailPage() {
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
                     <button className="post-action-btn">
-                      <span>↗️</span> Chia sẻ
+                      <span><i class="fa-solid fa-share"></i></span> Chia sẻ
                     </button>
                   </div>
                   {activeCommentPostId === post.id && (

@@ -33,7 +33,7 @@ export default function Header({ onLogout, showControls = true }) {
                 placeholder="Tìm kiếm" 
                 className="search-input"
               />
-              <button className="search-btn">🔍</button>
+              <button className="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
             </div>
 
             <div className="header-actions">

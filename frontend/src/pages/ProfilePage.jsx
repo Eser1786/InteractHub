@@ -118,7 +118,7 @@ export default function ProfilePage() {
               </div>
 
               <button className="profile-edit-btn">
-                <span>✏️</span> Chỉnh sửa
+                <span><i class="fa-solid fa-pen-nib"></i></span> Chỉnh sửa
               </button>
             </div>
           </div>

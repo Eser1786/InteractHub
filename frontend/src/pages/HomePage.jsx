@@ -32,7 +32,10 @@ export default function HomePage() {
         setCurrentUser(userData);
 
         const postsData = await getPosts();
-        setPosts(postsData || []);
+        setPosts((postsData || []).map((post) => ({
+          ...post,
+          commentsCount: commentsByPost[post.id]?.length ?? post.commentsCount ?? 0
+        })));
 
         const friendsData = await getAcceptedFriends(userData.id, 1, 10);
         setFriends(friendsData?.Data || []);
@@ -310,7 +313,7 @@ export default function HomePage() {
 
                   <div className="post-stats">
                     <span>❤️ {post.likesCount} lượt thích</span>
-                    <span>💬 {post.commentsCount} bình luận</span>
+                    <span>💬 {(commentsByPost[post.id]?.length ?? post.commentsCount ?? 0)} bình luận</span>
                   </div>
 
                   <div className="post-actions">

@@ -82,13 +82,17 @@ export default function GroupDetailPage() {
           return {
             ...p,
             likedBy: likedByArray,
-            likesCount: totalLikes > 0 ? totalLikes : likedByArray.length
+            likesCount: totalLikes > 0 ? totalLikes : likedByArray.length,
+            commentsCount: commentsByPost[p.id]?.length ?? p.commentsCount ?? 0
           };
         });
         setPosts(updatedPosts);
       } else {
         // If no user, just show posts without liked info
-        setPosts(groupPosts);
+        setPosts(groupPosts.map(p => ({
+          ...p,
+          commentsCount: commentsByPost[p.id]?.length ?? p.commentsCount ?? 0
+        })));
       }
     }
 
@@ -290,7 +294,7 @@ export default function GroupDetailPage() {
 
                   <div className="post-stats">
                     <span>❤️ {post.likesCount} lượt thích</span>
-                    <span>💬 {post.commentsCount} bình luận</span>
+                    <span>💬 {(commentsByPost[post.id]?.length ?? post.commentsCount ?? 0)} bình luận</span>
                   </div>
 
                   <div className="post-actions">

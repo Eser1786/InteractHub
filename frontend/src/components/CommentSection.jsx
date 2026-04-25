@@ -57,7 +57,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
         <div className="comment-modal-header">
           <div>
             <h2>Bình luận</h2>
-            <p>{post?.commentsCount || 0} bình luận</p>
+            <p>{comments.length} bình luận</p>
           </div>
           <button className="close-comment-modal" onClick={onClose}>✕</button>
         </div>

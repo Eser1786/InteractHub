@@ -65,6 +65,7 @@ export default function StoryPage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.dispatchEvent(new Event('tokenUpdated'));
     navigate('/login');
   };
 

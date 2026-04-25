@@ -8,11 +8,15 @@ export default function Header({ onLogout, showControls = true }) {
   const location = useLocation();
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Dispatch event to notify App.jsx about token change
+    window.dispatchEvent(new Event('tokenUpdated'));
+    
     if (onLogout) {
       onLogout();
     } else {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
       navigate('/login');
     }
   };

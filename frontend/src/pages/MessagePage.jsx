@@ -84,6 +84,7 @@ export default function MessagePage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.dispatchEvent(new Event('tokenUpdated'));
     navigate('/login');
   };
 

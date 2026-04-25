@@ -28,7 +28,12 @@ export default function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const userData = JSON.parse(localStorage.getItem('user'));
+        const userDataJson = localStorage.getItem('user');
+        if (!userDataJson) {
+          throw new Error('User data not found. Please login again.');
+        }
+
+        const userData = JSON.parse(userDataJson);
         setCurrentUser(userData);
 
         const postsData = await getPosts();
@@ -60,7 +65,7 @@ export default function HomePage() {
         setStories(friendStories);
       } catch (err) {
         console.error('Error loading data:', err);
-        setError(err.message);
+        setError(err.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }
@@ -105,6 +110,7 @@ export default function HomePage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.dispatchEvent(new Event('tokenUpdated'));
     navigate('/login');
   };
 

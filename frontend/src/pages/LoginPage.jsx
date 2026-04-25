@@ -18,11 +18,22 @@ export default function LoginPage() {
 
     try {
       const result = await login({ userName: username, password });
+      
+      if (!result || !result.token) {
+        throw new Error('Invalid login response from server');
+      }
+
       localStorage.setItem('token', result.token);
-      localStorage.setItem('user', JSON.stringify(result.user));
+      if (result.user) {
+        localStorage.setItem('user', JSON.stringify(result.user));
+      }
+      
+      // Dispatch event to notify App.jsx about token change (same-tab)
+      window.dispatchEvent(new Event('tokenUpdated'));
+      
       navigate('/home');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'An error occurred during login');
     } finally {
       setLoading(false);
     }

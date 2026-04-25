@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { GroupsProvider } from './contexts/GroupsContext';
 import LoginPage from './pages/LoginPage';
@@ -10,7 +11,25 @@ import MessagePage from './pages/MessagePage';
 import ProfilePage from './pages/ProfilePage';
 
 function App() {
-  const token = localStorage.getItem('token');
+  const [token, setToken] = useState(localStorage.getItem('token'));
+
+  useEffect(() => {
+    // Listen for storage changes (when token is saved from another tab or in this tab)
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem('token'));
+    };
+
+    // Listen to storage events (cross-tab)
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also listen to custom event for same-tab updates
+    window.addEventListener('tokenUpdated', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('tokenUpdated', handleStorageChange);
+    };
+  }, []);
 
   return (
     <GroupsProvider>

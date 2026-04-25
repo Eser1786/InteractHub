@@ -95,7 +95,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowLocalhost", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(
+            "http://localhost:3000",
+            "http://localhost:5142",
+            "https://localhost:5142"
+        )
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -117,6 +121,10 @@ builder.Services.AddAuthorization(options =>
 
 // Add Controllers
 builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = null; // Keep Pascal case from C#
+    })
     .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblies(new[] { typeof(CreatePostValidator).Assembly }));
 
 var app = builder.Build();
@@ -144,12 +152,17 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
+// Only redirect to HTTPS in production
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
 
 // ✅ Phục vụ các file tĩnh của React (JS, CSS, HTML)
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+// ✅ CORS must be applied before Authentication and Authorization
 app.UseCors("AllowLocalhost");
 app.UseAuthentication();
 app.UseAuthorization();

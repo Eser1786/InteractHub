@@ -37,11 +37,22 @@ export default function RegisterPage() {
         fullName: fullName,
         password: formData.password
       });
+      
+      if (!result || !result.token) {
+        throw new Error('Invalid registration response from server');
+      }
+
       localStorage.setItem('token', result.token);
-      localStorage.setItem('user', JSON.stringify(result.user));
+      if (result.user) {
+        localStorage.setItem('user', JSON.stringify(result.user));
+      }
+      
+      // Dispatch event to notify App.jsx about token change (same-tab)
+      window.dispatchEvent(new Event('tokenUpdated'));
+      
       navigate('/login');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'An error occurred during registration');
     } finally {
       setLoading(false);
     }

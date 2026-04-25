@@ -40,6 +40,7 @@ export default function GroupPage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.dispatchEvent(new Event('tokenUpdated'));
     navigate('/login');
   };
 

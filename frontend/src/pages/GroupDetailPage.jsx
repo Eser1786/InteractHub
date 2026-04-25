@@ -111,6 +111,10 @@ export default function GroupDetailPage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Dispatch event to notify App.jsx about token change
+    window.dispatchEvent(new Event('tokenUpdated'));
+    
     navigate('/login');
   };
 

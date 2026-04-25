@@ -12,22 +12,36 @@ export default function ProfilePage() {
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const userData = JSON.parse(localStorage.getItem('user'));
+        const userDataJson = localStorage.getItem('user');
+        if (!userDataJson) {
+          console.error('No user data found in localStorage');
+          setCurrentUser(null);
+          return;
+        }
+
+        const userData = JSON.parse(userDataJson);
         setCurrentUser(userData);
 
         // Load user's posts
-        const postsData = await getPosts();
-        setPosts((postsData || []).map((post) => ({
-          ...post,
-          commentsCount: commentsByPost[post.id]?.length ?? 0
-        })));
+        try {
+          const postsData = await getPosts();
+          setPosts((postsData || []).map((post) => ({
+            ...post,
+            commentsCount: commentsByPost[post.id]?.length ?? 0
+          })));
+        } catch (postsErr) {
+          console.error('Error loading posts:', postsErr);
+          setError(`Failed to load posts: ${postsErr.message}`);
+        }
       } catch (err) {
         console.error('Error loading profile:', err);
+        setError(`Error loading profile: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -43,6 +57,7 @@ export default function ProfilePage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.dispatchEvent(new Event('tokenUpdated'));
     navigate('/login');
   };
 
@@ -95,6 +110,27 @@ export default function ProfilePage() {
 
   if (loading) {
     return <div className="profile-wrapper"><p>Đang tải...</p></div>;
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="profile-wrapper">
+        <Header onLogout={handleLogout} />
+        <div className="profile-container">
+          <div className="error-message" style={{ textAlign: 'center', padding: '20px', color: '#d32f2f' }}>
+            <p>Không thể tải thông tin người dùng. Vui lòng đăng nhập lại.</p>
+            <button onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              window.dispatchEvent(new Event('tokenUpdated'));
+              navigate('/login');
+            }} style={{ marginTop: '10px', padding: '10px 20px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+              Đăng nhập lại
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

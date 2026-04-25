@@ -14,6 +14,11 @@ export default function GroupDetailPage() {
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [loading, setLoading] = useState(true);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [newPostImage, setNewPostImage] = useState('');
+  const [postType, setPostType] = useState('text');
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { groups, leaveGroup } = useGroups();
 
@@ -182,6 +187,43 @@ export default function GroupDetailPage() {
     setActiveCommentPostId((current) => (current === post.id ? null : post.id));
   };
 
+  const handleCreatePost = async (e) => {
+    e.preventDefault();
+    if (!newPostContent.trim() && !newPostImage.trim()) {
+      setError('Vui lòng nhập nội dung hoặc chọn hình ảnh');
+      return;
+    }
+
+    setPosting(true);
+    try {
+      // Create new post for the group
+      const newPost = {
+        id: `${group.id}-${Date.now()}`,
+        groupName: group.name,
+        groupId: group.id,
+        username: currentUser?.fullName || currentUser?.userName || 'Bạn',
+        content: newPostContent,
+        imageUrl: newPostImage || null,
+        createdAt: new Date(),
+        likesCount: 0,
+        commentsCount: 0,
+        likedBy: []
+      };
+
+      setNewPostContent('');
+      setNewPostImage('');
+      setPostType('text');
+      setError('');
+      
+      // Add new post to the beginning of the list
+      setPosts([newPost, ...posts]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPosting(false);
+    }
+  };
+
   const handleAddComment = (postId, content) => {
     const newComment = {
       id: `${postId}-${Date.now()}`,
@@ -263,6 +305,69 @@ export default function GroupDetailPage() {
               ✕ Rời nhóm
             </button>
           </div>
+
+          {/* Create Post Section */}
+          <section className="create-post-section">
+            <div className="create-post-header">
+              <div className="user-avatar">
+                <div className="avatar-placeholder">👤</div>
+              </div>
+              <p className="create-post-prompt">
+                Bạn đang nghĩ gì? Hãy chia sẻ cảm nghĩ của bạn đến thành viên nhóm...
+              </p>
+            </div>
+
+            <div className="create-post-tabs">
+              <button 
+                className={`tab ${postType === 'text' ? 'active' : ''}`}
+                onClick={() => setPostType('text')}
+              >
+                <span className="tab-icon">📝</span>
+                <span>Văn bản</span>
+              </button>
+              <button 
+                className={`tab ${postType === 'image' ? 'active' : ''}`}
+                onClick={() => setPostType('image')}
+              >
+                <span className="tab-icon">🖼️</span>
+                <span>Hình ảnh</span>
+              </button>
+            </div>
+
+            {error && <div className="error-message">{error}</div>}
+
+            <form onSubmit={handleCreatePost} className="create-post-form">
+              {postType === 'text' ? (
+                <textarea
+                  value={newPostContent}
+                  onChange={(e) => setNewPostContent(e.target.value)}
+                  placeholder="Chia sẻ suy nghĩ của bạn..."
+                  className="post-textarea"
+                  rows="4"
+                />
+              ) : (
+                <div className="image-input-wrapper">
+                  <input
+                    type="text"
+                    value={newPostImage}
+                    onChange={(e) => setNewPostImage(e.target.value)}
+                    placeholder="Nhập URL hình ảnh"
+                    className="post-image-input"
+                  />
+                  {newPostImage && (
+                    <img src={newPostImage} alt="Preview" className="image-preview" />
+                  )}
+                </div>
+              )}
+              <button 
+                type="submit" 
+                className="btn-post"
+                disabled={posting}
+              >
+                {posting ? 'Đang đăng...' : 'Đăng'}
+              </button>
+            </form>
+          </section>
 
           {/* Posts Feed */}
           <section className="posts-feed">

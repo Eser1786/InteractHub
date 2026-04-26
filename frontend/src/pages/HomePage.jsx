@@ -43,25 +43,25 @@ export default function HomePage() {
         })));
 
         const friendsData = await getAcceptedFriends(userData.Id, 1, 10);
-        setFriends(friendsData?.Data || []);
+        setFriends(friendsData || []);
 
         const requestsData = await getPendingRequests(userData.Id, 1, 20);
         setPendingRequests(requestsData || []);
 
         const allUsersData = await getAllUsers();
-        setAllUsers(allUsersData);
-        const friendIds = (friendsData?.Data || []).map(f => f.friendId);
-        const suggested = allUsersData.filter(
+        setAllUsers(allUsersData || []);
+        const friendIds = ((friendsData || []).map(f => f.friendId));
+        const suggested = (allUsersData || []).filter(
           u => u.Id !== userData.Id && !friendIds.includes(u.Id)
         ).slice(0, 5);
         setSuggestedUsers(suggested);
 
         // Load stories from friends
-        const friendStories = (friendsData?.Data || []).map((friend, idx) => ({
+        const friendStories = ((friendsData || []).map((friend, idx) => ({
           id: friend.friendId,
           userName: friend.friendName || `Bạn ${idx + 1}`,
           createdAt: new Date().toISOString()
-        }));
+        })));
         setStories(friendStories);
       } catch (err) {
         console.error('Error loading data:', err);

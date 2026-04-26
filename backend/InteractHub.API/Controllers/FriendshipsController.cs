@@ -56,13 +56,8 @@ public class FriendshipsController : ControllerBase
             var (friends, metadata) = await _friendshipService.GetAcceptedFriendsPaginatedAsync(userId, pageNumber, pageSize);
             var friendshipDtos = friends.Select(MapToFriendshipResponseDto).ToList();
 
-            var response = new
-            {
-                Data = friendshipDtos,
-                Pagination = metadata
-            };
-
-            return this.SuccessResponse(response);
+            // Return just the array, pagination info can be added later if needed
+            return this.SuccessResponse(friendshipDtos);
         }
         catch (ArgumentException ex)
         {
@@ -93,13 +88,8 @@ public class FriendshipsController : ControllerBase
             var (requests, metadata) = await _friendshipService.GetPendingRequestsPaginatedAsync(userId, pageNumber, pageSize);
             var friendshipDtos = requests.Select(MapToFriendshipResponseDto).ToList();
 
-            var response = new
-            {
-                Data = friendshipDtos,
-                Pagination = metadata
-            };
-
-            return this.SuccessResponse(response);
+            // Return just the array, pagination info can be added later if needed
+            return this.SuccessResponse(friendshipDtos);
         }
         catch (ArgumentException ex)
         {

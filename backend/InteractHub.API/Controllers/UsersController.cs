@@ -62,16 +62,8 @@ public class UsersController : ControllerBase
                 Bio = u.Bio
             }).ToList();
 
-            // Add metadata with search info
-            var response = new
-            {
-                Data = userDtos,
-                SearchTerm = search,
-                TotalCount = userDtos.Count,
-                Filtering = !string.IsNullOrWhiteSpace(search)
-            };
-
-            return this.SuccessResponse(response, "Users retrieved successfully", 200);
+            // Return just the array, not wrapped in metadata object
+            return this.SuccessResponse(userDtos, "Users retrieved successfully", 200);
         }
         catch (Exception ex)
         {

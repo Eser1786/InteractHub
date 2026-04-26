@@ -33,7 +33,7 @@ export default function GroupPage() {
 
   const handleJoinGroup = (group) => {
     if (!group.isJoined) {
-      joinGroup(group.id);
+      joinGroup(group.Id);
     }
   };
 
@@ -107,7 +107,7 @@ export default function GroupPage() {
               </p>
             ) : (
               filteredGroups.map((group) => (
-                <div key={group.id} className="group-card">
+                <div key={group.Id} className="group-card">
                   <div className="group-images">
                     {group.images.map((_, idx) => (
                       <div key={idx} className="group-image-placeholder"></div>

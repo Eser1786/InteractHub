@@ -92,7 +92,7 @@ export async function getPosts() {
   });
   
   const data = await handleResponse(response);
-  return data?.data || [];
+  return data?.Data || [];
 }
 
 export async function createPost({ content, imageUrl }) {
@@ -104,7 +104,7 @@ export async function createPost({ content, imageUrl }) {
   });
   
   const data = await handleResponse(response);
-  return data?.data || null;
+  return data?.Data || null;
 }
 
 export async function likePost(postId, userId) {
@@ -116,7 +116,7 @@ export async function likePost(postId, userId) {
   });
   
   const data = await handleResponse(response);
-  return data?.data || null;
+  return data?.Data || null;
 }
 
 export async function unlikePost(postId, userId) {
@@ -127,7 +127,7 @@ export async function unlikePost(postId, userId) {
   });
   
   const data = await handleResponse(response);
-  return data?.data || null;
+  return data?.Data || null;
 }
 
 export async function getUser(userId) {
@@ -137,7 +137,7 @@ export async function getUser(userId) {
   });
   
   const data = await handleResponse(response);
-  return data?.data || null;
+  return data?.Data || null;
 }
 
 export async function getAllUsers() {
@@ -147,7 +147,7 @@ export async function getAllUsers() {
   });
   
   const data = await handleResponse(response);
-  return data?.data || [];
+  return data?.Data || [];
 }
 
 export async function getAcceptedFriends(userId, pageNumber = 1, pageSize = 20) {
@@ -157,7 +157,7 @@ export async function getAcceptedFriends(userId, pageNumber = 1, pageSize = 20) 
   });
   
   const data = await handleResponse(response);
-  return data?.data || [];
+  return data?.Data || [];
 }
 
 export async function getPendingRequests(userId, pageNumber = 1, pageSize = 20) {
@@ -167,5 +167,5 @@ export async function getPendingRequests(userId, pageNumber = 1, pageSize = 20) 
   });
   
   const data = await handleResponse(response);
-  return data?.data || [];
+  return data?.Data || [];
 }

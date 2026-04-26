@@ -22,7 +22,7 @@ export default function MessagePage() {
         setCurrentUser(userData);
 
         // Load friends as conversations
-        const friendsData = await getAcceptedFriends(userData.id, 1, 100);
+        const friendsData = await getAcceptedFriends(userData.Id, 1, 100);
         const friends = friendsData?.Data || [];
 
         // Mock conversations with friends

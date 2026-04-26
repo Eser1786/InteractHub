@@ -43,11 +43,11 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
 
   useEffect(() => {
     setNewComment('');
-  }, [post?.id]);
+  }, [post?.Id]);
 
   const handleSubmit = () => {
     if (!newComment.trim()) return;
-    onAddComment(post.id, newComment.trim());
+    onAddComment(post.Id, newComment.trim());
     setNewComment('');
   };
 
@@ -70,7 +70,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
           ) : (
             <div className="comment-thread">
               {comments.map((comment) => (
-                <div key={comment.id} className="comment-item">
+                <div key={comment.Id} className="comment-item">
                   <div className="comment-avatar"><i className="fa-solid fa-user"></i></div>
                   <div className="comment-content-wrapper">
                     <div className="comment-top-row">

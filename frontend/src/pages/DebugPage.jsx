@@ -22,8 +22,8 @@ export default function DebugPage() {
     // Get details for each user
     const details = {};
     users.forEach(user => {
-      const userData = JSON.parse(localStorage.getItem(`user_data_${user.id}`) || '{}');
-      details[user.id] = {
+      const userData = JSON.parse(localStorage.getItem(`user_data_${user.Id}`) || '{}');
+      details[user.Id] = {
         posts: userData.posts?.length || 0,
         friends: userData.friends?.length || 0,
         likedPosts: Object.keys(userData.likedPosts || {}).length,
@@ -41,7 +41,7 @@ export default function DebugPage() {
   };
 
   const handleLoginAs = (user) => {
-    const userData = JSON.parse(localStorage.getItem(`user_data_${user.id}`) || '{}');
+    const userData = JSON.parse(localStorage.getItem(`user_data_${user.Id}`) || '{}');
     if (!userData.posts || !userData.friends) {
       const mockFriends = [
         { id: 'friend1', name: 'Nguyễn Văn A', fullName: 'Nguyễn Văn A', avatar: <i className="fa-solid fa-user"></i>, isActive: true },
@@ -50,7 +50,7 @@ export default function DebugPage() {
       const mockPosts = [
         {
           id: `post_${Date.now()}_1`,
-          userId: user.id,
+          userId: user.Id,
           username: 'Tôi',
           userName: user.fullName,
           content: 'Hôm nay thời tiết đẹp quá!',
@@ -66,10 +66,10 @@ export default function DebugPage() {
       userData.messages = userData.messages || {};
       userData.groupMemberships = userData.groupMemberships || [];
       userData.likedPosts = userData.likedPosts || {};
-      localStorage.setItem(`user_data_${user.id}`, JSON.stringify(userData));
+      localStorage.setItem(`user_data_${user.Id}`, JSON.stringify(userData));
     }
     
-    localStorage.setItem('token', `mock_token_${user.id}`);
+    localStorage.setItem('token', `mock_token_${user.Id}`);
     localStorage.setItem('user', JSON.stringify(user));
     navigate('/home');
   };
@@ -89,7 +89,7 @@ export default function DebugPage() {
               <p><strong>Tên:</strong> {currentUser.fullName}</p>
               <p><strong>Username:</strong> {currentUser.userName}</p>
               <p><strong>Email:</strong> {currentUser.email}</p>
-              <p><strong>ID:</strong> {currentUser.id}</p>
+              <p><strong>ID:</strong> {currentUser.Id}</p>
               <button className="btn-primary" onClick={() => navigate('/home')}>
                 → Về Home
               </button>
@@ -106,23 +106,23 @@ export default function DebugPage() {
           ) : (
             <div className="users-list">
               {allUsers.map(user => (
-                <div key={user.id} className="user-card">
+                <div key={user.Id} className="user-card\">
                   <div className="user-info">
                     <p><strong><i className="fa-solid fa-user"></i> Tên:</strong> {user.fullName}</p>
                     <p><strong>📧 Username:</strong> {user.userName}</p>
                     <p><strong>📨 Email:</strong> {user.email}</p>
                     <p><strong>🔑 Password:</strong> {user.password}</p>
-                    <p><strong>ID:</strong> <code>{user.id}</code></p>
+                    <p><strong>ID:</strong> <code>{user.Id}</code></p>
                     <p><strong>Tạo lúc:</strong> {new Date(user.createdAt).toLocaleString('vi-VN')}</p>
                   </div>
                   
                   <div className="user-stats">
                     <h4>📊 Thống kê:</h4>
                     <ul>
-                      <li>Posts: {userDetails[user.id]?.posts || 0}</li>
-                      <li>Friends: {userDetails[user.id]?.friends || 0}</li>
-                      <li>Liked Posts: {userDetails[user.id]?.likedPosts || 0}</li>
-                      <li>Messages: {userDetails[user.id]?.messages || 0}</li>
+                      <li>Posts: {userDetails[user.Id]?.posts || 0}</li>
+                      <li>Friends: {userDetails[user.Id]?.friends || 0}</li>
+                      <li>Liked Posts: {userDetails[user.Id]?.likedPosts || 0}</li>
+                      <li>Messages: {userDetails[user.Id]?.messages || 0}</li>
                     </ul>
                   </div>
 

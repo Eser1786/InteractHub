@@ -39,20 +39,20 @@ export default function HomePage() {
         const postsData = await getPosts();
         setPosts((postsData || []).map((post) => ({
           ...post,
-          commentsCount: commentsByPost[post.id]?.length ?? 0
+          commentsCount: commentsByPost[post.Id]?.length ?? 0
         })));
 
-        const friendsData = await getAcceptedFriends(userData.id, 1, 10);
+        const friendsData = await getAcceptedFriends(userData.Id, 1, 10);
         setFriends(friendsData?.Data || []);
 
-        const requestsData = await getPendingRequests(userData.id, 1, 20);
+        const requestsData = await getPendingRequests(userData.Id, 1, 20);
         setPendingRequests(requestsData || []);
 
         const allUsersData = await getAllUsers();
         setAllUsers(allUsersData);
         const friendIds = (friendsData?.Data || []).map(f => f.friendId);
         const suggested = allUsersData.filter(
-          u => u.id !== userData.id && !friendIds.includes(u.id)
+          u => u.Id !== userData.Id && !friendIds.includes(u.Id)
         ).slice(0, 5);
         setSuggestedUsers(suggested);
 
@@ -122,13 +122,13 @@ export default function HomePage() {
     
     try {
       const likedBy = post.likedBy || [];
-      const isLiked = likedBy.includes(currentUser.id);
-      console.log('Like status:', { postId: post.id, userId: currentUser.id, isLiked, likedBy });
+      const isLiked = likedBy.includes(currentUser.Id);
+      console.log('Like status:', { postId: post.Id, userId: currentUser.Id, isLiked, likedBy });
       
       if (isLiked) {
-        await unlikePost(post.id, currentUser.id);
+        await unlikePost(post.Id, currentUser.Id);
       } else {
-        await likePost(post.id, currentUser.id);
+        await likePost(post.Id, currentUser.Id);
       }
       
       // Reload posts to get updated like count
@@ -141,7 +141,7 @@ export default function HomePage() {
   };
 
   const handleToggleComments = (post) => {
-    setActiveCommentPostId((current) => (current === post.id ? null : post.id));
+    setActiveCommentPostId((current) => (current === post.Id ? null : post.Id));
   };
 
   const handleAddComment = (postId, content) => {
@@ -172,8 +172,8 @@ export default function HomePage() {
 
   const filteredUsers = searchQuery.trim() ? 
     allUsers.filter(u => 
-      u.id !== currentUser?.id &&
-      !friends.some(f => f.friendId === u.id) &&
+      u.Id !== currentUser?.Id &&
+      !friends.some(f => f.friendId === u.Id) &&
       (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
        u.userName.toLowerCase().includes(searchQuery.toLowerCase()))
     ) : suggestedUsers;
@@ -295,7 +295,7 @@ export default function HomePage() {
               <p className="no-posts">Chưa có bài viết nào. Hãy tạo bài viết đầu tiên!</p>
             ) : (
               posts.map((post) => (
-                <div key={post.id} className="post-card">
+                <div key={post.Id} className="post-card">
                   <div className="post-header">
                     <div className="post-user-info">
                       <div className="post-avatar"><i className="fa-solid fa-user"></i></div>
@@ -317,7 +317,7 @@ export default function HomePage() {
 
                   <div className="post-stats">
                     <span>❤️ {post.likesCount} lượt thích</span>
-                    <span><i className="fa-solid fa-comments"></i> {(commentsByPost[post.id]?.length ?? 0)} bình luận</span>
+                    <span><i className="fa-solid fa-comments"></i> {(commentsByPost[post.Id]?.length ?? 0)} bình luận</span>
                   </div>
 
                   <div className="post-actions">
@@ -335,10 +335,10 @@ export default function HomePage() {
                       <span><i class="fa-solid fa-share"></i></span> Chia sẻ
                     </button>
                   </div>
-                  {activeCommentPostId === post.id && (
+                  {activeCommentPostId === post.Id && (
                     <CommentSection
                       post={post}
-                      comments={commentsByPost[post.id] || []}
+                      comments={commentsByPost[post.Id] || []}
                       onClose={() => setActiveCommentPostId(null)}
                       onAddComment={handleAddComment}
                     />
@@ -416,7 +416,7 @@ export default function HomePage() {
                   <p className="no-friends">Chưa có bạn bè</p>
                 ) : (
                   friends.map((friend) => (
-                    <div key={friend.id} className="friend-item">
+                    <div key={friend.Id} className="friend-item">
                       <div className="friend-avatar-small"><i className="fa-solid fa-user"></i></div>
                       <p className="friend-name-small">{friend.friendName || 'Bạn'}</p>
                     </div>

@@ -33,7 +33,7 @@ export default function ProfilePage() {
           const postsData = await getPosts();
           setPosts((postsData || []).map((post) => ({
             ...post,
-            commentsCount: commentsByPost[post.id]?.length ?? 0
+            commentsCount: commentsByPost[post.Id]?.length ?? 0
           })));
         } catch (postsErr) {
           console.error('Error loading posts:', postsErr);
@@ -69,12 +69,12 @@ export default function ProfilePage() {
     
     try {
       const likedBy = post.likedBy || [];
-      const isLiked = likedBy.includes(currentUser.id);
+      const isLiked = likedBy.includes(currentUser.Id);
       
       if (isLiked) {
-        await unlikePost(post.id, currentUser.id);
+        await unlikePost(post.Id, currentUser.Id);
       } else {
-        await likePost(post.id, currentUser.id);
+        await likePost(post.Id, currentUser.Id);
       }
       
       // Reload posts to get updated like count
@@ -86,7 +86,7 @@ export default function ProfilePage() {
   };
 
   const handleToggleComments = (post) => {
-    setActiveCommentPostId((current) => (current === post.id ? null : post.id));
+    setActiveCommentPostId((current) => (current === post.Id ? null : post.Id));
   };
 
   const handleAddComment = (postId, content) => {
@@ -183,7 +183,7 @@ export default function ProfilePage() {
               <p className="no-posts">Chưa có bài viết nào</p>
             ) : (
               filteredPosts.map((post) => (
-                <div key={post.id} className="profile-post-card">
+                <div key={post.Id} className="profile-post-card">
                   <div className="post-header-profile">
                     <div className="post-user-info-profile">
                       <div className="post-avatar-profile"><i className="fa-solid fa-user"></i></div>
@@ -218,7 +218,7 @@ export default function ProfilePage() {
 
                   <div className="post-stats-profile">
                     <span>❤️ {post.likesCount}</span>
-                    <span><i className="fa-solid fa-comments"></i> {commentsByPost[post.id]?.length ?? 0} Bình luận</span>
+                    <span><i className="fa-solid fa-comments"></i> {commentsByPost[post.Id]?.length ?? 0} Bình luận</span>
                   </div>
 
                   <div className="post-actions-profile">
@@ -233,10 +233,10 @@ export default function ProfilePage() {
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
                   </div>
-                  {activeCommentPostId === post.id && (
+                  {activeCommentPostId === post.Id && (
                     <CommentSection
                       post={post}
-                      comments={commentsByPost[post.id] || []}
+                      comments={commentsByPost[post.Id] || []}
                       onClose={() => setActiveCommentPostId(null)}
                       onAddComment={handleAddComment}
                     />

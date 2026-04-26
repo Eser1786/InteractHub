@@ -64,7 +64,7 @@ export const GroupsProvider = ({ children }) => {
     // Update isJoined status based on localStorage
     const updatedGroups = mockGroups.map(group => ({
       ...group,
-      isJoined: userJoinedGroups.includes(group.id)
+      isJoined: userJoinedGroups.includes(group.Id)
     }));
 
     setGroups(updatedGroups);

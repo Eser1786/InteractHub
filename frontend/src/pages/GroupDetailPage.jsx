@@ -76,19 +76,19 @@ export default function GroupDetailPage() {
     if (foundGroup) {
       setGroup(foundGroup);
       // Filter posts for this group
-      const groupPosts = mockPosts.filter(p => p.groupId === foundGroup.id);
+      const groupPosts = mockPosts.filter(p => p.groupId === foundGroup.Id);
       
       // Apply user's liked posts to posts (check userData exists first)
-      if (userData && userData.id) {
-        const userLikedPosts = getLikedPostsForUser(userData.id);
+      if (userData && userData.Id) {
+        const userLikedPosts = getLikedPostsForUser(userData.Id);
         const updatedPosts = groupPosts.map(p => {
-          const likedByArray = userLikedPosts[p.id] || [];
-          const totalLikes = getTotalLikesForPost(p.id);
+          const likedByArray = userLikedPosts[p.Id] || [];
+          const totalLikes = getTotalLikesForPost(p.Id);
           return {
             ...p,
             likedBy: likedByArray,
             likesCount: totalLikes > 0 ? totalLikes : likedByArray.length,
-            commentsCount: commentsByPost[p.id]?.length ?? 0
+            commentsCount: commentsByPost[p.Id]?.length ?? 0
           };
         });
         setPosts(updatedPosts);
@@ -96,7 +96,7 @@ export default function GroupDetailPage() {
         // If no user, just show posts without liked info
         setPosts(groupPosts.map(p => ({
           ...p,
-          commentsCount: commentsByPost[p.id]?.length ?? 0
+          commentsCount: commentsByPost[p.Id]?.length ?? 0
         })));
       }
     }
@@ -130,38 +130,38 @@ export default function GroupDetailPage() {
 
     try {
       const likedBy = post.likedBy || [];
-      const isLiked = likedBy.includes(currentUser.id);
+      const isLiked = likedBy.includes(currentUser.Id);
       
       // Get current user data
-      const userData = getUserData(currentUser.id);
+      const userData = getUserData(currentUser.Id);
       const likedPosts = userData.likedPosts || {};
       
       let newLikesCount = post.likesCount || 0;
       
       // Update liked posts
       if (isLiked) {
-        if (likedPosts[post.id]) {
-          likedPosts[post.id] = likedPosts[post.id].filter(id => id !== currentUser.id);
-          if (likedPosts[post.id].length === 0) {
-            delete likedPosts[post.id];
+        if (likedPosts[post.Id]) {
+          likedPosts[post.Id] = likedPosts[post.Id].filter(id => id !== currentUser.Id);
+          if (likedPosts[post.Id].length === 0) {
+            delete likedPosts[post.Id];
           }
         }
         newLikesCount = Math.max(0, newLikesCount - 1);
       } else {
-        if (!likedPosts[post.id]) {
-          likedPosts[post.id] = [];
+        if (!likedPosts[post.Id]) {
+          likedPosts[post.Id] = [];
         }
-        if (!likedPosts[post.id].includes(currentUser.id)) {
-          likedPosts[post.id].push(currentUser.id);
+        if (!likedPosts[post.Id].includes(currentUser.Id)) {
+          likedPosts[post.Id].push(currentUser.Id);
         }
         newLikesCount = newLikesCount + 1;
       }
       
       // Update user data
-      updateUserData(currentUser.id, { likedPosts });
+      updateUserData(currentUser.Id, { likedPosts });
       
       // Save total likes count for this post
-      saveTotalLikesForPost(post.id, newLikesCount);
+      saveTotalLikesForPost(post.Id, newLikesCount);
       
       // Update local posts state
       const newPosts = posts.map(p => {

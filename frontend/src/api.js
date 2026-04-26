@@ -44,19 +44,20 @@ export async function login({ userName, password }) {
   
   // Debug logging
   console.log('Login response:', data);
-  console.log('Login data.data:', data?.data);
+  console.log('Login data.Data:', data?.Data);
   
-  // Check if data structure is correct - handle both camelCase and PascalCase
-  if (!data || !data.data) {
+  // Check if data structure is correct - handle both PascalCase (from backend) and camelCase
+  if (!data || !data.Data) {
     console.error('Invalid response structure:', data);
-    throw new Error('Invalid response from server - missing data object');
+    throw new Error('Invalid response from server - missing Data object');
   }
 
-  const token = data.data.Token || data.data.token;
-  const user = data.data.User || data.data.user;
+  // Backend uses PascalCase (PropertyNamingPolicy = null in Program.cs)
+  const token = data.Data.Token || data.Data.token;
+  const user = data.Data.User || data.Data.user;
 
   if (!token || !user) {
-    console.error('Missing token or user in response:', data.data);
+    console.error('Missing token or user in response:', data.Data);
     console.error('Token:', token);
     console.error('User:', user);
     throw new Error('Invalid response from server - missing Token or User');
@@ -73,8 +74,9 @@ export async function register({ userName, email, fullName, password }) {
   });
   
   const data = await handleResponse(response);
-  const token = data?.data?.Token || data?.data?.token;
-  const user = data?.data?.User || data?.data?.user;
+  // Backend uses PascalCase (PropertyNamingPolicy = null in Program.cs)
+  const token = data?.Data?.Token || data?.Data?.token;
+  const user = data?.Data?.User || data?.Data?.user;
 
   if (!token || !user) {
     throw new Error('Invalid registration response from server - missing Token or User');

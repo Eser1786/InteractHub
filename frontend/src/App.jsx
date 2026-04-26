@@ -10,13 +10,61 @@ import CreateGroupPage from './pages/CreateGroupPage';
 import MessagePage from './pages/MessagePage';
 import ProfilePage from './pages/ProfilePage';
 
+// Helper function to check if JWT token is valid (not expired)
+function isTokenValid(token) {
+  if (!token) return false;
+  
+  try {
+    // JWT has 3 parts separated by dots: header.payload.signature
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    
+    // Decode the payload (second part)
+    const payload = JSON.parse(atob(parts[1]));
+    
+    // Check if token has expired (exp is in seconds, Date.now() is in milliseconds)
+    const expirationTime = payload.exp * 1000;
+    const currentTime = Date.now();
+    
+    console.log('Token expiration check:', {
+      expiresAt: new Date(expirationTime),
+      currentTime: new Date(currentTime),
+      isValid: currentTime < expirationTime
+    });
+    
+    return currentTime < expirationTime;
+  } catch (err) {
+    console.error('Error validating token:', err);
+    return false;
+  }
+}
+
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(() => {
+    // Initialize token from localStorage, but validate it
+    const savedToken = localStorage.getItem('token');
+    if (savedToken && isTokenValid(savedToken)) {
+      return savedToken;
+    } else {
+      // Clear invalid/expired token
+      if (savedToken) {
+        console.log('Token is expired or invalid, clearing...');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+      return null;
+    }
+  });
 
   useEffect(() => {
     // Listen for storage changes (when token is saved from another tab or in this tab)
     const handleStorageChange = () => {
-      setToken(localStorage.getItem('token'));
+      const savedToken = localStorage.getItem('token');
+      if (savedToken && isTokenValid(savedToken)) {
+        setToken(savedToken);
+      } else {
+        setToken(null);
+      }
     };
 
     // Listen to storage events (cross-tab)

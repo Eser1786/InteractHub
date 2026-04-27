@@ -121,7 +121,18 @@ export async function likePost(postId, userId) {
 
 export async function unlikePost(postId, userId) {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE}/likes/${postId}/${userId}`, {
+  const response = await fetch(`${API_BASE}/likes/post/${postId}/user/${userId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function deletePost(postId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/posts/${postId}`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
   });

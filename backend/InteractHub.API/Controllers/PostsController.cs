@@ -40,7 +40,8 @@ public class PostsController : ControllerBase
             UserFullName = p.User?.FullName,
             UserProfilePictureUrl = p.User?.ProfilePictureUrl,
             LikesCount = p.Likes?.Count ?? 0,
-            CommentsCount = p.Comments?.Count ?? 0
+            CommentsCount = p.Comments?.Count ?? 0,
+            LikedByUserIds = p.Likes?.Select(l => l.UserId).ToList() ?? new()
         }).ToList();
         
         return this.SuccessResponse(postDtos, "Posts retrieved successfully", 200);
@@ -68,7 +69,8 @@ public class PostsController : ControllerBase
             UserFullName = post.User?.FullName,
             UserProfilePictureUrl = post.User?.ProfilePictureUrl,
             LikesCount = post.Likes?.Count ?? 0,
-            CommentsCount = post.Comments?.Count ?? 0
+            CommentsCount = post.Comments?.Count ?? 0,
+            LikedByUserIds = post.Likes?.Select(l => l.UserId).ToList() ?? new()
         };
 
         return this.SuccessResponse(postDto, "Post retrieved successfully", 200);
@@ -111,7 +113,8 @@ public class PostsController : ControllerBase
             UserFullName = createdWithUser.User?.FullName,
             UserProfilePictureUrl = createdWithUser.User?.ProfilePictureUrl,
             LikesCount = 0,
-            CommentsCount = 0
+            CommentsCount = 0,
+            LikedByUserIds = new()
         };
 
         return this.CreatedResponse(postDto, "Post created successfully");

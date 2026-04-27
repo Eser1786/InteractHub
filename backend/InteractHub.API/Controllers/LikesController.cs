@@ -116,4 +116,29 @@ public class LikesController : ControllerBase
 
         return this.SuccessResponse(message: "Like deleted successfully", statusCode: 200);
     }
+
+    [HttpDelete("post/{postId}/user/{userId}")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteByPostAndUser(int postId, string userId)
+    {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (currentUserId != userId)
+            return this.ForbiddenResponse("You cannot delete likes for other users");
+
+        // Get all likes for this post
+        var likes = await _likeService.GetByPostIdAsync(postId);
+        var likeToDelete = likes.FirstOrDefault(l => l.UserId == userId);
+        
+        if (likeToDelete == null)
+            return this.NotFoundResponse("Like not found");
+
+        var result = await _likeService.DeleteAsync(likeToDelete.Id);
+        if (!result)
+            return this.NotFoundResponse("Failed to delete like");
+
+        return this.SuccessResponse(message: "Like deleted successfully", statusCode: 200);
+    }
 }

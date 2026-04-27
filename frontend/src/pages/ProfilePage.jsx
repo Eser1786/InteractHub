@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture } from '../api';
+import { getPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture, deletePost } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import '../styles/ProfilePage.css';
@@ -14,6 +14,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [likedPosts, setLikedPosts] = useState(new Set());
+  const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [editFormData, setEditFormData] = useState({
     fullName: '',
     bio: ''
@@ -62,6 +64,12 @@ export default function ProfilePage() {
             ...post,
             commentsCount: commentsByPost[post.Id]?.length ?? 0
           })));
+          
+          // Initialize liked posts from response data
+          const userLikedPostIds = (postsData || [])
+            .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(userData.Id))
+            .map(post => post.Id);
+          setLikedPosts(new Set(userLikedPostIds));
         } catch (postsErr) {
           console.error('Error loading posts:', postsErr);
           setError(`Failed to load posts: ${postsErr.message}`);
@@ -235,18 +243,34 @@ export default function ProfilePage() {
     }
     
     try {
-      const likedBy = post.likedBy || [];
-      const isLiked = likedBy.includes(currentUser.Id || currentUser.id);
+      const isLiked = likedPosts.has(post.Id);
+      console.log('Like status:', { postId: post.Id, userId: currentUser.Id, isLiked });
       
       if (isLiked) {
+        // Unlike
         await unlikePost(post.Id, currentUser.Id || currentUser.id);
+        setLikedPosts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(post.Id);
+          return newSet;
+        });
       } else {
+        // Like
         await likePost(post.Id, currentUser.Id || currentUser.id);
+        setLikedPosts(prev => new Set(prev).add(post.Id));
       }
       
       // Reload posts to get updated like count
       const postsData = await getPosts();
-      setPosts(postsData || []);
+      if (postsData) {
+        setPosts(postsData);
+        // Update likedPosts Set based on fresh data from backend
+        const userLikedPostIds = postsData
+          .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(currentUser.Id || currentUser.id))
+          .map(post => post.Id);
+        setLikedPosts(new Set(userLikedPostIds));
+      }
+      console.log('Posts updated after like/unlike');
     } catch (err) {
       console.error('Error liking post:', err);
     }
@@ -269,6 +293,27 @@ export default function ProfilePage() {
       ...prev,
       [postId]: [newComment, ...(prev[postId] || [])]
     }));
+  };
+
+  const handleDeletePost = async (post) => {
+    if (post.UserId !== currentUser?.Id) {
+      setError('Bạn chỉ có thể xóa bài viết của chính mình');
+      return;
+    }
+
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
+      return;
+    }
+
+    try {
+      await deletePost(post.Id);
+      setPosts(posts.filter(p => p.Id !== post.Id));
+      setActivePostMenuId(null);
+      setError('');
+    } catch (err) {
+      console.error('Error deleting post:', err);
+      setError(`Lỗi xóa bài viết: ${err.message}`);
+    }
   };
 
   const filteredPosts = selectedTab === 'all' 
@@ -445,48 +490,66 @@ export default function ProfilePage() {
                 <div key={post.Id} className="profile-post-card">
                   <div className="post-header-profile">
                     <div className="post-user-info-profile">
-                      <div className="post-avatar-profile"><i className="fa-solid fa-user"></i></div>
+                      <div className="post-avatar-profile">
+                        {post.UserProfilePictureUrl ? (
+                          <img 
+                            src={post.UserProfilePictureUrl} 
+                            alt="User Avatar"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <i className="fa-solid fa-user"></i>
+                        )}
+                      </div>
                       <div className="post-user-details-profile">
-                        <p className="post-username-profile">{post.username || 'Người dùng'}</p>
+                        <p className="post-username-profile">{post.UserFullName || post.UserName || 'Người dùng'}</p>
                         <p className="post-time-profile">
-                          {new Date(post.createdAt).toLocaleDateString('vi-VN')}
+                          {new Date(post.CreatedAt).toLocaleDateString('vi-VN')}
                         </p>
                       </div>
                     </div>
-                    <button className="post-menu-btn">⋯</button>
+                    <div className="post-menu-container">
+                      <button 
+                        className="post-menu-btn"
+                        onClick={() => setActivePostMenuId(activePostMenuId === post.Id ? null : post.Id)}
+                      >
+                        ⋯
+                      </button>
+                      {activePostMenuId === post.Id && currentUser?.Id === post.UserId && (
+                        <div className="post-menu-dropdown">
+                          <button 
+                            className="menu-item"
+                            onClick={() => handleDeletePost(post)}
+                          >
+                            <i className="fa-solid fa-trash"></i> Xóa bài viết
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="post-content-profile">
-                    <p>{post.content}</p>
-                    {post.hashtags && (
-                      <div className="post-hashtags">
-                        {post.hashtags.split(' ').map((tag, idx) => (
-                          tag.startsWith('#') && (
-                            <span key={idx} className="hashtag">{tag}</span>
-                          )
-                        ))}
-                      </div>
-                    )}
+                    <p>{post.Content}</p>
                   </div>
 
-                  {post.imageUrl && (
+                  {post.ImageUrl && (
                     <div className="post-images-profile">
-                      <img src={post.imageUrl} alt="Post" className="post-image-profile" />
+                      <img src={post.ImageUrl} alt="Post" className="post-image-profile" />
                     </div>
                   )}
 
                   <div className="post-stats-profile">
-                    <span>❤️ {post.likesCount}</span>
+                    <span>❤️ {post.LikesCount}</span>
                     <span><i className="fa-solid fa-comments"></i> {commentsByPost[post.Id]?.length ?? 0} Bình luận</span>
                   </div>
 
                   <div className="post-actions-profile">
                     <button 
-                      className={`post-action-btn-profile ${(post.likedBy || []).includes(currentUser?.Id || currentUser?.id) ? 'liked' : ''}`}
+                      className={`post-action-btn-profile ${likedPosts.has(post.Id) ? 'liked' : ''}`}
                       onClick={() => handleLike(post)}
                     >
-                      <span>{(post.likedBy || []).includes(currentUser?.Id || currentUser?.id) ? '❤️' : '🤍'}</span> 
-                      {(post.likedBy || []).includes(currentUser?.Id || currentUser?.id) ? 'Bỏ thích' : 'Thích'}
+                      <span>{likedPosts.has(post.Id) ? '❤️' : '🤍'}</span> 
+                      {likedPosts.has(post.Id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn-profile" onClick={() => handleToggleComments(post)}>
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận

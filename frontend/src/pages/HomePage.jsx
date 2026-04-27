@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost } from '../api';
+import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost, deletePost } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import '../styles/HomePage.css';
@@ -18,11 +18,13 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [posting, setPosting] = useState(false);
+  const [likedPosts, setLikedPosts] = useState(new Set());
   const [selectedNav, setSelectedNav] = useState('friends');
   const [searchQuery, setSearchQuery] = useState('');
   const [stories, setStories] = useState([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
+  const [activePostMenuId, setActivePostMenuId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +43,12 @@ export default function HomePage() {
           ...post,
           commentsCount: commentsByPost[post.Id]?.length ?? 0
         })));
+
+        // Initialize liked posts from response data
+        const userLikedPostIds = (postsData || [])
+          .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(userData.Id))
+          .map(post => post.Id);
+        setLikedPosts(new Set(userLikedPostIds));
 
         const friendsData = await getAcceptedFriends(userData.Id, 1, 10);
         setFriends(friendsData || []);
@@ -175,19 +183,33 @@ export default function HomePage() {
     }
     
     try {
-      const likedBy = post.likedBy || [];
-      const isLiked = likedBy.includes(currentUser.Id);
-      console.log('Like status:', { postId: post.Id, userId: currentUser.Id, isLiked, likedBy });
+      const isLiked = likedPosts.has(post.Id);
+      console.log('Like status:', { postId: post.Id, userId: currentUser.Id, isLiked });
       
       if (isLiked) {
+        // Unlike
         await unlikePost(post.Id, currentUser.Id);
+        setLikedPosts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(post.Id);
+          return newSet;
+        });
       } else {
+        // Like
         await likePost(post.Id, currentUser.Id);
+        setLikedPosts(prev => new Set(prev).add(post.Id));
       }
       
       // Reload posts to get updated like count
       const postsData = await getPosts();
-      setPosts(postsData || []);
+      if (postsData) {
+        setPosts(postsData);
+        // Update likedPosts Set based on fresh data from backend
+        const userLikedPostIds = postsData
+          .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(currentUser.Id))
+          .map(post => post.Id);
+        setLikedPosts(new Set(userLikedPostIds));
+      }
       console.log('Posts updated after like/unlike');
     } catch (err) {
       console.error('Error liking post:', err);
@@ -211,6 +233,27 @@ export default function HomePage() {
       ...prev,
       [postId]: [newComment, ...(prev[postId] || [])]
     }));
+  };
+
+  const handleDeletePost = async (post) => {
+    if (post.UserId !== currentUser?.Id) {
+      setError('Bạn chỉ có thể xóa bài viết của chính mình');
+      return;
+    }
+
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
+      return;
+    }
+
+    try {
+      await deletePost(post.Id);
+      setPosts(posts.filter(p => p.Id !== post.Id));
+      setActivePostMenuId(null);
+      setError('');
+    } catch (err) {
+      console.error('Error deleting post:', err);
+      setError(`Lỗi xóa bài viết: ${err.message}`);
+    }
   };
 
   if (loading) {
@@ -383,6 +426,24 @@ export default function HomePage() {
                         </p>
                       </div>
                     </div>
+                    <div className="post-menu-container">
+                      <button 
+                        className="post-menu-btn" 
+                        onClick={() => setActivePostMenuId(activePostMenuId === post.Id ? null : post.Id)}
+                      >
+                        ⋯
+                      </button>
+                      {activePostMenuId === post.Id && currentUser?.Id === post.UserId && (
+                        <div className="post-menu-dropdown">
+                          <button 
+                            className="menu-item"
+                            onClick={() => handleDeletePost(post)}
+                          >
+                            <i className="fa-solid fa-trash"></i> Xóa bài viết
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="post-content">
@@ -399,11 +460,11 @@ export default function HomePage() {
 
                   <div className="post-actions">
                     <button 
-                      className={`post-action-btn ${(post.likedBy || []).includes(currentUser?.id) ? 'liked' : ''}`}
+                      className={`post-action-btn ${likedPosts.has(post.Id) ? 'liked' : ''}`}
                       onClick={() => handleLike(post)}
                     >
-                      <span>{(post.likedBy || []).includes(currentUser?.id) ? '❤️' : '🤍'}</span> 
-                      {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
+                      <span>{likedPosts.has(post.Id) ? '❤️' : '🤍'}</span> 
+                      {likedPosts.has(post.Id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn" onClick={() => handleToggleComments(post)}>
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận

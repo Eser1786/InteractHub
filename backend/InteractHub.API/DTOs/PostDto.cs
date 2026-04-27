@@ -20,6 +20,9 @@ public class PostResponseDto
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public string UserId { get; set; } = string.Empty;
+    public string? UserName { get; set; }
+    public string? UserFullName { get; set; }
+    public string? UserProfilePictureUrl { get; set; }
     public int LikesCount { get; set; }
     public int CommentsCount { get; set; }
 }

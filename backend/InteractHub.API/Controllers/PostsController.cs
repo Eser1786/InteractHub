@@ -36,6 +36,9 @@ public class PostsController : ControllerBase
             CreatedAt = p.CreatedAt,
             UpdatedAt = p.UpdatedAt,
             UserId = p.UserId,
+            UserName = p.User?.UserName,
+            UserFullName = p.User?.FullName,
+            UserProfilePictureUrl = p.User?.ProfilePictureUrl,
             LikesCount = p.Likes?.Count ?? 0,
             CommentsCount = p.Comments?.Count ?? 0
         }).ToList();
@@ -61,6 +64,9 @@ public class PostsController : ControllerBase
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
             UserId = post.UserId,
+            UserName = post.User?.UserName,
+            UserFullName = post.User?.FullName,
+            UserProfilePictureUrl = post.User?.ProfilePictureUrl,
             LikesCount = post.Likes?.Count ?? 0,
             CommentsCount = post.Comments?.Count ?? 0
         };
@@ -86,15 +92,24 @@ public class PostsController : ControllerBase
         };
 
         var created = await _postService.CreateAsync(post);
+        
+        // Reload post with User data
+        var createdWithUser = await _postService.GetByIdAsync(created.Id);
+        
+        if (createdWithUser == null)
+            return this.ErrorResponse("Failed to retrieve created post", statusCode: 500);
 
         var postDto = new PostResponseDto
         {
-            Id = created.Id,
-            Content = created.Content,
-            ImageUrl = created.ImageUrl,
-            CreatedAt = created.CreatedAt,
-            UpdatedAt = created.UpdatedAt,
-            UserId = created.UserId,
+            Id = createdWithUser.Id,
+            Content = createdWithUser.Content,
+            ImageUrl = createdWithUser.ImageUrl,
+            CreatedAt = createdWithUser.CreatedAt,
+            UpdatedAt = createdWithUser.UpdatedAt,
+            UserId = createdWithUser.UserId,
+            UserName = createdWithUser.User?.UserName,
+            UserFullName = createdWithUser.User?.FullName,
+            UserProfilePictureUrl = createdWithUser.User?.ProfilePictureUrl,
             LikesCount = 0,
             CommentsCount = 0
         };

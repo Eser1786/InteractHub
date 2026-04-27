@@ -36,11 +36,19 @@ public class PostService : IPostService
 
     public async Task<List<Post>> GetAllAsync()
     {
-        return await _context.Posts.ToListAsync();
+        return await _context.Posts
+            .Include(p => p.User)
+            .Include(p => p.Likes)
+            .Include(p => p.Comments)
+            .ToListAsync();
     }
 
     public async Task<Post?> GetByIdAsync(int id)
     {
-        return await _context.Posts.FindAsync(id);
+        return await _context.Posts
+            .Include(p => p.User)
+            .Include(p => p.Likes)
+            .Include(p => p.Comments)
+            .FirstOrDefaultAsync(p => p.Id == id);
     }
 }

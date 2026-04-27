@@ -13,11 +13,11 @@ export default function HomePage() {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [newPostContent, setNewPostContent] = useState('');
-  const [newPostImage, setNewPostImage] = useState('');
+  const [newPostFile, setNewPostFile] = useState(null);
+  const [postImagePreview, setPostImagePreview] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [posting, setPosting] = useState(false);
-  const [postType, setPostType] = useState('text');
   const [selectedNav, setSelectedNav] = useState('friends');
   const [searchQuery, setSearchQuery] = useState('');
   const [stories, setStories] = useState([]);
@@ -93,30 +93,69 @@ export default function HomePage() {
     localStorage.setItem('postComments', JSON.stringify(commentsByPost));
   }, [commentsByPost]);
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    
+    if (file.size > maxSize) {
+      setError('Kích thước hình ảnh không được vượt quá 5MB');
+      return;
+    }
+    
+    if (!validTypes.includes(file.type)) {
+      setError('Chỉ hỗ trợ các định dạng: JPEG, PNG, GIF, WebP');
+      return;
+    }
+
+    // Read file as Base64
+    const reader = new FileReader();
+    reader.onload = () => {
+      setNewPostFile(file);
+      setPostImagePreview(reader.result);
+      setError('');
+    };
+    reader.onerror = () => {
+      setError('Lỗi đọc tệp hình ảnh');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreatePost = async (e) => {
     e.preventDefault();
-    if (!newPostContent.trim() && !newPostImage.trim()) {
+    if (!newPostContent.trim() && !newPostFile) {
       setError('Vui lòng nhập nội dung hoặc chọn hình ảnh');
       return;
     }
 
     setPosting(true);
     try {
+      let imageBase64 = null;
+      if (newPostFile) {
+        imageBase64 = postImagePreview;
+      }
+
       const newPost = await createPost({
         content: newPostContent,
-        imageUrl: newPostImage
+        imageUrl: imageBase64
       });
       
-      setNewPostContent('');
-      setNewPostImage('');
-      setPostType('text');
+      console.log('Post created successfully:', newPost);
       
-      // Add new post to the beginning of the list with current timestamp
+      setNewPostContent('');
+      setNewPostFile(null);
+      setPostImagePreview('');
+      
+      // Add new post to the beginning of the list
       if (newPost) {
         setPosts([newPost, ...posts]);
       }
     } catch (err) {
       setError(err.message);
+      console.error('Error creating post:', err);
     } finally {
       setPosting(false);
     }
@@ -240,53 +279,58 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="create-post-tabs">
-              <button 
-                className={`tab ${postType === 'text' ? 'active' : ''}`}
-                onClick={() => setPostType('text')}
-              >
-                <span className="tab-icon"><i className="fa-solid fa-pen"></i></span>
-                <span>Văn bản</span>
-              </button>
-              <button 
-                className={`tab ${postType === 'image' ? 'active' : ''}`}
-                onClick={() => setPostType('image')}
-              >
-                <span className="tab-icon"><i class="fa-solid fa-image"></i></span>
-                <span>Hình ảnh</span>
-              </button>
-            </div>
-
             <form onSubmit={handleCreatePost} className="create-post-form">
-              {postType === 'text' ? (
-                <textarea
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="Chia sẻ suy nghĩ của bạn..."
-                  className="post-textarea"
-                  rows="4"
-                />
-              ) : (
-                <div className="image-input-wrapper">
+              <textarea
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+                placeholder="Chia sẻ suy nghĩ của bạn..."
+                className="post-textarea"
+                rows="4"
+              />
+              
+              <div className="post-form-bottom">
+                <div className="file-input-wrapper">
+                  <label htmlFor="post-image-input" className="file-input-label">
+                    <i className="fa-solid fa-image"></i>
+                    <span>Thêm hình ảnh</span>
+                  </label>
                   <input
-                    type="text"
-                    value={newPostImage}
-                    onChange={(e) => setNewPostImage(e.target.value)}
-                    placeholder="Nhập URL hình ảnh"
-                    className="post-image-input"
+                    id="post-image-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleFileChange}
+                    className="post-file-input"
                   />
-                  {newPostImage && (
-                    <img src={newPostImage} alt="Preview" className="image-preview" />
+                  {newPostFile && (
+                    <span className="file-selected">
+                      ✓ {newPostFile.name}
+                    </span>
                   )}
                 </div>
+                <button 
+                  type="submit" 
+                  className="btn-post"
+                  disabled={posting}
+                >
+                  {posting ? 'Đang đăng...' : 'Đăng'}
+                </button>
+              </div>
+              
+              {postImagePreview && (
+                <div className="post-image-preview-wrapper">
+                  <img src={postImagePreview} alt="Preview" className="post-image-preview" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPostFile(null);
+                      setPostImagePreview('');
+                    }}
+                    className="btn-remove-image"
+                  >
+                    ✕ Xóa hình ảnh
+                  </button>
+                </div>
               )}
-              <button 
-                type="submit" 
-                className="btn-post"
-                disabled={posting}
-              >
-                {posting ? 'Đang đăng...' : 'Đăng'}
-              </button>
             </form>
           </section>
 
@@ -321,25 +365,35 @@ export default function HomePage() {
                 <div key={post.Id} className="post-card">
                   <div className="post-header">
                     <div className="post-user-info">
-                      <div className="post-avatar"><i className="fa-solid fa-user"></i></div>
+                      <div className="post-avatar">
+                        {post.UserProfilePictureUrl ? (
+                          <img 
+                            src={post.UserProfilePictureUrl} 
+                            alt="User Avatar"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <i className="fa-solid fa-user"></i>
+                        )}
+                      </div>
                       <div className="post-user-details">
-                        <p className="post-username">{post.username || 'Người dùng'}</p>
+                        <p className="post-username">{post.UserFullName || post.UserName || 'Người dùng'}</p>
                         <p className="post-time">
-                          {new Date(post.createdAt).toLocaleDateString('vi-VN')}
+                          {new Date(post.CreatedAt).toLocaleDateString('vi-VN')}
                         </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="post-content">
-                    <p>{post.content}</p>
-                    {post.imageUrl && (
-                      <img src={post.imageUrl} alt="Post" className="post-image" />
+                    <p>{post.Content}</p>
+                    {post.ImageUrl && (
+                      <img src={post.ImageUrl} alt="Post" className="post-image" />
                     )}
                   </div>
 
                   <div className="post-stats">
-                    <span>❤️ {post.likesCount} lượt thích</span>
+                    <span>❤️ {post.LikesCount} lượt thích</span>
                     <span><i className="fa-solid fa-comments"></i> {(commentsByPost[post.Id]?.length ?? 0)} bình luận</span>
                   </div>
 

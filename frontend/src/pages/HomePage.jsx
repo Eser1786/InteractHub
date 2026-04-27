@@ -72,6 +72,21 @@ export default function HomePage() {
     };
 
     loadData();
+
+    // Listen for user data updates from other components (e.g., profile page)
+    const handleUserUpdate = () => {
+      const userDataJson = localStorage.getItem('user');
+      if (userDataJson) {
+        const userData = JSON.parse(userDataJson);
+        setCurrentUser(userData);
+      }
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdate);
+
+    return () => {
+      window.removeEventListener('userUpdated', handleUserUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -210,7 +225,15 @@ export default function HomePage() {
           <section className="create-post-section">
             <div className="create-post-header">
               <div className="user-avatar">
-                <div className="avatar-placeholder"><i className="fa-solid fa-user"></i></div>
+                {currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl ? (
+                  <img 
+                    src={currentUser.ProfilePictureUrl || currentUser.profilePictureUrl} 
+                    alt="Avatar"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div className="avatar-placeholder"><i className="fa-solid fa-user"></i></div>
+                )}
               </div>
               <p className="create-post-prompt">
                 Bạn đang nghĩ gì? Hãy chia sẻ cảm nghĩ của bạn đến bạn bè thông qua...

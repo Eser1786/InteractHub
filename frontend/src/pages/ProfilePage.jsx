@@ -186,6 +186,8 @@ export default function ProfilePage() {
         // Update localStorage with error handling
         try {
           localStorage.setItem('user', JSON.stringify(updatedUserState));
+          // Dispatch event to notify Header and other components about user update
+          window.dispatchEvent(new Event('userUpdated'));
         } catch (storageErr) {
           console.warn('localStorage save error (size limit?):', storageErr);
           // Even if localStorage fails, state is updated, so component will still display
@@ -207,6 +209,8 @@ export default function ProfilePage() {
         
         try {
           localStorage.setItem('user', JSON.stringify(updatedUserState));
+          // Dispatch event to notify Header and other components about user update
+          window.dispatchEvent(new Event('userUpdated'));
         } catch (storageErr) {
           console.warn('localStorage save error (size limit?):', storageErr);
         }

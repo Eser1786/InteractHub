@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import logoImage from '../assets/logo.png';
 import logoTextImage from '../assets/chữ logo 2.png';
 import '../styles/Header.css';
@@ -6,6 +7,44 @@ import '../styles/Header.css';
 export default function Header({ onLogout, showControls = true }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    // Load user data from localStorage
+    const loadUserData = () => {
+      try {
+        const userDataJson = localStorage.getItem('user');
+        if (userDataJson) {
+          const userData = JSON.parse(userDataJson);
+          setCurrentUser(userData);
+        }
+      } catch (err) {
+        console.error('Error loading user data:', err);
+      }
+    };
+
+    loadUserData();
+
+    // Listen for storage changes (when updated in other tabs or same page)
+    const handleStorageChange = (e) => {
+      if (e.key === 'user' || e.key === null) {
+        loadUserData();
+      }
+    };
+
+    // Listen for custom events (when updated on same page)
+    const handleUserUpdate = () => {
+      loadUserData();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userUpdated', handleUserUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userUpdated', handleUserUpdate);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -74,7 +113,17 @@ export default function Header({ onLogout, showControls = true }) {
                 onClick={() => navigate('/profile')}
                 title="Profile"
               >
-                <span className="icon-profile"><i className="fa-solid fa-user"></i></span>
+                {currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl ? (
+                  <span className="icon-profile-avatar">
+                    <img 
+                      src={currentUser.ProfilePictureUrl || currentUser.profilePictureUrl} 
+                      alt="Avatar"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                    />
+                  </span>
+                ) : (
+                  <span className="icon-profile"><i className="fa-solid fa-user"></i></span>
+                )}
               </button>
             </div>
           </>

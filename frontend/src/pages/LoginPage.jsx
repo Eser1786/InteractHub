@@ -83,7 +83,7 @@ export default function LoginPage() {
                   className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  ●
+                  <i class="fa-solid fa-eye"></i>
                 </button>
               </div>
             </div>

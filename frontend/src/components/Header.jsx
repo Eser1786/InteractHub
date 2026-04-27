@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import logoImage from '../assets/logo.png';
-import logoTextImage from '../assets/chữ logo.png';
+import logoTextImage from '../assets/chữ logo 2.png';
 import '../styles/Header.css';
 
 export default function Header({ onLogout, showControls = true }) {

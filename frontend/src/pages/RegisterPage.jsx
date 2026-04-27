@@ -88,7 +88,7 @@ export default function RegisterPage() {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="firstName" className="form-label">Họ và đệm:</label>
+                <label htmlFor="firstName" className="form-label">Họ:</label>
                 <input
                   id="firstName"
                   type="text"
@@ -149,7 +149,7 @@ export default function RegisterPage() {
                   className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  ●
+                  <i class="fa-solid fa-eye"></i>
                 </button>
               </div>
             </div>

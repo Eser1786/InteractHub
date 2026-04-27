@@ -1,69 +1,187 @@
 import { useState, useEffect } from 'react';
+import { getUser } from '../api';
 import '../styles/CommentSection.css';
 
-const handleCommentLike = () => {
-  alert('Tính năng thích bình luận đang được phát triển');
-};
-
-const DEFAULT_COMMENTS = [
-  {
-    id: 'c1',
-    userName: 'Mèo Lành Mạnh',
-    content: 'Lên kéo đi ăn mừng hơi',
-    createdAt: '45 phút trước',
-    replies: [
-      {
-        id: 'c1-1',
-        userName: 'Trần Dơ Hầy',
-        content: 'Uaaaaa',
-        createdAt: '43 phút trước'
-      },
-      {
-        id: 'c1-2',
-        userName: 'Thái Anh Gay',
-        content: 'Vậy là chưa Tây đâu',
-        createdAt: '40 phút trước'
-      }
-    ]
-  },
-  {
-    id: 'c2',
-    userName: 'Sang Khùng Long',
-    content: 'Nà ná na na....',
-    createdAt: '36 phút trước',
-    replies: [
-      {
-        id: 'c2-1',
-        userName: 'Thái Anh Gay',
-        content: 'Anh Phùng Thanh Độ. Anh Độ Mixi',
-        createdAt: '34 phút trước'
-      }
-    ]
+// Format timestamp function
+function formatCommentTime(dateString) {
+  if (!dateString) {
+    return 'Vừa xong';
   }
-];
 
-export default function CommentSection({ post, comments, onClose, onAddComment, currentUser }) {
+  // If it's the old format "Vừa xong", return it
+  if (dateString === 'Vừa xong') {
+    return 'Vừa xong';
+  }
+
+  try {
+    const now = new Date();
+    const commentDate = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(commentDate.getTime())) {
+      console.warn('Invalid date string:', dateString);
+      return 'Vừa xong';
+    }
+
+    const diffMs = now - commentDate;
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) {
+      return 'Vừa xong';
+    }
+
+    // Format: DD/MM/YYYY HH:mm
+    const day = String(commentDate.getDate()).padStart(2, '0');
+    const month = String(commentDate.getMonth() + 1).padStart(2, '0');
+    const year = commentDate.getFullYear();
+    const hours = String(commentDate.getHours()).padStart(2, '0');
+    const mins = String(commentDate.getMinutes()).padStart(2, '0');
+
+    return `${day}/${month}/${year} ${hours}:${mins}`;
+  } catch (err) {
+    console.error('Error formatting comment time:', err, dateString);
+    return 'Vừa xong';
+  }
+}
+
+export default function CommentSection({ post, comments, onClose, onAddComment, onDeleteComment, onEditComment, currentUser }) {
   const [newComment, setNewComment] = useState('');
+  const [likedComments, setLikedComments] = useState(new Set());
+  const [commentUsers, setCommentUsers] = useState({});
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [activeMenuCommentId, setActiveMenuCommentId] = useState(null);
+  const [localComments, setLocalComments] = useState(comments);
 
   useEffect(() => {
     setNewComment('');
   }, [post?.Id]);
 
   useEffect(() => {
-    // Debug logging
-    if (currentUser) {
-      console.log('CommentSection - currentUser:', {
-        name: currentUser.UserName,
-        ProfilePictureUrl: currentUser.ProfilePictureUrl,
-        fullName: currentUser.fullName
-      });
+    // Initialize liked comments from comment data
+    const liked = new Set();
+    comments.forEach(comment => {
+      if (comment.likes && Array.isArray(comment.likes) && comment.likes.includes(currentUser?.Id)) {
+        liked.add(comment.id);
+      }
+    });
+    setLikedComments(liked);
+  }, [comments, currentUser?.Id]);
+
+  // Load user data for comments that don't have profile picture
+  useEffect(() => {
+    const loadUserData = async () => {
+      const newUsers = { ...commentUsers };
+      
+      for (const comment of comments) {
+        // Load fresh user data if comment has userId (to get current name in case it changed)
+        if (comment.userId && !newUsers[comment.userId]) {
+          try {
+            const userData = await getUser(comment.userId);
+            newUsers[comment.userId] = userData;
+          } catch (err) {
+            console.error(`Error loading user ${comment.userId}:`, err);
+          }
+        }
+      }
+      
+      if (Object.keys(newUsers).length > Object.keys(commentUsers).length) {
+        setCommentUsers(newUsers);
+      }
+    };
+
+    if (comments.length > 0) {
+      loadUserData();
     }
-  }, [currentUser]);
+  }, [comments]);
+
+  // Fix old comments format - add userId from currentUser if missing
+  useEffect(() => {
+    if (!currentUser || !post) return;
+    
+    const needsUpdate = comments.some(comment => !comment.userId);
+    if (needsUpdate) {
+      console.log('Migrating old comment format - adding userId', currentUser?.Id || currentUser?.id);
+      const postCommentsStr = localStorage.getItem('postComments');
+      const allComments = JSON.parse(postCommentsStr || '{}');
+      
+      if (allComments[post.Id]) {
+        const userId = currentUser.Id || currentUser.id;
+        const updatedComments = allComments[post.Id].map(comment => {
+          const newComment = {
+            ...comment,
+            userId: comment.userId || userId
+          };
+          console.log('Updated comment:', newComment);
+          return newComment;
+        });
+        allComments[post.Id] = updatedComments;
+        localStorage.setItem('postComments', JSON.stringify(allComments));
+        console.log('Saved to localStorage:', allComments[post.Id]);
+        window.dispatchEvent(new Event('commentUpdated'));
+      }
+    }
+  }, [currentUser?.Id, post?.Id, comments.length]);
+
+  // Listen for user updates to refresh comment user data (e.g., when profile name changes)
+  useEffect(() => {
+    const handleUserUpdate = async () => {
+      console.log('userUpdated event received in CommentSection - refreshing user cache');
+      // Refresh all user data in comments
+      const newUsers = {};
+      
+      for (const comment of comments) {
+        if (comment.userId && !newUsers[comment.userId]) {
+          try {
+            const userData = await getUser(comment.userId);
+            newUsers[comment.userId] = userData;
+          } catch (err) {
+            console.error(`Error loading user ${comment.userId}:`, err);
+          }
+        }
+      }
+      
+      if (Object.keys(newUsers).length > 0) {
+        setCommentUsers(newUsers);
+      }
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdate);
+    return () => {
+      window.removeEventListener('userUpdated', handleUserUpdate);
+    };
+  }, [comments]);
 
   const handleSubmit = () => {
     if (!newComment.trim()) return;
     onAddComment(post.Id, newComment.trim());
     setNewComment('');
+  };
+
+  const handleEditComment = (commentId, currentText) => {
+    console.log('handleEditComment - id:', commentId, 'text:', currentText);
+    setEditingCommentId(commentId);
+    setEditingCommentText(currentText);
+    setActiveMenuCommentId(null);
+  };
+
+  const handleSaveEdit = (commentId) => {
+    console.log('handleSaveEdit - id:', commentId, 'newText:', editingCommentText);
+    if (!editingCommentText.trim()) return;
+    
+    // Call parent callback to update state
+    if (onEditComment) {
+      onEditComment(post.Id, commentId, editingCommentText.trim());
+    }
+    
+    // Close editing mode
+    setEditingCommentId(null);
+    setEditingCommentText('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingCommentText('');
   };
 
   return (
@@ -84,16 +202,36 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
             </div>
           ) : (
             <div className="comment-thread">
-              {comments.map((comment) => (
-                <div key={comment.Id} className="comment-item">
+              {comments.map((comment) => {
+                // Get user data from loaded users or use comment data
+                const userData = commentUsers[comment.userId];
+                const displayName = userData?.FullName || userData?.fullName || comment.userName;
+                const displayProfilePic = userData?.ProfilePictureUrl || userData?.profilePictureUrl || comment.userProfilePictureUrl;
+                
+                // Check if current user can delete this comment
+                const canDeleteComment = currentUser?.Id === comment.userId || currentUser?.Id === post.UserId;
+                
+                console.log('Rendering comment:', {
+                  id: comment.id,
+                  userId: comment.userId,
+                  content: comment.content,
+                  createdAt: comment.createdAt,
+                  canDelete: canDeleteComment,
+                  currentUserId: currentUser?.Id,
+                  postUserId: post.UserId,
+                  displayName
+                });
+                
+                return (
+                <div key={comment.id} className="comment-item">
                   <div className="comment-avatar">
-                    {comment.userProfilePictureUrl ? (
+                    {displayProfilePic ? (
                       <img 
-                        src={comment.userProfilePictureUrl} 
-                        alt={comment.userName}
+                        src={displayProfilePic} 
+                        alt={displayName}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
-                          console.warn('Failed to load comment avatar:', comment.userProfilePictureUrl);
+                          console.warn('Failed to load comment avatar:', displayProfilePic);
                           e.target.style.display = 'none';
                           const fallbackIcon = e.target.nextElementSibling;
                           if (fallbackIcon) {
@@ -105,7 +243,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                     <i 
                       className="fa-solid fa-user" 
                       style={{ 
-                        display: comment.userProfilePictureUrl ? 'none' : 'flex',
+                        display: displayProfilePic ? 'none' : 'flex',
                         width: '100%',
                         height: '100%',
                         alignItems: 'center',
@@ -114,13 +252,110 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                     ></i>
                   </div>
                   <div className="comment-content-wrapper">
-                    <div className="comment-top-row">
-                      <strong>{comment.userName}</strong>
-                      <span>{comment.createdAt}</span>
+                    <div className="comment-header">
+                      <div className="comment-user-info">
+                        <strong>{displayName}</strong>
+                        <p className="comment-time">{formatCommentTime(comment.createdAt)}</p>
+                      </div>
+                      {canDeleteComment && (
+                        <div className="comment-menu-container">
+                          <button 
+                            type="button"
+                            className="comment-menu-btn"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Menu button clicked for comment:', comment.id);
+                              setActiveMenuCommentId(activeMenuCommentId === comment.id ? null : comment.id);
+                            }}
+                          >
+                            ⋯
+                          </button>
+                          {activeMenuCommentId === comment.id && (
+                            <div className="comment-menu-dropdown">
+                              <button 
+                                type="button"
+                                className="menu-item"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('Edit button clicked');
+                                  handleEditComment(comment.id, comment.content);
+                                }}
+                              >
+                                <i className="fa-solid fa-pen"></i> Chỉnh sửa
+                              </button>
+                              <button 
+                                type="button"
+                                className="menu-item delete"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('Delete button clicked');
+                                  setActiveMenuCommentId(null);
+                                  onDeleteComment(post.Id, comment.id);
+                                }}
+                              >
+                                <i className="fa-solid fa-trash"></i> Xóa
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="comment-text">{comment.content}</p>
+                    
+                    {editingCommentId === comment.id ? (
+                      <div className="comment-edit-mode">
+                        <textarea
+                          value={editingCommentText}
+                          onChange={(e) => setEditingCommentText(e.target.value)}
+                          className="comment-edit-input"
+                        />
+                        <div className="comment-edit-actions">
+                          <button 
+                            type="button"
+                            className="btn-cancel"
+                            onClick={handleCancelEdit}
+                          >
+                            Hủy
+                          </button>
+                          <button 
+                            type="button"
+                            className="btn-save"
+                            onClick={() => handleSaveEdit(comment.id)}
+                          >
+                            Lưu
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="comment-text">{comment.content}</p>
+                    )}
+                    
                     <div className="comment-meta-row">
-                      <button className="comment-action-btn" onClick={handleCommentLike}>Thích</button>
+                      <button 
+                        className={`comment-like-btn ${likedComments.has(comment.id) ? 'liked' : ''}`}
+                        onClick={() => {
+                          const newLiked = new Set(likedComments);
+                          if (newLiked.has(comment.id)) {
+                            newLiked.delete(comment.id);
+                            comment.likes = comment.likes.filter(id => id !== currentUser?.Id);
+                          } else {
+                            newLiked.add(comment.id);
+                            if (!comment.likes) comment.likes = [];
+                            if (!comment.likes.includes(currentUser?.Id)) {
+                              comment.likes.push(currentUser?.Id);
+                            }
+                          }
+                          setLikedComments(newLiked);
+                        }}
+                        title="Thích bình luận này"
+                      >
+                        <i className="fa-solid fa-heart"></i>
+                        {comment.likes && comment.likes.length > 0 && (
+                          <span className="like-count"> {comment.likes.length}</span>
+                        )}
+                      </button>
                     </div>
                     {comment.replies && comment.replies.length > 0 && (
                       <div className="comment-replies">
@@ -156,11 +391,33 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                             <div className="comment-content-wrapper">
                               <div className="comment-top-row">
                                 <strong>{reply.userName}</strong>
-                                <span>{reply.createdAt}</span>
+                                <span>{formatCommentTime(reply.createdAt)}</span>
                               </div>
                               <p className="comment-text">{reply.content}</p>
                               <div className="comment-meta-row">
-                                <button className="comment-action-btn" onClick={handleCommentLike}>Thích</button>
+                                <button 
+                                  className={`comment-like-btn ${likedComments.has(reply.id) ? 'liked' : ''}`}
+                                  onClick={() => {
+                                    const newLiked = new Set(likedComments);
+                                    if (newLiked.has(reply.id)) {
+                                      newLiked.delete(reply.id);
+                                      reply.likes = reply.likes.filter(id => id !== currentUser?.Id);
+                                    } else {
+                                      newLiked.add(reply.id);
+                                      if (!reply.likes) reply.likes = [];
+                                      if (!reply.likes.includes(currentUser?.Id)) {
+                                        reply.likes.push(currentUser?.Id);
+                                      }
+                                    }
+                                    setLikedComments(newLiked);
+                                  }}
+                                  title="Thích bình luận này"
+                                >
+                                  <i className="fa-solid fa-heart"></i>
+                                  {reply.likes && reply.likes.length > 0 && (
+                                    <span className="like-count"> {reply.likes.length}</span>
+                                  )}
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -169,7 +426,8 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

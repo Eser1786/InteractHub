@@ -229,19 +229,59 @@ export default function HomePage() {
   };
 
   const handleAddComment = (postId, content) => {
+    console.log('handleAddComment - currentUser:', currentUser);
+    
     const newComment = {
       id: `${postId}-${Date.now()}`,
-      userName: currentUser?.fullName || currentUser?.userName || 'Bạn',
-      userProfilePictureUrl: currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl,
+      userId: currentUser?.Id || currentUser?.id,
+      userName: currentUser?.FullName || currentUser?.fullName || currentUser?.UserName || currentUser?.userName || 'User',
+      userProfilePictureUrl: currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl || null,
       content,
       createdAt: 'Vừa xong',
-      replies: []
+      replies: [],
+      likes: []
     };
 
-    setCommentsByPost((prev) => ({
-      ...prev,
-      [postId]: [newComment, ...(prev[postId] || [])]
-    }));
+    console.log('New comment created:', newComment);
+
+    setCommentsByPost((prev) => {
+      const updated = {
+        ...prev,
+        [postId]: [newComment, ...(prev[postId] || [])]
+      };
+      localStorage.setItem('postComments', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleDeleteComment = (postId, commentId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+      return;
+    }
+
+    setCommentsByPost((prev) => {
+      const updated = {
+        ...prev,
+        [postId]: (prev[postId] || []).filter(comment => comment.id !== commentId)
+      };
+      localStorage.setItem('postComments', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleEditComment = (postId, commentId, newContent) => {
+    setCommentsByPost((prev) => {
+      const updated = {
+        ...prev,
+        [postId]: (prev[postId] || []).map(comment =>
+          comment.id === commentId
+            ? { ...comment, content: newContent }
+            : comment
+        )
+      };
+      localStorage.setItem('postComments', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleDeletePost = async (post) => {
@@ -496,6 +536,8 @@ export default function HomePage() {
                       comments={commentsByPost[post.Id] || []}
                       onClose={() => setActiveCommentPostId(null)}
                       onAddComment={handleAddComment}
+                      onDeleteComment={handleDeleteComment}
+                      onEditComment={handleEditComment}
                       currentUser={currentUser}
                     />
                   )}

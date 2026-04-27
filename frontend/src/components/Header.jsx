@@ -17,6 +17,13 @@ export default function Header({ onLogout, showControls = true }) {
         if (userDataJson) {
           const userData = JSON.parse(userDataJson);
           setCurrentUser(userData);
+          
+          // Debug logging
+          console.log('Header - currentUser loaded:', {
+            id: userData.Id,
+            name: userData.UserName,
+            ProfilePictureUrl: userData.ProfilePictureUrl
+          });
         }
       } catch (err) {
         console.error('Error loading user data:', err);
@@ -113,12 +120,19 @@ export default function Header({ onLogout, showControls = true }) {
                 onClick={() => navigate('/profile')}
                 title="Profile"
               >
-                {currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl ? (
+                {currentUser?.ProfilePictureUrl ? (
                   <span className="icon-profile-avatar">
                     <img 
-                      src={currentUser.ProfilePictureUrl || currentUser.profilePictureUrl} 
+                      src={currentUser.ProfilePictureUrl} 
                       alt="Avatar"
                       style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                      onError={(e) => {
+                        console.warn('Failed to load profile avatar:', currentUser.ProfilePictureUrl);
+                        e.target.style.display = 'none';
+                        if (e.target.parentElement?.nextElementSibling) {
+                          e.target.parentElement.nextElementSibling.style.display = 'flex';
+                        }
+                      }}
                     />
                   </span>
                 ) : (

@@ -284,6 +284,7 @@ export default function ProfilePage() {
     const newComment = {
       id: `${postId}-${Date.now()}`,
       userName: currentUser?.FullName || currentUser?.fullName || currentUser?.UserName || currentUser?.userName || 'Bạn',
+      userProfilePictureUrl: currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl,
       content,
       createdAt: 'Vừa xong',
       replies: []
@@ -561,6 +562,7 @@ export default function ProfilePage() {
                       comments={commentsByPost[post.Id] || []}
                       onClose={() => setActiveCommentPostId(null)}
                       onAddComment={handleAddComment}
+                      currentUser={currentUser}
                     />
                   )}
                 </div>

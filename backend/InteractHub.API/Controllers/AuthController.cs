@@ -132,7 +132,8 @@ public class AuthController : ControllerBase
                 Id = user.Id,
                 UserName = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
-                FullName = user.FullName ?? string.Empty
+                FullName = user.FullName ?? string.Empty,
+                ProfilePictureUrl = user.ProfilePictureUrl
             }
         };
 
@@ -167,7 +168,8 @@ public class AuthController : ControllerBase
                 Id = user.Id,
                 UserName = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
-                FullName = user.FullName ?? string.Empty
+                FullName = user.FullName ?? string.Empty,
+                ProfilePictureUrl = user.ProfilePictureUrl
             }
         };
 

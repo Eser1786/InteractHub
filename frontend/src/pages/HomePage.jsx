@@ -37,6 +37,14 @@ export default function HomePage() {
 
         const userData = JSON.parse(userDataJson);
         setCurrentUser(userData);
+        
+        // Debug logging for avatar
+        console.log('HomePage - currentUser loaded:', {
+          id: userData.Id,
+          name: userData.UserName,
+          ProfilePictureUrl: userData.ProfilePictureUrl,
+          profilePictureUrl: userData.profilePictureUrl
+        });
 
         const postsData = await getPosts();
         setPosts((postsData || []).map((post) => ({
@@ -224,6 +232,7 @@ export default function HomePage() {
     const newComment = {
       id: `${postId}-${Date.now()}`,
       userName: currentUser?.fullName || currentUser?.userName || 'Bạn',
+      userProfilePictureUrl: currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl,
       content,
       createdAt: 'Vừa xong',
       replies: []
@@ -307,15 +316,23 @@ export default function HomePage() {
           <section className="create-post-section">
             <div className="create-post-header">
               <div className="user-avatar">
-                {currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl ? (
+                {currentUser?.ProfilePictureUrl ? (
                   <img 
-                    src={currentUser.ProfilePictureUrl || currentUser.profilePictureUrl} 
+                    src={currentUser.ProfilePictureUrl} 
                     alt="Avatar"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      console.warn('Failed to load avatar image:', currentUser.ProfilePictureUrl);
+                      e.target.style.display = 'none';
+                      if (e.target.nextElementSibling) {
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }
+                    }}
                   />
-                ) : (
-                  <div className="avatar-placeholder"><i className="fa-solid fa-user"></i></div>
-                )}
+                ) : null}
+                <div className="avatar-placeholder" style={{ display: currentUser?.ProfilePictureUrl ? 'none' : 'flex' }}>
+                  <i className="fa-solid fa-user"></i>
+                </div>
               </div>
               <p className="create-post-prompt">
                 Bạn đang nghĩ gì? Hãy chia sẻ cảm nghĩ của bạn đến bạn bè thông qua...
@@ -479,6 +496,7 @@ export default function HomePage() {
                       comments={commentsByPost[post.Id] || []}
                       onClose={() => setActiveCommentPostId(null)}
                       onAddComment={handleAddComment}
+                      currentUser={currentUser}
                     />
                   )}
                 </div>

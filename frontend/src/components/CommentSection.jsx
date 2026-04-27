@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import '../styles/CommentSection.css';
 
+const handleCommentLike = () => {
+  alert('Tính năng thích bình luận đang được phát triển');
+};
+
 const DEFAULT_COMMENTS = [
   {
     id: 'c1',
@@ -38,12 +42,23 @@ const DEFAULT_COMMENTS = [
   }
 ];
 
-export default function CommentSection({ post, comments, onClose, onAddComment }) {
+export default function CommentSection({ post, comments, onClose, onAddComment, currentUser }) {
   const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
     setNewComment('');
   }, [post?.Id]);
+
+  useEffect(() => {
+    // Debug logging
+    if (currentUser) {
+      console.log('CommentSection - currentUser:', {
+        name: currentUser.UserName,
+        ProfilePictureUrl: currentUser.ProfilePictureUrl,
+        fullName: currentUser.fullName
+      });
+    }
+  }, [currentUser]);
 
   const handleSubmit = () => {
     if (!newComment.trim()) return;
@@ -71,7 +86,33 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
             <div className="comment-thread">
               {comments.map((comment) => (
                 <div key={comment.Id} className="comment-item">
-                  <div className="comment-avatar"><i className="fa-solid fa-user"></i></div>
+                  <div className="comment-avatar">
+                    {comment.userProfilePictureUrl ? (
+                      <img 
+                        src={comment.userProfilePictureUrl} 
+                        alt={comment.userName}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          console.warn('Failed to load comment avatar:', comment.userProfilePictureUrl);
+                          e.target.style.display = 'none';
+                          const fallbackIcon = e.target.nextElementSibling;
+                          if (fallbackIcon) {
+                            fallbackIcon.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <i 
+                      className="fa-solid fa-user" 
+                      style={{ 
+                        display: comment.userProfilePictureUrl ? 'none' : 'flex',
+                        width: '100%',
+                        height: '100%',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    ></i>
+                  </div>
                   <div className="comment-content-wrapper">
                     <div className="comment-top-row">
                       <strong>{comment.userName}</strong>
@@ -79,14 +120,39 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
                     </div>
                     <p className="comment-text">{comment.content}</p>
                     <div className="comment-meta-row">
-                      <button className="comment-action-btn">Thích</button>
-                      <button className="comment-action-btn">Trả lời</button>
+                      <button className="comment-action-btn" onClick={handleCommentLike}>Thích</button>
                     </div>
                     {comment.replies && comment.replies.length > 0 && (
                       <div className="comment-replies">
                         {comment.replies.map((reply) => (
                           <div key={reply.id} className="comment-reply-item">
-                            <div className="comment-avatar"><i className="fa-solid fa-user"></i></div>
+                            <div className="comment-avatar">
+                              {reply.userProfilePictureUrl ? (
+                                <img 
+                                  src={reply.userProfilePictureUrl} 
+                                  alt={reply.userName}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    console.warn('Failed to load reply avatar:', reply.userProfilePictureUrl);
+                                    e.target.style.display = 'none';
+                                    const fallbackIcon = e.target.nextElementSibling;
+                                    if (fallbackIcon) {
+                                      fallbackIcon.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <i 
+                                className="fa-solid fa-user" 
+                                style={{ 
+                                  display: reply.userProfilePictureUrl ? 'none' : 'flex',
+                                  width: '100%',
+                                  height: '100%',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              ></i>
+                            </div>
                             <div className="comment-content-wrapper">
                               <div className="comment-top-row">
                                 <strong>{reply.userName}</strong>
@@ -94,8 +160,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
                               </div>
                               <p className="comment-text">{reply.content}</p>
                               <div className="comment-meta-row">
-                                <button className="comment-action-btn">Thích</button>
-                                <button className="comment-action-btn">Trả lời</button>
+                                <button className="comment-action-btn" onClick={handleCommentLike}>Thích</button>
                               </div>
                             </div>
                           </div>
@@ -110,7 +175,33 @@ export default function CommentSection({ post, comments, onClose, onAddComment }
         </div>
 
         <div className="comment-input-wrapper">
-          <div className="comment-avatar"><i className="fa-solid fa-user"></i></div>
+          <div className="comment-avatar" id="comment-input-avatar">
+            {currentUser?.ProfilePictureUrl ? (
+              <img 
+                src={currentUser.ProfilePictureUrl} 
+                alt="Your avatar" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                onError={(e) => {
+                  console.warn('Failed to load comment input avatar:', currentUser.ProfilePictureUrl);
+                  e.target.style.display = 'none';
+                  const fallbackIcon = e.target.nextElementSibling;
+                  if (fallbackIcon) {
+                    fallbackIcon.style.display = 'flex';
+                  }
+                }}
+              />
+            ) : null}
+            <i 
+              className="fa-solid fa-user" 
+              style={{ 
+                display: currentUser?.ProfilePictureUrl ? 'none' : 'flex',
+                width: '100%',
+                height: '100%',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            ></i>
+          </div>
           <input
             type="text"
             value={newComment}

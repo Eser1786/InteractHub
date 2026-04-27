@@ -6,8 +6,7 @@ import Header from '../components/Header';
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     userName: '',
-    firstName: '',
-    lastName: '',
+    fullName: '',
     email: '',
     password: ''
   });
@@ -30,11 +29,10 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const result = await register({
         userName: formData.userName,
         email: formData.email,
-        fullName: fullName,
+        fullName: formData.fullName,
         password: formData.password
       });
       
@@ -86,33 +84,18 @@ export default function RegisterPage() {
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="firstName" className="form-label">Họ:</label>
-                <input
-                  id="firstName"
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  placeholder="Họ và đệm"
-                  className="form-input"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="lastName" className="form-label">Tên:</label>
-                <input
-                  id="lastName"
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  placeholder="Tên"
-                  className="form-input"
-                  required
-                />
-              </div>
+            <div className="form-group">
+              <label htmlFor="fullName" className="form-label">Họ và Tên:</label>
+              <input
+                id="fullName"
+                type="text"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                placeholder="Nhập họ và tên đầy đủ"
+                className="form-input"
+                required
+              />
             </div>
 
 

@@ -181,3 +181,18 @@ export async function updateUser(userId, { fullName, bio, profilePictureUrl }) {
   const data = await handleResponse(response);
   return data;
 }
+
+export async function uploadProfilePicture(userId, file) {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await fetch(`${API_BASE}/users/${userId}/upload-profile-picture`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData
+  });
+  
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}

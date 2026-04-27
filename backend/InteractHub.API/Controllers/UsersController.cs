@@ -144,4 +144,79 @@ public class UsersController : ControllerBase
 
         return this.SuccessResponse(message: "User updated successfully", statusCode: 200);
     }
+
+    [HttpPost("{id}/upload-profile-picture")]
+    [ProducesResponseType(typeof(ApiResponse<UserResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadProfilePicture([FromRoute] string id, [FromForm] IFormFile? file)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (id != userId)
+            return this.ForbiddenResponse("You cannot update this user");
+
+        // Validate file
+        if (file == null || file.Length == 0)
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("file", "Please select a file to upload") 
+            });
+
+        // Check file size (max 5MB)
+        const long maxFileSize = 5 * 1024 * 1024; // 5MB
+        if (file.Length > maxFileSize)
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("file", "File size must not exceed 5MB") 
+            });
+
+        // Check file type
+        var allowedMimeTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+        if (!allowedMimeTypes.Contains(file.ContentType.ToLower()))
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("file", "Only image files (JPEG, PNG, GIF, WebP) are allowed") 
+            });
+
+        try
+        {
+            var user = await _userService.GetByIdAsync(id);
+            if (user == null)
+                return this.NotFoundResponse("User not found");
+
+            // Convert file to Base64
+            using (var memoryStream = new MemoryStream())
+            {
+                await file.CopyToAsync(memoryStream);
+                var fileBytes = memoryStream.ToArray();
+                var base64String = Convert.ToBase64String(fileBytes);
+                
+                // Create data URL
+                user.ProfilePictureUrl = $"data:{file.ContentType};base64,{base64String}";
+
+                await _userService.UpdateAsync(user);
+
+                var userDto = new UserResponseDto
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    ProfilePictureUrl = user.ProfilePictureUrl,
+                    Bio = user.Bio
+                };
+
+                return this.SuccessResponse(userDto, "Profile picture uploaded successfully", 200);
+            }
+        }
+        catch (Exception ex)
+        {
+            return this.BadRequestResponse(new List<ApiError> 
+            { 
+                ErrorHelper.CreateValidationError("file", $"Error uploading file: {ex.Message}") 
+            });
+        }
+    }
 }

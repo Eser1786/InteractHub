@@ -47,6 +47,7 @@
   margin-top: -60px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 15px;
+  overflow: hidden;
 }
 
 .profile-user-info {
@@ -457,6 +458,29 @@
 .form-input[type="url"] {
   font-family: monospace;
   font-size: 12px;
+}
+
+.form-input-file {
+  width: 100%;
+  padding: 12px;
+  border: 2px dashed #e0d5f0;
+  border-radius: 6px;
+  background: #fafafa;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.form-input-file:hover {
+  border-color: #6b4fc7;
+  background: #f5f0ff;
+}
+
+.form-input-file:focus {
+  outline: none;
+  border-color: #6b4fc7;
+  box-shadow: 0 0 0 3px rgba(107, 79, 199, 0.1);
 }
 
 .error-message {

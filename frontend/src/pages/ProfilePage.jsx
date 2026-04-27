@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, likePost, unlikePost, getUser, updateUser } from '../api';
+import { getPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import '../styles/ProfilePage.css';
@@ -16,9 +16,10 @@ export default function ProfilePage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editFormData, setEditFormData] = useState({
     fullName: '',
-    bio: '',
-    profilePictureUrl: ''
+    bio: ''
   });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
@@ -42,8 +43,7 @@ export default function ProfilePage() {
           setCurrentUser(fullUserData);
           setEditFormData({
             fullName: fullUserData.FullName || '',
-            bio: fullUserData.Bio || '',
-            profilePictureUrl: fullUserData.ProfilePictureUrl || ''
+            bio: fullUserData.Bio || ''
           });
         } catch (userErr) {
           console.error('Error loading user from backend:', userErr);
@@ -51,8 +51,7 @@ export default function ProfilePage() {
           setCurrentUser(userData);
           setEditFormData({
             fullName: userData.FullName || userData.fullName || '',
-            bio: userData.Bio || userData.bio || '',
-            profilePictureUrl: userData.ProfilePictureUrl || userData.profilePictureUrl || ''
+            bio: userData.Bio || userData.bio || ''
           });
         }
 
@@ -97,9 +96,10 @@ export default function ProfilePage() {
     setIsEditMode(false);
     setEditFormData({
       fullName: currentUser?.FullName || currentUser?.fullName || '',
-      bio: currentUser?.Bio || currentUser?.bio || '',
-      profilePictureUrl: currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl || ''
+      bio: currentUser?.Bio || currentUser?.bio || ''
     });
+    setSelectedFile(null);
+    setFilePreview(null);
   };
 
   const handleEditInputChange = (e) => {
@@ -110,35 +110,111 @@ export default function ProfilePage() {
     }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        setError('File size must not exceed 5MB');
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Only image files (JPEG, PNG, GIF, WebP) are allowed');
+        return;
+      }
+
+      setSelectedFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      setError('');
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!currentUser) return;
     
     setIsSaving(true);
     try {
       const userId = currentUser.Id || currentUser.id;
-      await updateUser(userId, editFormData);
+      let updatedProfilePictureUrl = currentUser.ProfilePictureUrl || currentUser.profilePictureUrl || '';
       
-      // Update local state
-      setCurrentUser({
-        ...currentUser,
-        FullName: editFormData.fullName,
-        Bio: editFormData.bio,
-        ProfilePictureUrl: editFormData.profilePictureUrl
+      // First, upload profile picture if selected
+      if (selectedFile) {
+        try {
+          const uploadedUser = await uploadProfilePicture(userId, selectedFile);
+          updatedProfilePictureUrl = uploadedUser.ProfilePictureUrl;
+          console.log('Profile picture uploaded:', uploadedUser);
+        } catch (uploadErr) {
+          console.error('Error uploading profile picture:', uploadErr);
+          setError(`Failed to upload profile picture: ${uploadErr.message}`);
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // Then, update other user info (fullName, bio)
+      await updateUser(userId, {
+        fullName: editFormData.fullName,
+        bio: editFormData.bio,
+        profilePictureUrl: updatedProfilePictureUrl
       });
       
-      // Update localStorage
-      const updatedUser = {
-        ...currentUser,
-        FullName: editFormData.fullName,
-        fullName: editFormData.fullName,
-        Bio: editFormData.bio,
-        bio: editFormData.bio,
-        ProfilePictureUrl: editFormData.profilePictureUrl,
-        profilePictureUrl: editFormData.profilePictureUrl
-      };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      // Force reload user data from backend to ensure everything is synced
+      try {
+        const freshUserData = await getUser(userId);
+        console.log('Fresh user data from backend:', freshUserData);
+        
+        const updatedUserState = {
+          ...freshUserData,
+          FullName: freshUserData.FullName || editFormData.fullName,
+          fullName: freshUserData.FullName || editFormData.fullName,
+          Bio: freshUserData.Bio || editFormData.bio,
+          bio: freshUserData.Bio || editFormData.bio
+        };
+        
+        setCurrentUser(updatedUserState);
+        
+        // Update localStorage with error handling
+        try {
+          localStorage.setItem('user', JSON.stringify(updatedUserState));
+        } catch (storageErr) {
+          console.warn('localStorage save error (size limit?):', storageErr);
+          // Even if localStorage fails, state is updated, so component will still display
+        }
+      } catch (reloadErr) {
+        console.error('Error reloading user data:', reloadErr);
+        // Fallback: use the local updated state
+        const updatedUserState = {
+          ...currentUser,
+          FullName: editFormData.fullName,
+          fullName: editFormData.fullName,
+          Bio: editFormData.bio,
+          bio: editFormData.bio,
+          ProfilePictureUrl: updatedProfilePictureUrl,
+          profilePictureUrl: updatedProfilePictureUrl
+        };
+        
+        setCurrentUser(updatedUserState);
+        
+        try {
+          localStorage.setItem('user', JSON.stringify(updatedUserState));
+        } catch (storageErr) {
+          console.warn('localStorage save error (size limit?):', storageErr);
+        }
+      }
       
       setIsEditMode(false);
+      setSelectedFile(null);
+      setFilePreview(null);
       setError('');
     } catch (err) {
       console.error('Error saving profile:', err);
@@ -308,25 +384,26 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="profilePictureUrl" className="form-label">Link Ảnh Đại Diện:</label>
+                  <label htmlFor="profilePicture" className="form-label">Ảnh Đại Diện:</label>
                   <input
-                    id="profilePictureUrl"
-                    type="url"
-                    name="profilePictureUrl"
-                    value={editFormData.profilePictureUrl}
-                    onChange={handleEditInputChange}
-                    placeholder="Nhập URL ảnh đại diện"
-                    className="form-input"
+                    id="profilePicture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="form-input-file"
                   />
+                  <p style={{fontSize: '12px', color: '#999', marginTop: '8px'}}>
+                    Chọn ảnh JPEG, PNG, GIF hoặc WebP (tối đa 5MB)
+                  </p>
                 </div>
 
-                {editFormData.profilePictureUrl && (
+                {filePreview && (
                   <div className="form-group">
                     <label>Xem trước ảnh:</label>
                     <img 
-                      src={editFormData.profilePictureUrl} 
+                      src={filePreview} 
                       alt="Preview" 
-                      style={{maxWidth: '100px', maxHeight: '100px', borderRadius: '50%', objectFit: 'cover'}}
+                      style={{maxWidth: '120px', maxHeight: '120px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #6b4fc7'}}
                     />
                   </div>
                 )}

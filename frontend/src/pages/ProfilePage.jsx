@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, likePost, unlikePost } from '../api';
+import { getPosts, likePost, unlikePost, getUser, updateUser } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import '../styles/ProfilePage.css';
@@ -13,6 +13,13 @@ export default function ProfilePage() {
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    fullName: '',
+    bio: '',
+    profilePictureUrl: ''
+  });
+  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,11 +29,32 @@ export default function ProfilePage() {
         if (!userDataJson) {
           console.error('No user data found in localStorage');
           setCurrentUser(null);
+          setError('Không thể tải thông tin người dùng');
+          setLoading(false);
           return;
         }
 
         const userData = JSON.parse(userDataJson);
-        setCurrentUser(userData);
+        
+        // Fetch full user data from backend
+        try {
+          const fullUserData = await getUser(userData.Id || userData.id);
+          setCurrentUser(fullUserData);
+          setEditFormData({
+            fullName: fullUserData.FullName || '',
+            bio: fullUserData.Bio || '',
+            profilePictureUrl: fullUserData.ProfilePictureUrl || ''
+          });
+        } catch (userErr) {
+          console.error('Error loading user from backend:', userErr);
+          // Fall back to localStorage data if backend fails
+          setCurrentUser(userData);
+          setEditFormData({
+            fullName: userData.FullName || userData.fullName || '',
+            bio: userData.Bio || userData.bio || '',
+            profilePictureUrl: userData.ProfilePictureUrl || userData.profilePictureUrl || ''
+          });
+        }
 
         // Load user's posts
         try {
@@ -61,6 +89,65 @@ export default function ProfilePage() {
     navigate('/login');
   };
 
+  const handleEditClick = () => {
+    setIsEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditFormData({
+      fullName: currentUser?.FullName || currentUser?.fullName || '',
+      bio: currentUser?.Bio || currentUser?.bio || '',
+      profilePictureUrl: currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl || ''
+    });
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    if (!currentUser) return;
+    
+    setIsSaving(true);
+    try {
+      const userId = currentUser.Id || currentUser.id;
+      await updateUser(userId, editFormData);
+      
+      // Update local state
+      setCurrentUser({
+        ...currentUser,
+        FullName: editFormData.fullName,
+        Bio: editFormData.bio,
+        ProfilePictureUrl: editFormData.profilePictureUrl
+      });
+      
+      // Update localStorage
+      const updatedUser = {
+        ...currentUser,
+        FullName: editFormData.fullName,
+        fullName: editFormData.fullName,
+        Bio: editFormData.bio,
+        bio: editFormData.bio,
+        ProfilePictureUrl: editFormData.profilePictureUrl,
+        profilePictureUrl: editFormData.profilePictureUrl
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      setIsEditMode(false);
+      setError('');
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      setError(`Failed to save profile: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleLike = async (post) => {
     if (!currentUser) {
       console.warn('No current user');
@@ -69,12 +156,12 @@ export default function ProfilePage() {
     
     try {
       const likedBy = post.likedBy || [];
-      const isLiked = likedBy.includes(currentUser.Id);
+      const isLiked = likedBy.includes(currentUser.Id || currentUser.id);
       
       if (isLiked) {
-        await unlikePost(post.Id, currentUser.Id);
+        await unlikePost(post.Id, currentUser.Id || currentUser.id);
       } else {
-        await likePost(post.Id, currentUser.Id);
+        await likePost(post.Id, currentUser.Id || currentUser.id);
       }
       
       // Reload posts to get updated like count
@@ -92,7 +179,7 @@ export default function ProfilePage() {
   const handleAddComment = (postId, content) => {
     const newComment = {
       id: `${postId}-${Date.now()}`,
-      userName: currentUser?.fullName || currentUser?.userName || 'Bạn',
+      userName: currentUser?.FullName || currentUser?.fullName || currentUser?.UserName || currentUser?.userName || 'Bạn',
       content,
       createdAt: 'Vừa xong',
       replies: []
@@ -106,10 +193,10 @@ export default function ProfilePage() {
 
   const filteredPosts = selectedTab === 'all' 
     ? posts 
-    : posts; // 'friends' tab for future use
+    : posts;
 
   if (loading) {
-    return <div className="profile-wrapper"><p>Đang tải...</p></div>;
+    return <div className="profile-wrapper"><p style={{padding: '20px', textAlign: 'center'}}>Đang tải...</p></div>;
   }
 
   if (!currentUser) {
@@ -117,14 +204,14 @@ export default function ProfilePage() {
       <div className="profile-wrapper">
         <Header onLogout={handleLogout} />
         <div className="profile-container">
-          <div className="error-message" style={{ textAlign: 'center', padding: '20px', color: '#d32f2f' }}>
-            <p>Không thể tải thông tin người dùng. Vui lòng đăng nhập lại.</p>
+          <div style={{background: 'white', padding: '40px', borderRadius: '12px', textAlign: 'center', color: '#d32f2f'}}>
+            <p style={{margin: '0 0 20px 0', fontSize: '16px'}}>Không thể tải thông tin người dùng. Vui lòng đăng nhập lại.</p>
             <button onClick={() => {
               localStorage.removeItem('token');
               localStorage.removeItem('user');
               window.dispatchEvent(new Event('tokenUpdated'));
               navigate('/login');
-            }} style={{ marginTop: '10px', padding: '10px 20px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            }} style={{padding: '10px 20px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600'}}>
               Đăng nhập lại
             </button>
           </div>
@@ -142,19 +229,27 @@ export default function ProfilePage() {
           <div className="profile-cover"></div>
           
           <div className="profile-info-section">
-            <div className="profile-avatar-large"><i className="fa-solid fa-user"></i></div>
+            <div className="profile-avatar-large">
+              {currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl ? (
+                <img src={currentUser.ProfilePictureUrl || currentUser.profilePictureUrl} alt="Avatar" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+              ) : (
+                <i className="fa-solid fa-user"></i>
+              )}
+            </div>
             
             <div className="profile-user-info">
-              <h1 className="profile-username">{currentUser?.fullName || currentUser?.userName}</h1>
+              <h1 className="profile-username">{currentUser?.FullName || currentUser?.fullName || currentUser?.UserName || currentUser?.userName}</h1>
               
               <div className="profile-bio">
-                <p>Nói giới thiệu bản thân</p>
-                <p>Địa chỉ nơi sống...</p>
-                <p>Đã học tại....</p>
+                {currentUser?.Bio || currentUser?.bio ? (
+                  <p>{currentUser.Bio || currentUser.bio}</p>
+                ) : (
+                  <p style={{color: '#999'}}>Chưa có tiểu sử</p>
+                )}
               </div>
 
-              <button className="profile-edit-btn">
-                <span><i class="fa-solid fa-pen-nib"></i></span> Chỉnh sửa
+              <button className="profile-edit-btn" onClick={handleEditClick}>
+                <span><i className="fa-solid fa-pen-nib"></i></span> Chỉnh sửa
               </button>
             </div>
           </div>
@@ -175,6 +270,89 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+
+        {/* Edit Profile Modal */}
+        {isEditMode && (
+          <div className="modal-overlay" onClick={handleCancelEdit}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Chỉnh sửa Hồ sơ</h2>
+                <button className="modal-close" onClick={handleCancelEdit}>✕</button>
+              </div>
+
+              <div className="modal-body">
+                <div className="form-group">
+                  <label htmlFor="fullName" className="form-label">Họ và Tên:</label>
+                  <input
+                    id="fullName"
+                    type="text"
+                    name="fullName"
+                    value={editFormData.fullName}
+                    onChange={handleEditInputChange}
+                    placeholder="Nhập họ và tên"
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="bio" className="form-label">Tiểu sử:</label>
+                  <textarea
+                    id="bio"
+                    name="bio"
+                    value={editFormData.bio}
+                    onChange={handleEditInputChange}
+                    placeholder="Nói giới thiệu về bản thân"
+                    className="form-input"
+                    rows="4"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="profilePictureUrl" className="form-label">Link Ảnh Đại Diện:</label>
+                  <input
+                    id="profilePictureUrl"
+                    type="url"
+                    name="profilePictureUrl"
+                    value={editFormData.profilePictureUrl}
+                    onChange={handleEditInputChange}
+                    placeholder="Nhập URL ảnh đại diện"
+                    className="form-input"
+                  />
+                </div>
+
+                {editFormData.profilePictureUrl && (
+                  <div className="form-group">
+                    <label>Xem trước ảnh:</label>
+                    <img 
+                      src={editFormData.profilePictureUrl} 
+                      alt="Preview" 
+                      style={{maxWidth: '100px', maxHeight: '100px', borderRadius: '50%', objectFit: 'cover'}}
+                    />
+                  </div>
+                )}
+
+                {error && <div className="error-message" style={{marginTop: '10px'}}>{error}</div>}
+              </div>
+
+              <div className="modal-footer">
+                <button 
+                  className="btn btn-cancel" 
+                  onClick={handleCancelEdit}
+                  disabled={isSaving}
+                >
+                  Hủy
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Đang lưu...' : 'Lưu'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Profile Posts */}
         <main className="profile-main-content">
@@ -223,11 +401,11 @@ export default function ProfilePage() {
 
                   <div className="post-actions-profile">
                     <button 
-                      className={`post-action-btn-profile ${(post.likedBy || []).includes(currentUser?.id) ? 'liked' : ''}`}
+                      className={`post-action-btn-profile ${(post.likedBy || []).includes(currentUser?.Id || currentUser?.id) ? 'liked' : ''}`}
                       onClick={() => handleLike(post)}
                     >
-                      <span>{(post.likedBy || []).includes(currentUser?.id) ? '❤️' : '🤍'}</span> 
-                      {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
+                      <span>{(post.likedBy || []).includes(currentUser?.Id || currentUser?.id) ? '❤️' : '🤍'}</span> 
+                      {(post.likedBy || []).includes(currentUser?.Id || currentUser?.id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn-profile" onClick={() => handleToggleComments(post)}>
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận

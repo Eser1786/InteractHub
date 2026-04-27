@@ -368,3 +368,144 @@
     padding: 0 20px 15px 20px;
   }
 }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #f0e6ff;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0d5f0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #6b4fc7;
+  box-shadow: 0 0 0 3px rgba(107, 79, 199, 0.1);
+}
+
+.form-input[type="url"] {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.error-message {
+  padding: 12px;
+  background: #ffebee;
+  color: #d32f2f;
+  border-radius: 6px;
+  font-size: 13px;
+  border-left: 3px solid #d32f2f;
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 1px solid #f0e6ff;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.btn-cancel {
+  background: #f5f0ff;
+  color: #333;
+  border: 1px solid #e0d5f0;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #e0d5f0;
+}
+
+.btn-primary {
+  background: #6b4fc7;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #5a3fa8;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

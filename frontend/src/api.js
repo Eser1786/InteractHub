@@ -169,3 +169,15 @@ export async function getPendingRequests(userId, pageNumber = 1, pageSize = 20) 
   const data = await handleResponse(response);
   return data?.Data || [];
 }
+
+export async function updateUser(userId, { fullName, bio, profilePictureUrl }) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ fullName, bio, profilePictureUrl })
+  });
+  
+  const data = await handleResponse(response);
+  return data;
+}

@@ -25,6 +25,31 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
+  const loadPosts = async () => {
+    try {
+      const postsData = await getPosts();
+      // Get commentsByPost from localStorage to ensure we have latest data
+      const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
+      setPosts((postsData || []).map((post) => ({
+        ...post,
+        commentsCount: commentsByPostData[post.Id]?.length ?? 0
+      })));
+      
+      // Initialize liked posts from response data
+      const userDataJson = localStorage.getItem('user');
+      if (userDataJson) {
+        const userData = JSON.parse(userDataJson);
+        const userLikedPostIds = (postsData || [])
+          .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(userData.Id))
+          .map(post => post.Id);
+        setLikedPosts(new Set(userLikedPostIds));
+      }
+    } catch (postsErr) {
+      console.error('Error loading posts:', postsErr);
+      setError(`Failed to load posts: ${postsErr.message}`);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -58,22 +83,7 @@ export default function ProfilePage() {
         }
 
         // Load user's posts
-        try {
-          const postsData = await getPosts();
-          setPosts((postsData || []).map((post) => ({
-            ...post,
-            commentsCount: commentsByPost[post.Id]?.length ?? 0
-          })));
-          
-          // Initialize liked posts from response data
-          const userLikedPostIds = (postsData || [])
-            .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(userData.Id))
-            .map(post => post.Id);
-          setLikedPosts(new Set(userLikedPostIds));
-        } catch (postsErr) {
-          console.error('Error loading posts:', postsErr);
-          setError(`Failed to load posts: ${postsErr.message}`);
-        }
+        await loadPosts();
       } catch (err) {
         console.error('Error loading profile:', err);
         setError(`Error loading profile: ${err.message}`);
@@ -89,8 +99,8 @@ export default function ProfilePage() {
     localStorage.setItem('postComments', JSON.stringify(commentsByPost));
   }, [commentsByPost]);
 
+  // Listen for comment updates from CommentSection
   useEffect(() => {
-    // Listen for comment updates from CommentSection
     const handleCommentUpdated = () => {
       console.log('commentUpdated event received');
       const updatedComments = JSON.parse(localStorage.getItem('postComments') || '{}');
@@ -101,6 +111,19 @@ export default function ProfilePage() {
     window.addEventListener('commentUpdated', handleCommentUpdated);
     return () => {
       window.removeEventListener('commentUpdated', handleCommentUpdated);
+    };
+  }, []);
+
+  // Listen for user updates from other tabs/windows to reload posts with updated user name
+  useEffect(() => {
+    const handleUserUpdate = async () => {
+      console.log('User updated in ProfilePage - reloading posts with new user name');
+      await loadPosts();
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdate);
+    return () => {
+      window.removeEventListener('userUpdated', handleUserUpdate);
     };
   }, []);
 
@@ -243,6 +266,9 @@ export default function ProfilePage() {
       setSelectedFile(null);
       setFilePreview(null);
       setError('');
+      
+      // Reload posts to reflect the new user name
+      await loadPosts();
     } catch (err) {
       console.error('Error saving profile:', err);
       setError(`Failed to save profile: ${err.message}`);

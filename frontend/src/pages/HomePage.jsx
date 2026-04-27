@@ -27,6 +27,26 @@ export default function HomePage() {
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const navigate = useNavigate();
 
+  const loadPosts = async (userData) => {
+    try {
+      const postsData = await getPosts();
+      // Get commentsByPost from localStorage to ensure we have latest data
+      const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
+      setPosts((postsData || []).map((post) => ({
+        ...post,
+        commentsCount: commentsByPostData[post.Id]?.length ?? 0
+      })));
+
+      // Initialize liked posts from response data
+      const userLikedPostIds = (postsData || [])
+        .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(userData.Id))
+        .map(post => post.Id);
+      setLikedPosts(new Set(userLikedPostIds));
+    } catch (err) {
+      console.error('Error loading posts:', err);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -46,17 +66,7 @@ export default function HomePage() {
           profilePictureUrl: userData.profilePictureUrl
         });
 
-        const postsData = await getPosts();
-        setPosts((postsData || []).map((post) => ({
-          ...post,
-          commentsCount: commentsByPost[post.Id]?.length ?? 0
-        })));
-
-        // Initialize liked posts from response data
-        const userLikedPostIds = (postsData || [])
-          .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(userData.Id))
-          .map(post => post.Id);
-        setLikedPosts(new Set(userLikedPostIds));
+        await loadPosts(userData);
 
         const friendsData = await getAcceptedFriends(userData.Id, 1, 10);
         setFriends(friendsData || []);
@@ -90,11 +100,14 @@ export default function HomePage() {
     loadData();
 
     // Listen for user data updates from other components (e.g., profile page)
-    const handleUserUpdate = () => {
+    const handleUserUpdate = async () => {
       const userDataJson = localStorage.getItem('user');
       if (userDataJson) {
         const userData = JSON.parse(userDataJson);
         setCurrentUser(userData);
+        // Reload posts to reflect updated user name in post author info
+        console.log('User updated - reloading posts with new user name');
+        await loadPosts(userData);
       }
     };
 

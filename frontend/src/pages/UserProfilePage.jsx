@@ -188,7 +188,8 @@ export default function UserProfilePage() {
   };
 
   const handleHashtagClick = (hashtag) => {
-    console.log('Hashtag clicked:', hashtag);
+    const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
+    navigate(`/hashtag/${encodeURIComponent(slug)}`);
   };
 
   if (loading) {

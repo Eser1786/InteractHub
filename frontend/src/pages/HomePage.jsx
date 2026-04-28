@@ -405,9 +405,8 @@ export default function HomePage() {
   };
 
   const handleHashtagClick = (hashtag) => {
-    setSearchQuery(hashtag);
-    setHashtagSearch(hashtag);
-    setSelectedNav('add-friends');
+    const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
+    navigate(`/hashtag/${encodeURIComponent(slug)}`);
   };
 
   if (loading) {

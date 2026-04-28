@@ -441,8 +441,8 @@ export default function ProfilePage() {
   };
 
   const handleHashtagClick = (hashtag) => {
-    console.log('Hashtag clicked:', hashtag);
-    // Could navigate to search page in future
+    const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
+    navigate(`/hashtag/${encodeURIComponent(slug)}`);
   };
 
   const filteredPosts = selectedTab === 'all' 

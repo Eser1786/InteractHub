@@ -253,7 +253,20 @@ export default function HomePage() {
   const handleHomeSearch = (query) => {
     const hashtag = extractHashtag(query);
     setHashtagSearch(hashtag);
+    if (hashtag && location.pathname === '/home') {
+      navigate(`/home?hashtag=${encodeURIComponent(hashtag.slice(1))}`, { replace: true });
+    }
+    if (!hashtag && location.pathname === '/home') {
+      navigate('/home', { replace: true });
+    }
   };
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const hashtagParam = queryParams.get('hashtag');
+    const hashtag = extractHashtag(hashtagParam);
+    setHashtagSearch(hashtag);
+  }, [location.search]);
 
   const handleLike = async (post) => {
     if (!currentUser) {
@@ -451,11 +464,7 @@ export default function HomePage() {
 
   const handleHashtagClick = (hashtag) => {
     const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
-    if (location.pathname === '/home') {
-      setHashtagSearch(`#${slug}`);
-    } else {
-      navigate(`/hashtag/${encodeURIComponent(slug)}`);
-    }
+    navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
   };
 
   const hasHashtag = (content = '', tag) => {

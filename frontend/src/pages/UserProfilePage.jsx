@@ -197,7 +197,7 @@ export default function UserProfilePage() {
 
   const handleHashtagClick = (hashtag) => {
     const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
-    navigate(`/hashtag/${encodeURIComponent(slug)}`);
+    navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
   };
 
   if (loading) {

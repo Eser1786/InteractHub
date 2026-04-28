@@ -88,7 +88,7 @@ export default function Header({ onLogout, showControls = true, onSearch, search
     if (typeof onSearch === 'function') {
       onSearch(hashtag);
     } else {
-      navigate(`/hashtag/${encodeURIComponent(hashtag)}`);
+      navigate(`/home?hashtag=${encodeURIComponent(hashtag)}`);
     }
   };
 

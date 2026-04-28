@@ -442,7 +442,7 @@ export default function ProfilePage() {
 
   const handleHashtagClick = (hashtag) => {
     const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
-    navigate(`/hashtag/${encodeURIComponent(slug)}`);
+    navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
   };
 
   const filteredPosts = selectedTab === 'all' 

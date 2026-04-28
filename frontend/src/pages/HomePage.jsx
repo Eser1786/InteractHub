@@ -73,6 +73,7 @@ export default function HomePage() {
         await loadPosts(userData);
 
         const friendsData = await getAcceptedFriends(userData.Id, 1, 10);
+        console.log('Friends data from API:', friendsData);
         setFriends(friendsData || []);
 
         const requestsData = await getPendingRequests(userData.Id, 1, 20);
@@ -80,9 +81,10 @@ export default function HomePage() {
 
         const allUsersData = await getAllUsers();
         setAllUsers(allUsersData || []);
-        const friendIds = ((friendsData || []).map(f => f.friendId));
+        const friendIds = ((friendsData || []).map(f => f.FriendId || f.friendId));
+        console.log('Friend IDs extracted:', friendIds);
         
-        // Get 3 random users excluding current user and friends
+        // Get 3 random users excluding current user and friends (check both as FriendId and UserId)
         const availableUsers = (allUsersData || []).filter(
           u => u.Id !== userData.Id && !friendIds.includes(u.Id)
         );
@@ -94,11 +96,14 @@ export default function HomePage() {
         setSuggestedUsers(suggested);
 
         // Load stories from friends
-        const friendStories = ((friendsData || []).map((friend, idx) => ({
-          id: friend.friendId,
-          userName: friend.friendName || `Bạn ${idx + 1}`,
-          createdAt: new Date().toISOString()
-        })));
+        const friendStories = ((friendsData || []).map((friend, idx) => {
+          const friendId = friend.FriendId || friend.friendId;
+          return {
+            id: friendId,
+            userName: friend.friendName || `Bạn ${idx + 1}`,
+            createdAt: new Date().toISOString()
+          };
+        }));
         setStories(friendStories);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -133,12 +138,25 @@ export default function HomePage() {
       }
     };
 
+    // Listen for friend acceptance - reload friends list
+    const handleFriendAccepted = async () => {
+      if (currentUser) {
+        console.log('Friend accepted - reloading friends list');
+        const friendsData = await getAcceptedFriends(currentUser.Id, 1, 10);
+        setFriends(friendsData || []);
+        // Clear friends info cache to reload user info
+        setFriendsInfo({});
+      }
+    };
+
     window.addEventListener('userUpdated', handleUserUpdate);
     window.addEventListener('friendRequestSent', handleFriendRequestSent);
+    window.addEventListener('friendAccepted', handleFriendAccepted);
 
     return () => {
       window.removeEventListener('userUpdated', handleUserUpdate);
       window.removeEventListener('friendRequestSent', handleFriendRequestSent);
+      window.removeEventListener('friendAccepted', handleFriendAccepted);
     };
   }, []);
 
@@ -350,7 +368,12 @@ export default function HomePage() {
       // Reload friends list
       const friendsData = await getAcceptedFriends(currentUser.Id, 1, 10);
       setFriends(friendsData || []);
+      // Clear cache
+      setFriendsInfo({});
       setError('');
+      
+      // Emit event to notify other components
+      window.dispatchEvent(new Event('friendAccepted'));
     } catch (err) {
       console.error('Error accepting friend request:', err);
       setError(`Lỗi chấp nhận lời mời: ${err.message}`);
@@ -366,6 +389,9 @@ export default function HomePage() {
       await declineFriendRequest(request.Id);
       setPendingRequests(pendingRequests.filter(r => r.Id !== request.Id));
       setError('');
+      
+      // Emit event to notify other components
+      window.dispatchEvent(new Event('friendDeclined'));
     } catch (err) {
       console.error('Error declining friend request:', err);
       setError(`Lỗi từ chối lời mời: ${err.message}`);
@@ -424,7 +450,10 @@ export default function HomePage() {
   const filteredUsers = searchQuery.trim() ? 
     allUsers.filter(u => 
       u.Id !== currentUser?.Id &&
-      !friends.some(f => f.friendId === u.Id) &&
+      !friends.some(f => {
+        const fId = f.FriendId || f.friendId;
+        return fId === u.Id;
+      }) &&
       (u.FullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
        u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
        u.UserName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -821,12 +850,39 @@ export default function HomePage() {
                 {friends.length === 0 ? (
                   <p className="no-friends">Chưa có bạn bè</p>
                 ) : (
-                  friends.map((friend) => (
-                    <div key={friend.Id} className="friend-item">
-                      <div className="friend-avatar-small"><i className="fa-solid fa-user"></i></div>
-                      <p className="friend-name-small">{friend.friendName || 'Bạn'}</p>
-                    </div>
-                  ))
+                  friends.map((friend) => {
+                    const friendId = friend.FriendId || friend.friendId;
+                    const friendInfo = friendsInfo[friendId];
+                    
+                    console.log('Friend item:', { friend, friendId, friendInfo });
+                    
+                    // Load friend info if not already loaded
+                    if (!friendInfo && friendId) {
+                      loadFriendInfo(friendId);
+                    }
+
+                    return (
+                      <div 
+                        key={friend.Id || friendId} 
+                        className="friend-item"
+                        onClick={() => navigate(`/user-profile/${friendId}`)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div className="friend-avatar-small">
+                          {friendInfo?.ProfilePictureUrl || friendInfo?.profilePictureUrl ? (
+                            <img 
+                              src={friendInfo.ProfilePictureUrl || friendInfo.profilePictureUrl} 
+                              alt={friendInfo?.FullName || friendInfo?.fullName}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <i className="fa-solid fa-user"></i>
+                          )}
+                        </div>
+                        <p className="friend-name-small">{friendInfo?.FullName || friendInfo?.fullName || 'Đang tải...'}</p>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </>

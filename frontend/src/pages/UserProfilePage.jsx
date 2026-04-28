@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost } from '../api';
+import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getAcceptedFriends } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -21,6 +21,7 @@ export default function UserProfilePage() {
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [friendRequestSent, setFriendRequestSent] = useState(false);
   const [isAddingFriend, setIsAddingFriend] = useState(false);
+  const [isFriend, setIsFriend] = useState(false);
 
   const loadUserData = async () => {
     try {
@@ -52,6 +53,13 @@ export default function UserProfilePage() {
           .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(currentUserData.Id))
           .map(post => post.Id);
         setLikedPosts(new Set(userLikedPostIds));
+        
+        // Check if already friends
+        const friendsData = await getAcceptedFriends(currentUserData.Id, 1, 100);
+        const isFriendAlready = (friendsData || []).some(f => String(f.FriendId || f.friendId) === String(userId));
+        console.log('Friend check:', { userId, isFriendAlready, friendIds: friendsData?.map(f => f.FriendId || f.friendId) });
+        setIsFriend(isFriendAlready);
+        setFriendRequestSent(false);
       }
     } catch (err) {
       console.error('Error loading user data:', err);
@@ -70,7 +78,7 @@ export default function UserProfilePage() {
   }, [commentsByPost]);
 
   const handleAddFriend = async () => {
-    if (!currentUser || !user) return;
+    if (!currentUser || !user || isFriend) return;
 
     setIsAddingFriend(true);
     try {
@@ -249,7 +257,11 @@ export default function UserProfilePage() {
                 )}
               </div>
 
-              {friendRequestSent ? (
+              {isFriend ? (
+                <div style={{ padding: '10px 20px', background: '#6b4fc7', color: 'white', borderRadius: '6px', fontWeight: '600', textAlign: 'center' }}>
+                  ✓ Bạn bè
+                </div>
+              ) : friendRequestSent ? (
                 <div style={{ padding: '10px 20px', background: '#4caf50', color: 'white', borderRadius: '6px', fontWeight: '600', textAlign: 'center' }}>
                   ✓ Đã gửi lời mời kết bạn
                 </div>
@@ -258,7 +270,7 @@ export default function UserProfilePage() {
                   className="profile-edit-btn" 
                   onClick={handleAddFriend}
                   disabled={isAddingFriend}
-                  style={{ background: '#ffffff' }}
+                  style={{ background: 'white', color: '#6b4fc7' }}
                 >
                   <span><i className="fa-solid fa-user-plus"></i></span> Kết bạn
                 </button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser } from '../api';
+ import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -431,9 +431,8 @@ export default function HomePage() {
   };
 
   const handleHashtagClick = (hashtag) => {
-    setSearchQuery(hashtag);
-    setHashtagSearch(hashtag);
-    setSelectedNav('add-friends');
+    const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
+    navigate(`/hashtag/${encodeURIComponent(slug)}`);
   };
 
   if (loading) {

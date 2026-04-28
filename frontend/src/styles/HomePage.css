@@ -257,6 +257,17 @@
 .friend-avatar {
   font-size: 36px;
   margin-bottom: 10px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #f0e6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .friend-name {

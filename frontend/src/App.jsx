@@ -9,6 +9,7 @@ import GroupDetailPage from './pages/GroupDetailPage';
 import CreateGroupPage from './pages/CreateGroupPage';
 import MessagePage from './pages/MessagePage';
 import ProfilePage from './pages/ProfilePage';
+import UserProfilePage from './pages/UserProfilePage';
 
 // Helper function to check if JWT token is valid (not expired)
 function isTokenValid(token) {
@@ -91,6 +92,7 @@ function App() {
           <Route path="/creategroup" element={token ? <CreateGroupPage /> : <Navigate to="/login" replace />} />
           <Route path="/message" element={token ? <MessagePage /> : <Navigate to="/login" replace />} />
           <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/login" replace />} />
+          <Route path="/user-profile/:userId" element={token ? <UserProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/" element={token ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />} />
         </Routes>
       </Router>

@@ -235,3 +235,15 @@ export async function uploadProfilePicture(userId, file) {
   const data = await handleResponse(response);
   return data?.Data || null;
 }
+
+export async function sendFriendRequest(friendId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/friendships/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ friendId })
+  });
+  
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}

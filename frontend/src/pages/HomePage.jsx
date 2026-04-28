@@ -79,9 +79,16 @@ export default function HomePage() {
         const allUsersData = await getAllUsers();
         setAllUsers(allUsersData || []);
         const friendIds = ((friendsData || []).map(f => f.friendId));
-        const suggested = (allUsersData || []).filter(
+        
+        // Get 3 random users excluding current user and friends
+        const availableUsers = (allUsersData || []).filter(
           u => u.Id !== userData.Id && !friendIds.includes(u.Id)
-        ).slice(0, 5);
+        );
+        
+        // Fisher-Yates shuffle for random selection
+        const shuffled = [...availableUsers].sort(() => Math.random() - 0.5);
+        const suggested = shuffled.slice(0, 3);
+        
         setSuggestedUsers(suggested);
 
         // Load stories from friends
@@ -341,8 +348,10 @@ export default function HomePage() {
     allUsers.filter(u => 
       u.Id !== currentUser?.Id &&
       !friends.some(f => f.friendId === u.Id) &&
-      (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       u.userName.toLowerCase().includes(searchQuery.toLowerCase()))
+      (u.FullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       u.UserName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       u.userName?.toLowerCase().includes(searchQuery.toLowerCase()))
     ) : suggestedUsers;
 
   console.log('Search query:', searchQuery);
@@ -633,10 +642,33 @@ export default function HomePage() {
                     <>
                       {searchQuery.trim() === '' && <h4 className="suggestions-title">Gợi ý bạn bè</h4>}
                       {filteredUsers.map(user => (
-                        <div key={user.id} className="suggested-friend-card">
-                          <div className="friend-avatar"><i className="fa-solid fa-user"></i></div>
-                          <p className="friend-name">{user.fullName}</p>
-                          <button className="btn-add-friend">Kết bạn</button>
+                        <div 
+                          key={user.Id || user.id} 
+                          className="suggested-friend-card"
+                          onClick={() => navigate(`/user-profile/${user.Id || user.id}`)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="friend-avatar">
+                            {user.ProfilePictureUrl || user.profilePictureUrl ? (
+                              <img 
+                                src={user.ProfilePictureUrl || user.profilePictureUrl} 
+                                alt={user.FullName || user.fullName}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                              />
+                            ) : (
+                              <i className="fa-solid fa-user"></i>
+                            )}
+                          </div>
+                          <p className="friend-name">{user.FullName || user.fullName}</p>
+                          <button 
+                            className="btn-add-friend"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/user-profile/${user.Id || user.id}`);
+                            }}
+                          >
+                            Xem hồ sơ
+                          </button>
                         </div>
                       ))}
                     </>

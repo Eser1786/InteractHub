@@ -26,10 +26,17 @@ Thay vì thuê 2 máy chủ riêng biệt (1 cho Frontend, 1 cho Backend) và g�
 
 ### Bước 2: Tạo Máy chủ Web (Azure App Service)
 - Tạo một Web App mới với Runtime stack là `.NET 9 (STS)`. Có thể chọn HĐH Windows hoặc Linux (Linux thường khởi động nhanh và rẻ hơn).
-- Vào mục **Settings > Configuration** (hoặc Environment variables) của App Service và khai báo các biến bảo mật để không bị lộ trên Github:
-  - `ConnectionStrings__DefaultConnection`: Chuỗi kết nối Database ở Bước 1.
-  - `Cloudinary__CloudName`, `Cloudinary__ApiKey`, `Cloudinary__ApiSecret`: Các thông số hình ảnh.
-  - `JWT__SecretKey`: Mã khóa bí mật JWT.
+- Vào mục **Settings > Environment variables** của App Service và khai báo các biến bảo mật để code có thể hoạt động (Lưu ý tên biến phải có 2 dấu gạch dưới `__`):
+
+| Tên biến (Name) | Giá trị cần điền (Value) |
+| :--- | :--- |
+| `ConnectionStrings__DefaultConnection` | `Server=tcp:YOUR_SERVER.database.windows.net,1433;Initial Catalog=YOUR_DB;User ID=YOUR_USER;Password=YOUR_PASS;MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;` |
+| `JWT__SecretKey` | `this-is-a-very-secure-secret-key-for-interacthub-12345` |
+| `JWT__Issuer` | `InteractHub` |
+| `JWT__Audience` | `InteractHubUsers` |
+| `Cloudinary__CloudName` | `demo` |
+| `Cloudinary__ApiKey` | `demo` |
+| `Cloudinary__ApiSecret` | `demo` |
 
 ### Bước 3: Gắn Chìa Khóa Cho GitHub (Publish Profile)
 - Tại trang quản trị của App Service, bấm vào nút **Download publish profile** ở thanh công cụ phía trên.

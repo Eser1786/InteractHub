@@ -498,7 +498,7 @@ export default function HomePage() {
 
   return (
     <div className="home-wrapper">
-      <Header onLogout={handleLogout} onSearch={handleHomeSearch} />
+      <Header onLogout={handleLogout} onSearch={handleHomeSearch} searchValue={hashtagSearch || ''} />
       <div className="home-container">
         {/* Left Sidebar */}
         <aside className="sidebar-left">

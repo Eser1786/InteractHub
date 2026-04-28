@@ -4,11 +4,17 @@ import logoImage from '../assets/logo.png';
 import logoTextImage from '../assets/chữ logo 2.png';
 import '../styles/Header.css';
 
-export default function Header({ onLogout, showControls = true, onSearch }) {
+export default function Header({ onLogout, showControls = true, onSearch, searchValue = '' }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchValue);
+
+  useEffect(() => {
+    if (typeof searchValue === 'string') {
+      setSearchQuery(searchValue);
+    }
+  }, [searchValue]);
 
   useEffect(() => {
     // Load user data from localStorage

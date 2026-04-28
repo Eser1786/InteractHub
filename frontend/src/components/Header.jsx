@@ -8,6 +8,7 @@ export default function Header({ onLogout, showControls = true }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     // Load user data from localStorage
@@ -67,6 +68,19 @@ export default function Header({ onLogout, showControls = true }) {
     }
   };
 
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    const match = query.match(/#?([a-zA-Z0-9_]+)/);
+    if (!match || !match[1]) return;
+
+    const hashtag = match[1];
+    setSearchQuery('');
+    navigate(`/hashtag/${encodeURIComponent(hashtag)}`);
+  };
+
   return (
     <header className="header">
       <div className="header-content">
@@ -78,12 +92,16 @@ export default function Header({ onLogout, showControls = true }) {
         {showControls && (
           <>
             <div className="header-search">
-              <input 
-                type="text" 
-                placeholder="Tìm kiếm" 
-                className="search-input"
-              />
-              <button className="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+              <form onSubmit={handleSearchSubmit} className="header-search-form">
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+                <button type="submit" className="search-btn"><i className="fa-solid fa-magnifying-glass"></i></button>
+              </form>
             </div>
 
             <div className="header-actions">

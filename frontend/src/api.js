@@ -238,10 +238,32 @@ export async function uploadProfilePicture(userId, file) {
 
 export async function sendFriendRequest(friendId) {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE}/friendships/request`, {
+  const response = await fetch(`${API_BASE}/friendships/send-request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({ friendId })
+  });
+  
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function acceptFriendRequest(friendshipId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/friendships/${friendshipId}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+  });
+  
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function declineFriendRequest(friendshipId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/friendships/${friendshipId}/decline`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
   });
   
   const data = await handleResponse(response);

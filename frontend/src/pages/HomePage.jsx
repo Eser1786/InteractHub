@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost, deletePost } from '../api';
+import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -9,9 +9,11 @@ import '../styles/HomePage.css';
 export default function HomePage() {
   const [posts, setPosts] = useState([]);
   const [friends, setFriends] = useState([]);
+  const [friendsInfo, setFriendsInfo] = useState({}); // Store user info for each friend
   const [suggestedUsers, setSuggestedUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [requestersInfo, setRequestersInfo] = useState({}); // Store user info for each requester
   const [currentUser, setCurrentUser] = useState(null);
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostFile, setNewPostFile] = useState(null);
@@ -120,10 +122,23 @@ export default function HomePage() {
       }
     };
 
+    // Listen for new friend request from UserProfilePage
+    const handleFriendRequestSent = async () => {
+      if (currentUser) {
+        console.log('Friend request sent - reloading pending requests');
+        const requestsData = await getPendingRequests(currentUser.Id, 1, 20);
+        setPendingRequests(requestsData || []);
+        // Clear requesters info cache to reload user info
+        setRequestersInfo({});
+      }
+    };
+
     window.addEventListener('userUpdated', handleUserUpdate);
+    window.addEventListener('friendRequestSent', handleFriendRequestSent);
 
     return () => {
       window.removeEventListener('userUpdated', handleUserUpdate);
+      window.removeEventListener('friendRequestSent', handleFriendRequestSent);
     };
   }, []);
 
@@ -324,6 +339,68 @@ export default function HomePage() {
     } catch (err) {
       console.error('Error deleting post:', err);
       setError(`Lỗi xóa bài viết: ${err.message}`);
+    }
+  };
+
+  const handleAcceptRequest = async (request) => {
+    try {
+      await acceptFriendRequest(request.Id);
+      // Remove from pending requests
+      setPendingRequests(pendingRequests.filter(r => r.Id !== request.Id));
+      // Reload friends list
+      const friendsData = await getAcceptedFriends(currentUser.Id, 1, 10);
+      setFriends(friendsData || []);
+      setError('');
+    } catch (err) {
+      console.error('Error accepting friend request:', err);
+      setError(`Lỗi chấp nhận lời mời: ${err.message}`);
+    }
+  };
+
+  const handleDeclineRequest = async (request) => {
+    if (!window.confirm('Bạn có chắc chắn muốn từ chối lời mời này?')) {
+      return;
+    }
+
+    try {
+      await declineFriendRequest(request.Id);
+      setPendingRequests(pendingRequests.filter(r => r.Id !== request.Id));
+      setError('');
+    } catch (err) {
+      console.error('Error declining friend request:', err);
+      setError(`Lỗi từ chối lời mời: ${err.message}`);
+    }
+  };
+
+  const loadRequesterInfo = async (userId) => {
+    if (requestersInfo[userId]) {
+      return; // Already loaded
+    }
+    
+    try {
+      const userData = await getUser(userId);
+      setRequestersInfo(prev => ({
+        ...prev,
+        [userId]: userData
+      }));
+    } catch (err) {
+      console.error('Error loading requester info:', err);
+    }
+  };
+
+  const loadFriendInfo = async (friendId) => {
+    if (friendsInfo[friendId]) {
+      return; // Already loaded
+    }
+    
+    try {
+      const userData = await getUser(friendId);
+      setFriendsInfo(prev => ({
+        ...prev,
+        [friendId]: userData
+      }));
+    } catch (err) {
+      console.error('Error loading friend info:', err);
     }
   };
 
@@ -687,18 +764,53 @@ export default function HomePage() {
                 {pendingRequests.length === 0 ? (
                   <p className="no-friends">Hiện chưa có lời mời kết bạn</p>
                 ) : (
-                  pendingRequests.map((request) => (
-                    <div key={request.id} className="friend-request-item">
-                      <div className="request-header">
-                        <div className="friend-avatar-small"><i className="fa-solid fa-user"></i></div>
-                        <p className="friend-name-small">{request.requesterName || 'Người dùng'}</p>
+                  pendingRequests.map((request) => {
+                    const requesterInfo = requestersInfo[request.UserId];
+                    
+                    // Load requester info if not already loaded
+                    if (!requesterInfo) {
+                      loadRequesterInfo(request.UserId);
+                    }
+
+                    return (
+                      <div key={request.Id} className="friend-request-item">
+                        <div className="request-header">
+                          <div className="friend-avatar-small">
+                            {requesterInfo?.ProfilePictureUrl || requesterInfo?.profilePictureUrl ? (
+                              <img 
+                                src={requesterInfo.ProfilePictureUrl || requesterInfo.profilePictureUrl} 
+                                alt={requesterInfo?.FullName || requesterInfo?.fullName}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <i className="fa-solid fa-user"></i>
+                            )}
+                          </div>
+                          <p 
+                            className="friend-name-small"
+                            onClick={() => navigate(`/user-profile/${request.UserId}`)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {requesterInfo?.FullName || requesterInfo?.fullName || 'Người dùng'}
+                          </p>
+                        </div>
+                        <div className="request-actions">
+                          <button 
+                            className="btn-accept"
+                            onClick={() => handleAcceptRequest(request)}
+                          >
+                            Xác nhận
+                          </button>
+                          <button 
+                            className="btn-reject"
+                            onClick={() => handleDeclineRequest(request)}
+                          >
+                            Xóa bỏ
+                          </button>
+                        </div>
                       </div>
-                      <div className="request-actions">
-                        <button className="btn-accept">Xác nhận</button>
-                        <button className="btn-reject">Xóa bỏ</button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </>

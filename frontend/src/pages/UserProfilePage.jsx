@@ -78,6 +78,9 @@ export default function UserProfilePage() {
       setFriendRequestSent(true);
       setError('');
       
+      // Emit event to notify HomePage about new friend request
+      window.dispatchEvent(new Event('friendRequestSent'));
+      
       // Show success notification
       setTimeout(() => {
         setFriendRequestSent(false);

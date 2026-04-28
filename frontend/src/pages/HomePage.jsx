@@ -36,10 +36,14 @@ export default function HomePage() {
       const postsData = await getPosts();
       // Get commentsByPost from localStorage to ensure we have latest data
       const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
-      setPosts((postsData || []).map((post) => ({
-        ...post,
-        commentsCount: commentsByPostData[post.Id]?.length ?? 0
-      })));
+      // Sort posts by CreatedAt descending (newest first)
+      const sortedPosts = (postsData || [])
+        .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt))
+        .map((post) => ({
+          ...post,
+          commentsCount: commentsByPostData[post.Id]?.length ?? 0
+        }));
+      setPosts(sortedPosts);
 
       // Initialize liked posts from response data
       const userLikedPostIds = (postsData || [])
@@ -266,7 +270,10 @@ export default function HomePage() {
       // Reload posts to get updated like count
       const postsData = await getPosts();
       if (postsData) {
-        setPosts(postsData);
+        // Sort posts by CreatedAt descending (newest first)
+        const sortedPosts = (postsData || [])
+          .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+        setPosts(sortedPosts);
         // Update likedPosts Set based on fresh data from backend
         const userLikedPostIds = postsData
           .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(currentUser.Id))

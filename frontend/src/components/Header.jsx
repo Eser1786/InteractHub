@@ -4,7 +4,7 @@ import logoImage from '../assets/logo.png';
 import logoTextImage from '../assets/chữ logo 2.png';
 import '../styles/Header.css';
 
-export default function Header({ onLogout, showControls = true }) {
+export default function Header({ onLogout, showControls = true, onSearch }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
@@ -77,8 +77,13 @@ export default function Header({ onLogout, showControls = true }) {
     if (!match || !match[1]) return;
 
     const hashtag = match[1];
-    setSearchQuery('');
-    navigate(`/hashtag/${encodeURIComponent(hashtag)}`);
+    const normalized = `#${hashtag}`;
+    setSearchQuery(normalized);
+    if (typeof onSearch === 'function') {
+      onSearch(hashtag);
+    } else {
+      navigate(`/hashtag/${encodeURIComponent(hashtag)}`);
+    }
   };
 
   return (
@@ -97,7 +102,13 @@ export default function Header({ onLogout, showControls = true }) {
                   type="text" 
                   placeholder="Tìm kiếm"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+                    if (typeof onSearch === 'function' && value.trim() === '') {
+                      onSearch('');
+                    }
+                  }}
                   className="search-input"
                 />
                 <button type="submit" className="search-btn"><i className="fa-solid fa-magnifying-glass"></i></button>

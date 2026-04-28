@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
  import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
@@ -30,6 +30,7 @@ export default function HomePage() {
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [hashtagSearch, setHashtagSearch] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const loadPosts = async (userData) => {
     try {
@@ -243,6 +244,17 @@ export default function HomePage() {
     navigate('/login');
   };
 
+  const extractHashtag = (query) => {
+    if (!query) return null;
+    const match = query.match(/#?([a-zA-Z0-9_]+)/);
+    return match?.[1] ? `#${match[1]}` : null;
+  };
+
+  const handleHomeSearch = (query) => {
+    const hashtag = extractHashtag(query);
+    setHashtagSearch(hashtag);
+  };
+
   const handleLike = async (post) => {
     if (!currentUser) {
       console.warn('No current user');
@@ -439,8 +451,23 @@ export default function HomePage() {
 
   const handleHashtagClick = (hashtag) => {
     const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
-    navigate(`/hashtag/${encodeURIComponent(slug)}`);
+    if (location.pathname === '/home') {
+      setHashtagSearch(`#${slug}`);
+    } else {
+      navigate(`/hashtag/${encodeURIComponent(slug)}`);
+    }
   };
+
+  const hasHashtag = (content = '', tag) => {
+    if (!tag) return false;
+    const escaped = tag.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+    const regex = new RegExp(`(^|\\s)${escaped}(?=\\s|$|[^a-zA-Z0-9_])`, 'i');
+    return regex.test(content);
+  };
+
+  const displayedPosts = hashtagSearch
+    ? posts.filter(post => hasHashtag(post.Content || '', hashtagSearch))
+    : posts;
 
   if (loading) {
     return <div className="home-container"><p>Đang tải...</p></div>;
@@ -471,7 +498,7 @@ export default function HomePage() {
 
   return (
     <div className="home-wrapper">
-      <Header onLogout={handleLogout} />
+      <Header onLogout={handleLogout} onSearch={handleHomeSearch} />
       <div className="home-container">
         {/* Left Sidebar */}
         <aside className="sidebar-left">
@@ -600,10 +627,12 @@ export default function HomePage() {
           ) : null}
 
           <section className="posts-feed">
-            {posts.length === 0 ? (
-              <p className="no-posts">Chưa có bài viết nào. Hãy tạo bài viết đầu tiên!</p>
+            {displayedPosts.length === 0 ? (
+              <p className="no-posts">
+                {hashtagSearch ? `Không có bài viết nào với ${hashtagSearch}.` : 'Chưa có bài viết nào. Hãy tạo bài viết đầu tiên!'}
+              </p>
             ) : (
-              posts.map((post) => (
+              displayedPosts.map((post) => (
                 <div key={post.Id} className="post-card">
                   <div className="post-header">
                     <div className="post-user-info">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost, deletePost } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
+import HashtagContent from '../components/HashtagContent';
 import '../styles/HomePage.css';
 
 export default function HomePage() {
@@ -25,6 +26,7 @@ export default function HomePage() {
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [activePostMenuId, setActivePostMenuId] = useState(null);
+  const [hashtagSearch, setHashtagSearch] = useState(null);
   const navigate = useNavigate();
 
   const loadPosts = async (userData) => {
@@ -318,6 +320,12 @@ export default function HomePage() {
     }
   };
 
+  const handleHashtagClick = (hashtag) => {
+    setSearchQuery(hashtag);
+    setHashtagSearch(hashtag);
+    setSelectedNav('add-friends');
+  };
+
   if (loading) {
     return <div className="home-container"><p>Đang tải...</p></div>;
   }
@@ -517,7 +525,12 @@ export default function HomePage() {
                   </div>
 
                   <div className="post-content">
-                    <p>{post.Content}</p>
+                    <p>
+                      <HashtagContent 
+                        content={post.Content} 
+                        onHashtagClick={handleHashtagClick}
+                      />
+                    </p>
                     {post.ImageUrl && (
                       <img src={post.ImageUrl} alt="Post" className="post-image" />
                     )}
@@ -562,7 +575,45 @@ export default function HomePage() {
 
         {/* Right Sidebar */}
         <aside className="sidebar-right">
-          {selectedNav === 'add-friends' ? (
+          {selectedNav === 'add-friends' && hashtagSearch ? (
+            <>
+              <h3 className="sidebar-title">
+                Bài viết có #{hashtagSearch.slice(1)}
+              </h3>
+              <button 
+                className="btn-clear-hashtag"
+                onClick={() => {
+                  setHashtagSearch(null);
+                  setSearchQuery('');
+                }}
+              >
+                ✕ Xóa tìm kiếm
+              </button>
+              <div className="hashtag-posts">
+                {posts.length > 0 ? (
+                  <>
+                    {posts.filter(post => post.Content.includes(hashtagSearch)).map(post => (
+                      <div key={post.Id} className="hashtag-post-item">
+                        <p className="hashtag-post-author">{post.UserFullName || post.UserName}</p>
+                        <p className="hashtag-post-content">{post.Content.substring(0, 100)}...</p>
+                      </div>
+                    )).length > 0 ? (
+                      posts.filter(post => post.Content.includes(hashtagSearch)).map(post => (
+                        <div key={post.Id} className="hashtag-post-item">
+                          <p className="hashtag-post-author">{post.UserFullName || post.UserName}</p>
+                          <p className="hashtag-post-content">{post.Content.substring(0, 100)}...</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="no-results">Không có bài viết với hashtag này</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="no-results">Không có bài viết với hashtag này</p>
+                )}
+              </div>
+            </>
+          ) : selectedNav === 'add-friends' ? (
             <>
               <h3 className="sidebar-title">Thêm bạn bè</h3>
               <div className="add-friends-container">

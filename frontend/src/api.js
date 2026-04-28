@@ -45,6 +45,8 @@ export async function login({ userName, password }) {
   // Debug logging
   console.log('Login response:', data);
   console.log('Login data.Data:', data?.Data);
+  console.log('Login data.Data.User:', data?.Data?.User);
+  console.log('Login data.Data.User.Id:', data?.Data?.User?.Id);
   
   // Check if data structure is correct - handle both PascalCase (from backend) and camelCase
   if (!data || !data.Data) {
@@ -63,6 +65,9 @@ export async function login({ userName, password }) {
     throw new Error('Invalid response from server - missing Token or User');
   }
 
+  console.log('Final user object to be returned:', user);
+  console.log('Final user.Id:', user.Id);
+  
   return { token, user };
 }
 
@@ -92,6 +97,29 @@ export async function getPosts() {
   });
   
   const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
+export async function getUserPosts(userId) {
+  const token = localStorage.getItem('token');
+  console.log('getUserPosts called with userId:', userId);
+  
+  if (!userId) {
+    console.warn('getUserPosts: userId is empty/null');
+    return [];
+  }
+  
+  const url = `${API_BASE}/posts/user/${userId}`;
+  console.log('getUserPosts - fetching from URL:', url);
+  
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  
+  const data = await handleResponse(response);
+  console.log('getUserPosts response data:', data);
+  console.log('getUserPosts Data array:', data?.Data);
+  
   return data?.Data || [];
 }
 

@@ -278,6 +278,29 @@
   text-decoration: underline;
 }
 
+/* Hashtag Styles - matching HomePage */
+.post-hashtag {
+  color: #7c3aed;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.post-hashtag:hover {
+  color: #6d28d9;
+  background: rgba(124, 58, 237, 0.1);
+  text-decoration: underline;
+  transform: scale(1.05);
+}
+
+.post-hashtag:active {
+  transform: scale(0.98);
+}
+
 .post-images-profile {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

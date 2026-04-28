@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture, deletePost } from '../api';
+import { getUserPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture, deletePost } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
+import HashtagContent from '../components/HashtagContent';
 import '../styles/ProfilePage.css';
 
 export default function ProfilePage() {
@@ -25,9 +26,18 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
-  const loadPosts = async () => {
+  const loadPosts = async (userId) => {
     try {
-      const postsData = await getPosts();
+      console.log('loadPosts called with userId:', userId);
+      if (!userId) {
+        console.warn('No userId provided to loadPosts');
+        setPosts([]);
+        return;
+      }
+      
+      const postsData = await getUserPosts(userId);
+      console.log('Posts data received for userId:', userId, postsData);
+      
       // Get commentsByPost from localStorage to ensure we have latest data
       const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
       setPosts((postsData || []).map((post) => ({
@@ -54,6 +64,8 @@ export default function ProfilePage() {
     const loadData = async () => {
       try {
         const userDataJson = localStorage.getItem('user');
+        console.log('ProfilePage - userDataJson from localStorage:', userDataJson);
+        
         if (!userDataJson) {
           console.error('No user data found in localStorage');
           setCurrentUser(null);
@@ -63,10 +75,18 @@ export default function ProfilePage() {
         }
 
         const userData = JSON.parse(userDataJson);
+        console.log('ProfilePage - userData parsed:', userData);
+        console.log('ProfilePage - userData.Id:', userData.Id);
+        console.log('ProfilePage - userData.id:', userData.id);
         
         // Fetch full user data from backend
         try {
-          const fullUserData = await getUser(userData.Id || userData.id);
+          const userId = userData.Id || userData.id;
+          if (!userId) {
+            throw new Error('User ID not found in localStorage');
+          }
+          
+          const fullUserData = await getUser(userId);
           setCurrentUser(fullUserData);
           setEditFormData({
             fullName: fullUserData.FullName || '',
@@ -83,7 +103,17 @@ export default function ProfilePage() {
         }
 
         // Load user's posts
-        await loadPosts();
+        const userIdToUse = userData.Id || userData.id;
+        console.log('ProfilePage - loading posts for userId:', userIdToUse);
+        
+        if (!userIdToUse) {
+          console.warn('ProfilePage - userId is empty, cannot load posts');
+          setError('Cannot determine user ID to load posts');
+          setLoading(false);
+          return;
+        }
+        
+        await loadPosts(userIdToUse);
       } catch (err) {
         console.error('Error loading profile:', err);
         setError(`Error loading profile: ${err.message}`);
@@ -118,7 +148,11 @@ export default function ProfilePage() {
   useEffect(() => {
     const handleUserUpdate = async () => {
       console.log('User updated in ProfilePage - reloading posts with new user name');
-      await loadPosts();
+      const userDataJson = localStorage.getItem('user');
+      if (userDataJson) {
+        const userData = JSON.parse(userDataJson);
+        await loadPosts(userData.Id || userData.id);
+      }
     };
 
     window.addEventListener('userUpdated', handleUserUpdate);
@@ -268,7 +302,7 @@ export default function ProfilePage() {
       setError('');
       
       // Reload posts to reflect the new user name
-      await loadPosts();
+      await loadPosts(userId);
     } catch (err) {
       console.error('Error saving profile:', err);
       setError(`Failed to save profile: ${err.message}`);
@@ -284,12 +318,13 @@ export default function ProfilePage() {
     }
     
     try {
+      const userId = currentUser.Id || currentUser.id;
       const isLiked = likedPosts.has(post.Id);
-      console.log('Like status:', { postId: post.Id, userId: currentUser.Id, isLiked });
+      console.log('Like status:', { postId: post.Id, userId, isLiked });
       
       if (isLiked) {
         // Unlike
-        await unlikePost(post.Id, currentUser.Id || currentUser.id);
+        await unlikePost(post.Id, userId);
         setLikedPosts(prev => {
           const newSet = new Set(prev);
           newSet.delete(post.Id);
@@ -297,18 +332,25 @@ export default function ProfilePage() {
         });
       } else {
         // Like
-        await likePost(post.Id, currentUser.Id || currentUser.id);
+        await likePost(post.Id, userId);
         setLikedPosts(prev => new Set(prev).add(post.Id));
       }
       
-      // Reload posts to get updated like count
-      const postsData = await getPosts();
+      // Reload only this user's posts to get updated like count
+      console.log('Reloading posts for userId:', userId);
+      const postsData = await getUserPosts(userId);
       if (postsData) {
-        setPosts(postsData);
+        console.log('Posts reloaded:', postsData);
+        const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
+        setPosts((postsData || []).map((post) => ({
+          ...post,
+          commentsCount: commentsByPostData[post.Id]?.length ?? 0
+        })));
+        
         // Update likedPosts Set based on fresh data from backend
         const userLikedPostIds = postsData
-          .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(currentUser.Id || currentUser.id))
-          .map(post => post.Id);
+          .filter(p => p.LikedByUserIds && p.LikedByUserIds.includes(userId))
+          .map(p => p.Id);
         setLikedPosts(new Set(userLikedPostIds));
       }
       console.log('Posts updated after like/unlike');
@@ -396,6 +438,11 @@ export default function ProfilePage() {
       console.error('Error deleting post:', err);
       setError(`Lỗi xóa bài viết: ${err.message}`);
     }
+  };
+
+  const handleHashtagClick = (hashtag) => {
+    console.log('Hashtag clicked:', hashtag);
+    // Could navigate to search page in future
   };
 
   const filteredPosts = selectedTab === 'all' 
@@ -611,7 +658,12 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="post-content-profile">
-                    <p>{post.Content}</p>
+                    <p>
+                      <HashtagContent 
+                        content={post.Content} 
+                        onHashtagClick={handleHashtagClick}
+                      />
+                    </p>
                   </div>
 
                   {post.ImageUrl && (

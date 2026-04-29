@@ -59,6 +59,64 @@
   font-size: 18px;
 }
 
+.sidebar-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: #f5f0ff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sidebar-notification:hover,
+.sidebar-notification.active {
+  background: #ede5ff;
+}
+
+.notification-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #3c2f70;
+  font-size: 13px;
+}
+
+.notification-text p {
+  margin: 0;
+  color: #5f55a7;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-item {
+  background: white;
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+}
+
+.notification-title {
+  margin: 0 0 6px;
+  color: #322d5a;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.notification-time {
+  margin: 0;
+  color: #7a74a8;
+  font-size: 12px;
+}
+
 /* Main Content */
 .main-content {
   display: flex;

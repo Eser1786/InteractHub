@@ -24,6 +24,11 @@ export default function HomePage() {
   const [likedPosts, setLikedPosts] = useState(new Set());
   const [selectedNav, setSelectedNav] = useState('friends');
   const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState([
+    { id: '1', title: 'Bạn có lời mời kết bạn mới', time: '2 giờ trước' },
+    { id: '2', title: 'Bài viết mới từ bạn thân', time: '5 giờ trước' },
+    { id: '3', title: 'Thành viên mới vừa tham gia nhóm', time: '1 ngày trước' }
+  ]);
   const [stories, setStories] = useState([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
@@ -576,12 +581,19 @@ export default function HomePage() {
         {/* Left Sidebar */}
         <aside className="sidebar-left">
           <nav className="sidebar-nav">
+            <div className={`sidebar-notification ${selectedNav === 'notifications' ? 'active' : ''}`} onClick={() => setSelectedNav('notifications')}>
+              <span className="nav-icon"><i className="fa-solid fa-bell"></i></span>
+              <div className="notification-text">
+                <strong>Thông báo</strong>
+                <p>{notifications.length} cập nhật mới</p>
+              </div>
+            </div>
             <div className={`nav-item ${selectedNav === 'friends' ? 'active' : ''}`} onClick={() => setSelectedNav('friends')}>
-              <span className="nav-icon"><i class="fa-solid fa-people-pulling"></i></span>
+              <span className="nav-icon"><i className="fa-solid fa-people-pulling"></i></span>
               <span>Tất cả bạn bè</span>
             </div>
             <div className={`nav-item ${selectedNav === 'requests' ? 'active' : ''}`} onClick={() => setSelectedNav('requests')}>
-              <span className="nav-icon"><i class="fa-solid fa-address-book"></i></span>
+              <span className="nav-icon"><i className="fa-solid fa-address-book"></i></span>
               <span>Lời mời kết bạn</span>
             </div>
             <div className={`nav-item ${selectedNav === 'add-friends' ? 'active' : ''}`} onClick={() => setSelectedNav('add-friends')}>
@@ -835,6 +847,22 @@ export default function HomePage() {
                   </>
                 ) : (
                   <p className="no-results">Không có bài viết với hashtag này</p>
+                )}
+              </div>
+            </>
+          ) : selectedNav === 'notifications' ? (
+            <>
+              <h3 className="sidebar-title">Thông báo</h3>
+              <div className="notifications-list">
+                {notifications.length === 0 ? (
+                  <p className="no-results">Hiện chưa có thông báo</p>
+                ) : (
+                  notifications.map((item) => (
+                    <div key={item.id} className="notification-item">
+                      <p className="notification-title">{item.title}</p>
+                      <p className="notification-time">{item.time}</p>
+                    </div>
+                  ))
                 )}
               </div>
             </>

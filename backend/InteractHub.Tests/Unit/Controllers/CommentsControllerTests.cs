@@ -14,7 +14,7 @@ public class CommentsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnAllComments_WhenCommentsExist()
     {
-        // Given
+        // given
         var comments = new List<Comment>
         {
             new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "comment 1", CreatedAt = DateTime.UtcNow },
@@ -25,10 +25,10 @@ public class CommentsControllerTests
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -39,17 +39,17 @@ public class CommentsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenNoCommentsExist()
     {
-        // Given
+        // given
         var comments = new List<Comment>();
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(comments);
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -59,17 +59,17 @@ public class CommentsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnComment_WhenCommentExists()
     {
-        // Given
+        // given
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "test comment", CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -80,16 +80,16 @@ public class CommentsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenCommentMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetByIdAsync(44)).ReturnsAsync((Comment?)null);
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(44);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -98,7 +98,7 @@ public class CommentsControllerTests
     [Fact]
     public async Task GetByPostId_ShouldReturnPostComments_WhenCommentsExist()
     {
-        // Given
+        // given
         var postId = 5;
         var comments = new List<Comment>
         {
@@ -110,10 +110,10 @@ public class CommentsControllerTests
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByPostId(postId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -124,7 +124,7 @@ public class CommentsControllerTests
     [Fact]
     public async Task GetByPostId_ShouldReturnEmpty_WhenNoCommentsForPost()
     {
-        // Given
+        // given
         var postId = 5;
         var comments = new List<Comment>();
         var serviceMock = new Mock<ICommentService>();
@@ -132,10 +132,10 @@ public class CommentsControllerTests
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByPostId(postId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -145,7 +145,7 @@ public class CommentsControllerTests
     [Fact]
     public async Task Create_ShouldReturnCreated_WhenCommentIsValid()
     {
-        // Given
+        // given
         var createDto = new CreateCommentDto { PostId = 1, Content = "new comment" };
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = createDto.Content, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<ICommentService>();
@@ -153,10 +153,10 @@ public class CommentsControllerTests
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Create(createDto);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
         serviceMock.Verify(s => s.CreateAsync(It.IsAny<Comment>()), Times.Once);
@@ -166,15 +166,15 @@ public class CommentsControllerTests
     [Fact]
     public async Task Create_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
-        // Given
+        // given
         var serviceMock = new Mock<ICommentService>();
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // When
+        // when
         var result = await controller.Create(new CreateCommentDto { PostId = 1, Content = "comment" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -183,7 +183,7 @@ public class CommentsControllerTests
     [Fact]
     public async Task Update_ShouldReturnOk_WhenCommentOwner()
     {
-        // Given
+        // given
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "old", CreatedAt = DateTime.UtcNow };
         var updateDto = new UpdateCommentDto { Content = "updated" };
         var serviceMock = new Mock<ICommentService>();
@@ -192,10 +192,10 @@ public class CommentsControllerTests
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Update(1, updateDto);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.UpdateAsync(It.IsAny<Comment>()), Times.Once);
@@ -205,16 +205,16 @@ public class CommentsControllerTests
     [Fact]
     public async Task Update_ShouldReturnNotFound_WhenCommentMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Comment?)null);
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Update(999, new UpdateCommentDto { Content = "updated" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -223,17 +223,17 @@ public class CommentsControllerTests
     [Fact]
     public async Task Update_ShouldReturnForbidden_WhenCurrentUserIsNotCommentOwner()
     {
-        // Given
+        // given
         var comment = new Comment { Id = 1, UserId = "owner", PostId = 1, Content = "old" };
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "other");
 
-        // When
+        // when
         var result = await controller.Update(1, new UpdateCommentDto { Content = "updated" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -242,7 +242,7 @@ public class CommentsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnOk_WhenCommentOwner()
     {
-        // Given
+        // given
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "test", CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
@@ -250,10 +250,10 @@ public class CommentsControllerTests
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.DeleteAsync(1), Times.Once);
@@ -263,16 +263,16 @@ public class CommentsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenCommentMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Comment?)null);
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -281,17 +281,17 @@ public class CommentsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnForbidden_WhenCurrentUserIsNotCommentOwner()
     {
-        // Given
+        // given
         var comment = new Comment { Id = 1, UserId = "owner", PostId = 1, Content = "test" };
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "other");
 
-        // When
+        // when
         var result = await controller.Delete(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -300,7 +300,7 @@ public class CommentsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenDeleteFails()
     {
-        // Given
+        // given
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "test", CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<ICommentService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
@@ -308,10 +308,10 @@ public class CommentsControllerTests
         var controller = new CommentsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }

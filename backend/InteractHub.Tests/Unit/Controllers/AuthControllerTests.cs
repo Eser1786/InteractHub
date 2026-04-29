@@ -16,12 +16,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenEmailFormatInvalid()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -30,7 +30,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -39,12 +39,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenEmailIsEmpty()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -53,7 +53,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -62,12 +62,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenUsernameTooShort()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "ab",
@@ -76,7 +76,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -85,12 +85,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenUsernameTooLong()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "this_is_a_very_long_username_that_exceeds_limit",
@@ -99,7 +99,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -108,12 +108,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenUsernameHasInvalidCharacters()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "invalid-name!",
@@ -122,7 +122,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -131,12 +131,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenFullNameTooShort()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -145,7 +145,7 @@ public class AuthControllerTests
             FullName = "A"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -154,13 +154,13 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenFullNameTooLong()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
         var longName = new string('A', 101);
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -169,7 +169,7 @@ public class AuthControllerTests
             FullName = longName
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -178,12 +178,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenPasswordTooShort()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -192,7 +192,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -201,12 +201,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenPasswordMissingUppercase()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -215,7 +215,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -224,12 +224,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenPasswordMissingLowercase()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -238,7 +238,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -247,12 +247,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenPasswordMissingNumber()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -261,7 +261,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -270,12 +270,12 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenPasswordMissingSpecialChar()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "valid_name",
@@ -284,7 +284,7 @@ public class AuthControllerTests
             FullName = "Test User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -293,14 +293,14 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenUsernameAlreadyExists()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("taken_name"))
             .ReturnsAsync(new User { Id = "u1", UserName = "taken_name", Email = "taken@mail.com", FullName = "Taken" });
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "taken_name",
@@ -309,7 +309,7 @@ public class AuthControllerTests
             FullName = "New User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -318,7 +318,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenEmailAlreadyExists()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("new_name")).ReturnsAsync((User?)null);
         userManagerMock.Setup(m => m.FindByEmailAsync("taken@mail.com"))
@@ -326,7 +326,7 @@ public class AuthControllerTests
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "new_name",
@@ -335,7 +335,7 @@ public class AuthControllerTests
             FullName = "New User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -344,7 +344,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnCreated_WhenInputIsValid()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("new_user")).ReturnsAsync((User?)null);
         userManagerMock.Setup(m => m.FindByEmailAsync("new@mail.com")).ReturnsAsync((User?)null);
@@ -361,7 +361,7 @@ public class AuthControllerTests
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "new_user",
@@ -370,7 +370,7 @@ public class AuthControllerTests
             FullName = "New User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -380,7 +380,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenCreateUserFails()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("new_user")).ReturnsAsync((User?)null);
         userManagerMock.Setup(m => m.FindByEmailAsync("new@mail.com")).ReturnsAsync((User?)null);
@@ -392,7 +392,7 @@ public class AuthControllerTests
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "new_user",
@@ -401,7 +401,7 @@ public class AuthControllerTests
             FullName = "New User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -410,7 +410,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenAddRoleFails()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("new_user")).ReturnsAsync((User?)null);
         userManagerMock.Setup(m => m.FindByEmailAsync("new@mail.com")).ReturnsAsync((User?)null);
@@ -428,7 +428,7 @@ public class AuthControllerTests
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Register(new RegisterDto
         {
             UserName = "new_user",
@@ -437,7 +437,7 @@ public class AuthControllerTests
             FullName = "New User"
         });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -446,16 +446,16 @@ public class AuthControllerTests
     [Fact]
     public async Task Login_ShouldReturnUnauthorized_WhenUserNotFound()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("missing")).ReturnsAsync((User?)null);
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Login(new LoginDto { UserName = "missing", Password = "password" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -464,7 +464,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Login_ShouldReturnUnauthorized_WhenPasswordIsInvalid()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "john", Email = "john@mail.com", FullName = "John" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("john")).ReturnsAsync(user);
@@ -474,10 +474,10 @@ public class AuthControllerTests
             .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Login(new LoginDto { UserName = "john", Password = "bad-pass" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -486,7 +486,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Login_ShouldReturnOk_WhenCredentialsAreValid()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "john", Email = "john@mail.com", FullName = "John Doe" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("john")).ReturnsAsync(user);
@@ -497,10 +497,10 @@ public class AuthControllerTests
             .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Login(new LoginDto { UserName = "john", Password = "ValidPass123!" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -510,7 +510,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Login_ShouldReturnOkWithAdminRole_WhenUserIsAdmin()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "admin", Email = "admin@mail.com", FullName = "Admin User" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("admin")).ReturnsAsync(user);
@@ -521,10 +521,10 @@ public class AuthControllerTests
             .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
-        // When
+        // when
         var result = await controller.Login(new LoginDto { UserName = "admin", Password = "AdminPass123!" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);

@@ -14,7 +14,7 @@ public class HashtagsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnAllHashtags_WhenHashtagsExist()
     {
-        // Given
+        // given
         var hashtags = new List<Hashtag>
         {
             new Hashtag { Id = 1, Name = "#csharp" },
@@ -25,10 +25,10 @@ public class HashtagsControllerTests
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -39,17 +39,17 @@ public class HashtagsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenNoHashtagsExist()
     {
-        // Given
+        // given
         var hashtags = new List<Hashtag>();
         var serviceMock = new Mock<IHashtagService>();
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(hashtags);
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -59,17 +59,17 @@ public class HashtagsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnHashtag_WhenHashtagExists()
     {
-        // Given
+        // given
         var hashtag = new Hashtag { Id = 1, Name = "#csharp" };
         var serviceMock = new Mock<IHashtagService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(hashtag);
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -80,16 +80,16 @@ public class HashtagsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenHashtagMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IHashtagService>();
         serviceMock.Setup(s => s.GetByIdAsync(100)).ReturnsAsync((Hashtag?)null);
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(100);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -98,17 +98,17 @@ public class HashtagsControllerTests
     [Fact]
     public async Task GetByName_ShouldReturnHashtag_WhenHashtagExists()
     {
-        // Given
+        // given
         var hashtag = new Hashtag { Id = 1, Name = "#csharp" };
         var serviceMock = new Mock<IHashtagService>();
         serviceMock.Setup(s => s.GetByNameAsync("#csharp")).ReturnsAsync(hashtag);
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByName("#csharp");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -119,16 +119,16 @@ public class HashtagsControllerTests
     [Fact]
     public async Task GetByName_ShouldReturnNotFound_WhenHashtagMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IHashtagService>();
         serviceMock.Setup(s => s.GetByNameAsync("#nonexistent")).ReturnsAsync((Hashtag?)null);
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByName("#nonexistent");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -137,7 +137,7 @@ public class HashtagsControllerTests
     [Fact]
     public async Task Create_ShouldReturnCreated_WhenHashtagIsValid()
     {
-        // Given
+        // given
         var createDto = new CreateHashtagDto { Name = "#newhashtag" };
         var hashtag = new Hashtag { Id = 1, Name = createDto.Name };
         var serviceMock = new Mock<IHashtagService>();
@@ -145,10 +145,10 @@ public class HashtagsControllerTests
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Create(createDto);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
         serviceMock.Verify(s => s.CreateAsync(It.IsAny<Hashtag>()), Times.Once);
@@ -158,16 +158,16 @@ public class HashtagsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNoContent_WhenHashtagDeleted()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IHashtagService>();
         serviceMock.Setup(s => s.DeleteAsync(5)).ReturnsAsync(true);
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(5);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(204, objectResult.StatusCode);
         serviceMock.Verify(s => s.DeleteAsync(5), Times.Once);
@@ -177,16 +177,16 @@ public class HashtagsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenDeleteFails()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IHashtagService>();
         serviceMock.Setup(s => s.DeleteAsync(5)).ReturnsAsync(false);
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(5);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }

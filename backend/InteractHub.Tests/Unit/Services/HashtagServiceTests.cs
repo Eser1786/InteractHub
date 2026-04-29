@@ -10,12 +10,15 @@ public class HashtagServiceTests
     // Kiểm tra tìm kiếm Hashtag theo tên: Phải trả về đúng thông tin nếu tồn tại.
     public async Task GetByNameAsync_ShouldReturnHashtag_WhenExists()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var service = new HashtagService(context);
         await service.CreateAsync(new Hashtag { Name = "dotnet" });
 
+        // when
         var hashtag = await service.GetByNameAsync("dotnet");
 
+        // then
         Assert.NotNull(hashtag);
         Assert.Equal("dotnet", hashtag!.Name);
     }
@@ -24,11 +27,14 @@ public class HashtagServiceTests
     // Kiểm tra logic xoá Hashtag an toàn: Trả về False nếu id đó không tồn tại trong DB.
     public async Task DeleteAsync_ShouldReturnFalse_WhenHashtagMissing()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var service = new HashtagService(context);
 
+        // when
         var deleted = await service.DeleteAsync(777);
 
+        // then
         Assert.False(deleted);
     }
 }

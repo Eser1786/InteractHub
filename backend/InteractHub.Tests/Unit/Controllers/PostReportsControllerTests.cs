@@ -14,7 +14,7 @@ public class PostReportsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnAllReports_WhenReportsExist()
     {
-        // Given
+        // given
         var reports = new List<PostReport>
         {
             new PostReport { Id = 1, UserId = "u1", PostId = 1, Reason = "spam", CreatedAt = DateTime.UtcNow },
@@ -25,10 +25,10 @@ public class PostReportsControllerTests
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -39,17 +39,17 @@ public class PostReportsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenNoReportsExist()
     {
-        // Given
+        // given
         var reports = new List<PostReport>();
         var serviceMock = new Mock<IPostReportService>();
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(reports);
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -59,17 +59,17 @@ public class PostReportsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnReport_WhenReportExists()
     {
-        // Given
+        // given
         var report = new PostReport { Id = 1, UserId = "u1", PostId = 1, Reason = "spam", CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IPostReportService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(report);
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -80,16 +80,16 @@ public class PostReportsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenReportMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IPostReportService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((PostReport?)null);
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -98,7 +98,7 @@ public class PostReportsControllerTests
     [Fact]
     public async Task Create_ShouldReturnCreated_WhenReportIsValid()
     {
-        // Given
+        // given
         var createDto = new CreatePostReportDto { PostId = 1, Reason = "spam" };
         var report = new PostReport { Id = 1, UserId = "u1", PostId = 1, Reason = createDto.Reason, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IPostReportService>();
@@ -106,10 +106,10 @@ public class PostReportsControllerTests
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Create(createDto);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
         serviceMock.Verify(s => s.CreateAsync(It.IsAny<PostReport>()), Times.Once);
@@ -119,15 +119,15 @@ public class PostReportsControllerTests
     [Fact]
     public async Task Create_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IPostReportService>();
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // When
+        // when
         var result = await controller.Create(new CreatePostReportDto { PostId = 1, Reason = "spam" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -136,7 +136,7 @@ public class PostReportsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNoContent_WhenReportDeleted()
     {
-        // Given
+        // given
         var report = new PostReport { Id = 11, UserId = "u1", PostId = 1, Reason = "spam", CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IPostReportService>();
         serviceMock.Setup(s => s.GetByIdAsync(11)).ReturnsAsync(report);
@@ -144,10 +144,10 @@ public class PostReportsControllerTests
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.Delete(11);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(204, objectResult.StatusCode);
         serviceMock.Verify(s => s.DeleteAsync(11), Times.Once);
@@ -157,16 +157,16 @@ public class PostReportsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenReportMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IPostReportService>();
         serviceMock.Setup(s => s.GetByIdAsync(11)).ReturnsAsync((PostReport?)null);
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.Delete(11);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -175,7 +175,7 @@ public class PostReportsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenDeleteFails()
     {
-        // Given
+        // given
         var report = new PostReport { Id = 11, UserId = "u1", PostId = 1, Reason = "spam", CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IPostReportService>();
         serviceMock.Setup(s => s.GetByIdAsync(11)).ReturnsAsync(report);
@@ -183,10 +183,10 @@ public class PostReportsControllerTests
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.Delete(11);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }

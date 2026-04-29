@@ -59,7 +59,7 @@ public class UsersControllerTests
     [Fact]
     public async Task Update_ShouldReturnOk_WhenUserIdMatchesCurrentUser()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", FullName = "Old Name", ProfilePictureUrl = "old.jpg", Bio = "Old bio" };
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetByIdAsync("u1")).ReturnsAsync(user);
@@ -67,10 +67,10 @@ public class UsersControllerTests
         var controller = new UsersController(userServiceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Update("u1", new UpdateUserDto { FullName = "Changed", ProfilePictureUrl = "new.jpg", Bio = "New bio" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         userServiceMock.Verify(s => s.UpdateAsync(It.Is<User>(u => u.Id == "u1" && u.FullName == "Changed")));
@@ -80,16 +80,16 @@ public class UsersControllerTests
     [Fact]
     public async Task Update_ShouldReturnNotFound_WhenUserNotFound()
     {
-        // Given
+        // given
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetByIdAsync("u1")).ReturnsAsync((User?)null);
         var controller = new UsersController(userServiceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Update("u1", new UpdateUserDto { FullName = "Changed" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -99,7 +99,7 @@ public class UsersControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnAllUsers_WhenNoSearch()
     {
-        // Given
+        // given
         var users = new List<User>
         {
             new User { Id = "u1", UserName = "user1", Email = "user1@example.com", FullName = "User One", ProfilePictureUrl = "pic1.jpg", Bio = "Bio 1" },
@@ -111,10 +111,10 @@ public class UsersControllerTests
         var controller = new UsersController(userServiceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -124,7 +124,7 @@ public class UsersControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnFilteredUsers_WhenSearchMatches()
     {
-        // Given
+        // given
         var users = new List<User>
         {
             new User { Id = "u1", UserName = "john_doe", Email = "john@example.com", FullName = "John Doe", ProfilePictureUrl = "pic1.jpg", Bio = "Bio 1" },
@@ -137,10 +137,10 @@ public class UsersControllerTests
         var controller = new UsersController(userServiceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll(search: "john");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -150,17 +150,17 @@ public class UsersControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenNoUsersExist()
     {
-        // Given
+        // given
         var users = new List<User>();
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetUsersAsync()).ReturnsAsync(users);
         var controller = new UsersController(userServiceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -170,7 +170,7 @@ public class UsersControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenSearchDoesNotMatch()
     {
-        // Given
+        // given
         var users = new List<User>
         {
             new User { Id = "u1", UserName = "john_doe", Email = "john@example.com", FullName = "John Doe", ProfilePictureUrl = "pic1.jpg", Bio = "Bio 1" },
@@ -182,10 +182,10 @@ public class UsersControllerTests
         var controller = new UsersController(userServiceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll(search: "xyz");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);

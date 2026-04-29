@@ -15,17 +15,17 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnFriendship_WhenFriendshipExists()
     {
-        // Given
+        // given
         var friendship = new Friendship { Id = 1, UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(friendship);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -36,16 +36,16 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenFriendshipMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Friendship?)null);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -54,7 +54,7 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task GetAcceptedFriends_ShouldReturnAcceptedFriends_WhenFriendsExist()
     {
-        // Given
+        // given
         var userId = "u1";
         var friends = new List<Friendship>
         {
@@ -67,10 +67,10 @@ public class FriendshipsControllerTests
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAcceptedFriends(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -81,7 +81,7 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task GetAcceptedFriends_ShouldReturnEmpty_WhenNoAcceptedFriendships()
     {
-        // Given
+        // given
         var userId = "u1";
         var friends = new List<Friendship>();
         var metadata = new InteractHub.Application.Helpers.PaginationMetadata { TotalCount = 0, PageNumber = 1, PageSize = 20, TotalPages = 0 };
@@ -90,10 +90,10 @@ public class FriendshipsControllerTests
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAcceptedFriends(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -103,7 +103,7 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task GetPendingRequests_ShouldReturnPendingRequests_WhenRequestsExist()
     {
-        // Given
+        // given
         var userId = "u1";
         var requests = new List<Friendship>
         {
@@ -116,10 +116,10 @@ public class FriendshipsControllerTests
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.GetPendingRequests(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -130,15 +130,15 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task GetPendingRequests_ShouldReturnForbidden_WhenUserId_NotMatchCurrentUser()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetPendingRequests("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -147,7 +147,7 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task GetPendingRequests_ShouldReturnEmpty_WhenNoPendingRequests()
     {
-        // Given
+        // given
         var userId = "u1";
         var requests = new List<Friendship>();
         var metadata = new InteractHub.Application.Helpers.PaginationMetadata { TotalCount = 0, PageNumber = 1, PageSize = 20, TotalPages = 0 };
@@ -156,10 +156,10 @@ public class FriendshipsControllerTests
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.GetPendingRequests(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -169,7 +169,7 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task SendFriendRequest_ShouldReturnCreated_WhenRequestIsValid()
     {
-        // Given
+        // given
         var requestDto = new SendFriendRequestDto { FriendId = "u2" };
         var friendship = new Friendship { Id = 1, UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Pending, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IFriendshipService>();
@@ -177,10 +177,10 @@ public class FriendshipsControllerTests
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.SendFriendRequest(requestDto);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
         serviceMock.Verify(s => s.SendFriendRequestAsync("u1", "u2"), Times.Once);
@@ -190,15 +190,15 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task SendFriendRequest_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // When
+        // when
         var result = await controller.SendFriendRequest(new SendFriendRequestDto { FriendId = "u2" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -207,17 +207,17 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task SendFriendRequest_ShouldReturnBadRequest_WhenServiceThrowsException()
     {
-        // Given
+        // given
         var requestDto = new SendFriendRequestDto { FriendId = "u2" };
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.SendFriendRequestAsync("u1", "u2")).ThrowsAsync(new InvalidOperationException("Already friends"));
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.SendFriendRequest(requestDto);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -226,17 +226,17 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task AcceptFriendRequest_ShouldReturnOk_WhenRequestIsValid()
     {
-        // Given
+        // given
         var friendship = new Friendship { Id = 1, UserId = "u2", FriendId = "u1", Status = FriendshipStatus.Accepted, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.AcceptFriendRequestAsync(1)).ReturnsAsync(friendship);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.AcceptFriendRequest(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.AcceptFriendRequestAsync(1), Times.Once);
@@ -246,16 +246,16 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task AcceptFriendRequest_ShouldReturnBadRequest_WhenRequestInvalid()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.AcceptFriendRequestAsync(999)).ThrowsAsync(new InvalidOperationException("Request not found"));
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.AcceptFriendRequest(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -264,16 +264,16 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task DeclineFriendRequest_ShouldReturnOk_WhenRequestIsValid()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.DeclineFriendRequestAsync(22)).ReturnsAsync(true);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.DeclineFriendRequest(22);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.DeclineFriendRequestAsync(22), Times.Once);
@@ -283,16 +283,16 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task DeclineFriendRequest_ShouldReturnBadRequest_WhenServiceReturnsFalse()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.DeclineFriendRequestAsync(22)).ReturnsAsync(false);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.DeclineFriendRequest(22);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -301,16 +301,16 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task RemoveFriend_ShouldReturnOk_WhenFriendExists()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.RemoveFriendAsync("u1", "u2")).ReturnsAsync(true);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.RemoveFriend("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.RemoveFriendAsync("u1", "u2"), Times.Once);
@@ -320,16 +320,16 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task RemoveFriend_ShouldReturnNotFound_WhenFriendDoesNotExist()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.RemoveFriendAsync("u1", "u999")).ReturnsAsync(false);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.RemoveFriend("u999");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -338,15 +338,15 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task RemoveFriend_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // When
+        // when
         var result = await controller.RemoveFriend("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -355,17 +355,17 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task BlockUser_ShouldReturnOk_WhenBlockIsValid()
     {
-        // Given
+        // given
         var friendship = new Friendship { Id = 1, UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Blocked, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.BlockUserAsync("u1", "u2")).ReturnsAsync(friendship);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.BlockUser("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.BlockUserAsync("u1", "u2"), Times.Once);
@@ -375,15 +375,15 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task BlockUser_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // When
+        // when
         var result = await controller.BlockUser("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -392,16 +392,16 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task CheckFriendshipStatus_ShouldReturnStatus_WhenStatusExists()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.CheckFriendshipStatusAsync("u1", "u2")).ReturnsAsync(FriendshipStatus.Accepted);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.CheckFriendshipStatus("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -412,16 +412,16 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task CheckFriendshipStatus_ShouldReturnNone_WhenStatusDoesNotExist()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         serviceMock.Setup(s => s.CheckFriendshipStatusAsync("u1", "u999")).ReturnsAsync((FriendshipStatus?)null);
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.CheckFriendshipStatus("u999");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -431,15 +431,15 @@ public class FriendshipsControllerTests
     [Fact]
     public async Task CheckFriendshipStatus_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IFriendshipService>();
         var controller = new FriendshipsController(serviceMock.Object);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // When
+        // when
         var result = await controller.CheckFriendshipStatus("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }

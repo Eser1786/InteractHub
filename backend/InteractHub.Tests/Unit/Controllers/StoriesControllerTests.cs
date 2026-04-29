@@ -14,7 +14,7 @@ public class StoriesControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnAllStories_WhenStoriesExist()
     {
-        // Given
+        // given
         var stories = new List<Story>
         {
             new Story { Id = 1, UserId = "u1", Content = "story 1", ImageUrl = "img1.jpg", CreatedAt = DateTime.UtcNow, ExpireAt = DateTime.UtcNow.AddDays(1) },
@@ -25,10 +25,10 @@ public class StoriesControllerTests
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -39,17 +39,17 @@ public class StoriesControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenNoStoriesExist()
     {
-        // Given
+        // given
         var stories = new List<Story>();
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(stories);
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetAll();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -59,17 +59,17 @@ public class StoriesControllerTests
     [Fact]
     public async Task GetById_ShouldReturnStory_WhenStoryExists()
     {
-        // Given
+        // given
         var story = new Story { Id = 1, UserId = "u1", Content = "test story", ImageUrl = "img.jpg", CreatedAt = DateTime.UtcNow, ExpireAt = DateTime.UtcNow.AddDays(1) };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(story);
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -80,16 +80,16 @@ public class StoriesControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenStoryMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Story?)null);
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -98,7 +98,7 @@ public class StoriesControllerTests
     [Fact]
     public async Task GetByUserId_ShouldReturnUserStories_WhenStoriesExist()
     {
-        // Given
+        // given
         var userId = "u1";
         var stories = new List<Story>
         {
@@ -110,10 +110,10 @@ public class StoriesControllerTests
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByUserId(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -124,7 +124,7 @@ public class StoriesControllerTests
     [Fact]
     public async Task GetByUserId_ShouldReturnEmpty_WhenNoStoriesForUser()
     {
-        // Given
+        // given
         var userId = "u1";
         var stories = new List<Story>();
         var serviceMock = new Mock<IStoryService>();
@@ -132,10 +132,10 @@ public class StoriesControllerTests
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByUserId(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -145,7 +145,7 @@ public class StoriesControllerTests
     [Fact]
     public async Task Create_ShouldReturnCreated_WhenStoryIsValid()
     {
-        // Given
+        // given
         var createDto = new CreateStoryDto { Content = "new story", ImageUrl = "image.jpg", ExpireAt = DateTime.UtcNow.AddDays(1) };
         var story = new Story { Id = 1, UserId = "u1", Content = createDto.Content, ImageUrl = createDto.ImageUrl, ExpireAt = createDto.ExpireAt, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IStoryService>();
@@ -153,10 +153,10 @@ public class StoriesControllerTests
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Create(createDto);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
         serviceMock.Verify(s => s.CreateAsync(It.IsAny<Story>()), Times.Once);
@@ -166,15 +166,15 @@ public class StoriesControllerTests
     [Fact]
     public async Task Create_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IStoryService>();
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // When
+        // when
         var result = await controller.Create(new CreateStoryDto { Content = "story", ExpireAt = DateTime.UtcNow.AddDays(1) });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -183,7 +183,7 @@ public class StoriesControllerTests
     [Fact]
     public async Task Delete_ShouldReturnOk_WhenStoryOwner()
     {
-        // Given
+        // given
         var story = new Story { Id = 3, UserId = "u1", Content = "abc", ExpireAt = DateTime.UtcNow.AddDays(1), CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(3)).ReturnsAsync(story);
@@ -191,10 +191,10 @@ public class StoriesControllerTests
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(3);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(204, objectResult.StatusCode);
         serviceMock.Verify(s => s.DeleteAsync(3), Times.Once);
@@ -204,16 +204,16 @@ public class StoriesControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenStoryMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Story?)null);
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -222,17 +222,17 @@ public class StoriesControllerTests
     [Fact]
     public async Task Delete_ShouldReturnForbidden_WhenCurrentUserIsNotOwner()
     {
-        // Given
+        // given
         var story = new Story { Id = 3, UserId = "owner", Content = "abc", ExpireAt = DateTime.UtcNow.AddDays(1) };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(3)).ReturnsAsync(story);
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "other");
 
-        // When
+        // when
         var result = await controller.Delete(3);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -241,7 +241,7 @@ public class StoriesControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenDeleteFails()
     {
-        // Given
+        // given
         var story = new Story { Id = 3, UserId = "u1", Content = "abc", ExpireAt = DateTime.UtcNow.AddDays(1), CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(3)).ReturnsAsync(story);
@@ -249,10 +249,10 @@ public class StoriesControllerTests
         var controller = new StoriesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(3);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }

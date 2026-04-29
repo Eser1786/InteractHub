@@ -83,13 +83,12 @@ public class ExceptionHandlingMiddleware
             // Generic Exception
             default:
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                var detailedError = exception.Message + (exception.InnerException != null ? " | Inner: " + exception.InnerException.Message : "");
                 response = new ApiResponse(
                     false,
-                    $"[LỖI CHI TIẾT]: {detailedError}",
+                    "An unexpected error occurred. Please try again later.",
                     null,
                     500,
-                    new List<ApiError> { new ApiError(exception.StackTrace ?? "No stack trace", code: "INTERNAL_ERROR") }
+                    new List<ApiError> { new ApiError("Internal server error", code: "INTERNAL_ERROR") }
                 );
                 _logger.LogError(exception, $"Unhandled exception: {exception.Message}\n{exception.StackTrace}");
                 break;

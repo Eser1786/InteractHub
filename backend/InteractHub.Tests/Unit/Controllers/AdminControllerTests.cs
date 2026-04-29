@@ -17,7 +17,7 @@ public class AdminControllerTests
     [Fact]
     public async Task GetAllUsersWithRoles_ShouldReturnAllUsersWithRoles_WhenUsersExist()
     {
-        // Given
+        // given
         var users = new List<User>
         {
             new User { Id = "u1", UserName = "user1", FullName = "User One", Email = "user1@mail.com" },
@@ -32,10 +32,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.GetAllUsersWithRoles();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -45,7 +45,7 @@ public class AdminControllerTests
     [Fact]
     public async Task GetAllUsersWithRoles_ShouldReturnEmpty_WhenNoUsersExist()
     {
-        // Given
+        // given
         var users = new List<User>();
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.Users).Returns(users.AsQueryable());
@@ -54,10 +54,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.GetAllUsersWithRoles();
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -67,7 +67,7 @@ public class AdminControllerTests
     [Fact]
     public async Task AssignRoleToUser_ShouldReturnSuccess_WhenInputIsValid()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "test-user", FullName = "Test User", Email = "test@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
@@ -82,10 +82,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.AssignRoleToUser(new AssignRoleDto { UserId = "u1", Role = RoleConstants.User });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
     }
@@ -94,17 +94,17 @@ public class AdminControllerTests
     [Fact]
     public async Task AssignRoleToUser_ShouldReturnNotFound_WhenUserMissing()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("missing")).ReturnsAsync((User?)null);
         var roleManagerMock = IdentityMockFactory.CreateRoleManagerMock();
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.AssignRoleToUser(new AssignRoleDto { UserId = "missing", Role = "User" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -113,7 +113,7 @@ public class AdminControllerTests
     [Fact]
     public async Task AssignRoleToUser_ShouldReturnBadRequest_WhenRoleDoesNotExist()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "test-user", FullName = "Test User", Email = "test@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
@@ -124,10 +124,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.AssignRoleToUser(new AssignRoleDto { UserId = "u1", Role = "NonExistentRole" });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -136,7 +136,7 @@ public class AdminControllerTests
     [Fact]
     public async Task AssignRoleToUser_ShouldReturnBadRequest_WhenUserAlreadyHasRole()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "test-user", FullName = "Test User", Email = "test@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
@@ -148,10 +148,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.AssignRoleToUser(new AssignRoleDto { UserId = "u1", Role = RoleConstants.User });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -160,7 +160,7 @@ public class AdminControllerTests
     [Fact]
     public async Task RemoveRoleFromUser_ShouldReturnSuccess_WhenInputIsValid()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "test-user", FullName = "Test User", Email = "test@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
@@ -171,10 +171,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.RemoveRoleFromUser(new RemoveRoleDto { UserId = "u1", Role = RoleConstants.User });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
     }
@@ -183,7 +183,7 @@ public class AdminControllerTests
     [Fact]
     public async Task RemoveRoleFromUser_ShouldReturnNotFound_WhenUserMissing()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("missing")).ReturnsAsync((User?)null);
 
@@ -191,10 +191,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.RemoveRoleFromUser(new RemoveRoleDto { UserId = "missing", Role = RoleConstants.User });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -203,7 +203,7 @@ public class AdminControllerTests
     [Fact]
     public async Task RemoveRoleFromUser_ShouldReturnBadRequest_WhenUserDoesNotHaveRole()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "test-user", FullName = "Test User", Email = "test@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
@@ -213,10 +213,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.RemoveRoleFromUser(new RemoveRoleDto { UserId = "u1", Role = RoleConstants.User });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -225,7 +225,7 @@ public class AdminControllerTests
     [Fact]
     public async Task RemoveRoleFromUser_ShouldReturnBadRequest_WhenRemovingOwnAdminRole()
     {
-        // Given
+        // given
         var user = new User { Id = "admin-1", UserName = "admin", FullName = "Admin", Email = "admin@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("admin-1")).ReturnsAsync(user);
@@ -234,10 +234,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin-1");
 
-        // When
+        // when
         var result = await controller.RemoveRoleFromUser(new RemoveRoleDto { UserId = "admin-1", Role = RoleConstants.Admin });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }
@@ -246,7 +246,7 @@ public class AdminControllerTests
     [Fact]
     public async Task GetUserWithRoles_ShouldReturnUserWithRoles_WhenUserExists()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "test-user", FullName = "Test User", Email = "test@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
@@ -256,10 +256,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.GetUserWithRoles("u1");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -269,7 +269,7 @@ public class AdminControllerTests
     [Fact]
     public async Task GetUserWithRoles_ShouldReturnNotFound_WhenUserMissing()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u999")).ReturnsAsync((User?)null);
 
@@ -277,10 +277,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.GetUserWithRoles("u999");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -289,7 +289,7 @@ public class AdminControllerTests
     [Fact]
     public async Task DeleteUser_ShouldReturnSuccess_WhenUserExists()
     {
-        // Given
+        // given
         var user = new User { Id = "u1", UserName = "test-user", FullName = "Test User", Email = "test@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
@@ -299,10 +299,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin2");
 
-        // When
+        // when
         var result = await controller.DeleteUser("u1");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
     }
@@ -311,7 +311,7 @@ public class AdminControllerTests
     [Fact]
     public async Task DeleteUser_ShouldReturnNotFound_WhenUserMissing()
     {
-        // Given
+        // given
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u999")).ReturnsAsync((User?)null);
 
@@ -319,10 +319,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.DeleteUser("u999");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -331,7 +331,7 @@ public class AdminControllerTests
     [Fact]
     public async Task DeleteUser_ShouldReturnBadRequest_WhenDeletingOwnAccount()
     {
-        // Given
+        // given
         var user = new User { Id = "admin", UserName = "admin-user", FullName = "Admin", Email = "admin@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("admin")).ReturnsAsync(user);
@@ -340,10 +340,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // When
+        // when
         var result = await controller.DeleteUser("admin");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }

@@ -15,17 +15,17 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotification_WhenNotificationExists()
     {
-        // Given
+        // given
         var notification = new Notification { Id = 1, UserId = "u1", Content = "New like", Type = NotificationType.Like, IsRead = false, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(notification);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -36,16 +36,16 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenNotificationMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Notification?)null);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -54,7 +54,7 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetByUserId_ShouldReturnUserNotifications_WhenNotificationsExist()
     {
-        // Given
+        // given
         var userId = "u1";
         var notifications = new List<Notification>
         {
@@ -66,10 +66,10 @@ public class NotificationsControllerTests
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.GetByUserId(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -80,15 +80,15 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetByUserId_ShouldReturnForbidden_WhenUserRequestsAnotherUsersNotifications()
     {
-        // Given
+        // given
         var serviceMock = new Mock<INotificationService>();
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByUserId("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -97,7 +97,7 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetByUserId_ShouldReturnEmpty_WhenNoNotificationsExist()
     {
-        // Given
+        // given
         var userId = "u1";
         var notifications = new List<Notification>();
         var serviceMock = new Mock<INotificationService>();
@@ -105,10 +105,10 @@ public class NotificationsControllerTests
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.GetByUserId(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -118,7 +118,7 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetUnreadNotifications_ShouldReturnUnreadNotifications_WhenUnreadExist()
     {
-        // Given
+        // given
         var userId = "u1";
         var unreadNotifications = new List<Notification>
         {
@@ -129,10 +129,10 @@ public class NotificationsControllerTests
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.GetUnreadNotifications(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -143,15 +143,15 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetUnreadNotifications_ShouldReturnForbidden_WhenUserRequestsAnotherUsersUnread()
     {
-        // Given
+        // given
         var serviceMock = new Mock<INotificationService>();
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetUnreadNotifications("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -160,7 +160,7 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetUnreadCount_ShouldReturnUnreadCount_WhenCalled()
     {
-        // Given
+        // given
         var userId = "u1";
         var count = 5;
         var serviceMock = new Mock<INotificationService>();
@@ -168,10 +168,10 @@ public class NotificationsControllerTests
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.GetUnreadCount(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -182,15 +182,15 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetUnreadCount_ShouldReturnForbidden_WhenUserRequestsAnotherUsersCount()
     {
-        // Given
+        // given
         var serviceMock = new Mock<INotificationService>();
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetUnreadCount("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -199,7 +199,7 @@ public class NotificationsControllerTests
     [Fact]
     public async Task MarkAsRead_ShouldReturnOk_WhenNotificationOwner()
     {
-        // Given
+        // given
         var notification = new Notification { Id = 50, UserId = "u1", Content = "test", Type = NotificationType.Like, IsRead = false, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(50)).ReturnsAsync(notification);
@@ -207,10 +207,10 @@ public class NotificationsControllerTests
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.MarkAsRead(50);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.MarkAsReadAsync(50), Times.Once);
@@ -220,16 +220,16 @@ public class NotificationsControllerTests
     [Fact]
     public async Task MarkAsRead_ShouldReturnNotFound_WhenNotificationMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(50)).ReturnsAsync((Notification?)null);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.MarkAsRead(50);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -238,17 +238,17 @@ public class NotificationsControllerTests
     [Fact]
     public async Task MarkAsRead_ShouldReturnForbidden_WhenNotNotificationOwner()
     {
-        // Given
+        // given
         var notification = new Notification { Id = 50, UserId = "u2", Content = "test", Type = NotificationType.Like, IsRead = false };
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(50)).ReturnsAsync(notification);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.MarkAsRead(50);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -257,17 +257,17 @@ public class NotificationsControllerTests
     [Fact]
     public async Task MarkAllAsRead_ShouldReturnOk_WhenCalled()
     {
-        // Given
+        // given
         var userId = "u1";
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.MarkAllAsReadAsync(userId)).ReturnsAsync(true);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.MarkAllAsRead(userId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.MarkAllAsReadAsync(userId), Times.Once);
@@ -277,15 +277,15 @@ public class NotificationsControllerTests
     [Fact]
     public async Task MarkAllAsRead_ShouldReturnForbidden_WhenUserIdNotMatchCurrentUser()
     {
-        // Given
+        // given
         var serviceMock = new Mock<INotificationService>();
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.MarkAllAsRead("u2");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -294,7 +294,7 @@ public class NotificationsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnOk_WhenNotificationOwner()
     {
-        // Given
+        // given
         var notification = new Notification { Id = 1, UserId = "u1", Content = "test", Type = NotificationType.Like, IsRead = false, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(notification);
@@ -302,10 +302,10 @@ public class NotificationsControllerTests
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.DeleteAsync(1), Times.Once);
@@ -315,16 +315,16 @@ public class NotificationsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenNotificationMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Notification?)null);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -333,17 +333,17 @@ public class NotificationsControllerTests
     [Fact]
     public async Task Delete_ShouldReturnForbidden_WhenNotNotificationOwner()
     {
-        // Given
+        // given
         var notification = new Notification { Id = 1, UserId = "u2", Content = "test", Type = NotificationType.Like, IsRead = false };
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(notification);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -352,17 +352,17 @@ public class NotificationsControllerTests
     [Fact]
     public async Task DeleteByType_ShouldReturnOk_WhenTypeIsValid()
     {
-        // Given
+        // given
         var userId = "u1";
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.DeleteNotificationsByTypeAsync(userId, NotificationType.Like)).ReturnsAsync(true);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.DeleteByType(userId, "Like");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.DeleteNotificationsByTypeAsync(userId, NotificationType.Like), Times.Once);
@@ -372,15 +372,15 @@ public class NotificationsControllerTests
     [Fact]
     public async Task DeleteByType_ShouldReturnForbidden_WhenUserIdNotMatchCurrentUser()
     {
-        // Given
+        // given
         var serviceMock = new Mock<INotificationService>();
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.DeleteByType("u2", "Like");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -389,16 +389,16 @@ public class NotificationsControllerTests
     [Fact]
     public async Task DeleteByType_ShouldReturnBadRequest_WhenTypeIsInvalid()
     {
-        // Given
+        // given
         var userId = "u1";
         var serviceMock = new Mock<INotificationService>();
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, userId);
 
-        // When
+        // when
         var result = await controller.DeleteByType(userId, "InvalidType");
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, objectResult.StatusCode);
     }

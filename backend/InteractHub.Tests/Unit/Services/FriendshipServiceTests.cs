@@ -13,10 +13,12 @@ public class FriendshipServiceTests
     // Kiểm tra chức năng gửi kết bạn: Phải ném lỗi nếu người gửi và nhận là cùng một người.
     public async Task SendFriendRequestAsync_ShouldThrow_WhenSenderEqualsReceiver()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var notificationMock = new Mock<INotificationService>();
         var service = new FriendshipService(context, notificationMock.Object);
 
+        // when & then
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.SendFriendRequestAsync("same-user", "same-user"));
     }
@@ -25,6 +27,7 @@ public class FriendshipServiceTests
     // Kiểm tra tránh lặp request: Phải ném lỗi nếu cả 2 bên đã từng có quan hệ kết bạn/gửi yc.
     public async Task SendFriendRequestAsync_ShouldThrow_WhenExistingFriendshipExists()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         context.Friendships.Add(new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Pending });
         await context.SaveChangesAsync();
@@ -32,6 +35,7 @@ public class FriendshipServiceTests
         var notificationMock = new Mock<INotificationService>();
         var service = new FriendshipService(context, notificationMock.Object);
 
+        // when & then
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.SendFriendRequestAsync("u1", "u2"));
     }
@@ -40,6 +44,7 @@ public class FriendshipServiceTests
     // Kiểm tra gửi yêu cầu thành công: Hệ thống tạo trạng thái Pending và gửi Noti cho bên B.
     public async Task SendFriendRequestAsync_ShouldCreatePendingAndNotifyReceiver()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var notificationMock = new Mock<INotificationService>();
         notificationMock
@@ -47,8 +52,10 @@ public class FriendshipServiceTests
             .ReturnsAsync(new Notification { UserId = "u2", Content = "Friend request", Type = NotificationType.FriendRequest });
         var service = new FriendshipService(context, notificationMock.Object);
 
+        // when
         var friendship = await service.SendFriendRequestAsync("u1", "u2");
 
+        // then
         Assert.Equal(FriendshipStatus.Pending, friendship.Status);
         notificationMock.Verify(n => n.NotifyFriendRequestAsync("u2", "u1"), Times.Once);
     }
@@ -57,9 +64,11 @@ public class FriendshipServiceTests
     // Kiểm tra chấp nhận kết bạn an toàn: Quăng lỗi nếu đối phương chưa hề gửi yêu cầu nào.
     public async Task AcceptFriendRequestAsync_ShouldThrow_WhenRequestDoesNotExist()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
 
+        // when & then
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.AcceptFriendRequestAsync(777));
     }
@@ -68,6 +77,7 @@ public class FriendshipServiceTests
     // Kiểm tra quy trình chấp nhận: Trạng thái đổi qua Accepted và gửi chuông thông báo lại cho bên A.
     public async Task AcceptFriendRequestAsync_ShouldSetStatusAcceptedAndNotifySender()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         context.Users.AddRange(
             new User { Id = "sender", UserName = "sender", Email = "sender@mail.com", FullName = "Sender" },
@@ -83,8 +93,10 @@ public class FriendshipServiceTests
             .ReturnsAsync(new Notification { UserId = "sender", Type = NotificationType.FriendRequestAccepted, Content = "Accepted" });
         var service = new FriendshipService(context, notificationMock.Object);
 
+        // when
         var updated = await service.AcceptFriendRequestAsync(friendship.Id);
 
+        // then
         Assert.Equal(FriendshipStatus.Accepted, updated.Status);
         notificationMock.Verify(n => n.NotifyFriendRequestAcceptedAsync("sender", "receiver"), Times.Once);
     }
@@ -93,12 +105,14 @@ public class FriendshipServiceTests
     // Kiểm tra lỗi trạng thái luồng: Quăng lỗi nếu chấp nhận 1 yêu cầu không hề ở trạng thái Pending.
     public async Task AcceptFriendRequestAsync_ShouldThrow_WhenStatusIsNotPending()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var friendship = new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted };
         context.Friendships.Add(friendship);
         await context.SaveChangesAsync();
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
 
+        // when & then
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.AcceptFriendRequestAsync(friendship.Id));
     }
 
@@ -106,6 +120,7 @@ public class FriendshipServiceTests
     // Kiểm tra đẩy lùi yêu cầu: Nếu đang Pending thì đổi trạng thái sang Declined, trả về True.
     public async Task DeclineFriendRequestAsync_ShouldReturnTrue_WhenPendingRequestExists()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         context.Users.AddRange(
             new User { Id = "u1", UserName = "u1", Email = "u1@mail.com", FullName = "U1" },
@@ -115,8 +130,11 @@ public class FriendshipServiceTests
         await context.SaveChangesAsync();
 
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
+        
+        // when
         var result = await service.DeclineFriendRequestAsync(friendship.Id);
 
+        // then
         Assert.True(result);
         Assert.Equal(FriendshipStatus.Declined, friendship.Status);
     }
@@ -125,14 +143,17 @@ public class FriendshipServiceTests
     // Kiểm tra tính nhất quán: Trả về False nếu người dùng cố từ chối một Id yêu cầu lung tung.
     public async Task DeclineFriendRequestAsync_ShouldReturnFalse_WhenRequestIsNotPending()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var friendship = new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted };
         context.Friendships.Add(friendship);
         await context.SaveChangesAsync();
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
 
+        // when
         var result = await service.DeclineFriendRequestAsync(friendship.Id);
 
+        // then
         Assert.False(result);
     }
 
@@ -140,6 +161,7 @@ public class FriendshipServiceTests
     // Kiểm tra chức năng Hủy kết bạn (Unfriend): Hủy tình bạn thành công và xóa dữ liệu khỏi DB.
     public async Task RemoveFriendAsync_ShouldReturnTrue_WhenFriendshipAccepted()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         context.Users.AddRange(
             new User { Id = "u1", UserName = "u1", Email = "u1@mail.com", FullName = "U1" },
@@ -148,8 +170,11 @@ public class FriendshipServiceTests
         await context.SaveChangesAsync();
 
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
+        
+        // when
         var removed = await service.RemoveFriendAsync("u1", "u2");
 
+        // then
         Assert.True(removed);
         Assert.Empty(context.Friendships);
     }
@@ -158,11 +183,14 @@ public class FriendshipServiceTests
     // Kiểm tra tính năng Chặn (Block): Sinh ra 1 quan hệ status = Blocked giữa 2 người thành công.
     public async Task BlockUserAsync_ShouldCreateBlockedFriendship_WhenNoExistingRecord()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
 
+        // when
         var blocked = await service.BlockUserAsync("u1", "u3");
 
+        // then
         Assert.Equal(FriendshipStatus.Blocked, blocked.Status);
         Assert.Single(context.Friendships);
     }
@@ -171,13 +199,16 @@ public class FriendshipServiceTests
     // Kiểm tra tra cứu linh hoạt: Phải dò ra đúng trạng thái kết nối chuẩn chỉnh của 2 id bất kì.
     public async Task CheckFriendshipStatusAsync_ShouldReturnStatus_WhenFriendshipExists()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         context.Friendships.Add(new Friendship { UserId = "x1", FriendId = "x2", Status = FriendshipStatus.Accepted });
         await context.SaveChangesAsync();
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
 
+        // when
         var status = await service.CheckFriendshipStatusAsync("x1", "x2");
 
+        // then
         Assert.Equal(FriendshipStatus.Accepted, status);
     }
 
@@ -185,6 +216,7 @@ public class FriendshipServiceTests
     // Kiểm tra lọc danh sách gửi tới: Lọc và chỉ lấy ra những người có trạng thái đúng là Pending.
     public async Task GetPendingRequestsAsync_ShouldReturnOnlyPendingForReceiver()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         context.Users.AddRange(
             new User { Id = "sender1", UserName = "sender1", Email = "s1@mail.com", FullName = "Sender 1" },
@@ -197,8 +229,11 @@ public class FriendshipServiceTests
         await context.SaveChangesAsync();
 
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
+        
+        // when
         var pending = await service.GetPendingRequestsAsync("receiver");
 
+        // then
         Assert.Equal(2, pending.Count);
         Assert.All(pending, p => Assert.Equal(FriendshipStatus.Pending, p.Status));
     }
@@ -207,6 +242,7 @@ public class FriendshipServiceTests
     // Kiểm tra phân trang danh sách lời mời: Metadata đếm tổng số trang và chia phần dư phải chính xác.
     public async Task GetPendingRequestsPaginatedAsync_ShouldReturnCorrectMetadata()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         context.Users.Add(new User { Id = "receiver", UserName = "receiver", Email = "receiver@mail.com", FullName = "Receiver" });
         for (var i = 0; i < 5; i++)
@@ -218,8 +254,11 @@ public class FriendshipServiceTests
         await context.SaveChangesAsync();
 
         var service = new FriendshipService(context, Mock.Of<INotificationService>());
+        
+        // when
         var result = await service.GetPendingRequestsPaginatedAsync("receiver", pageNumber: 2, pageSize: 2);
 
+        // then
         Assert.Equal(2, result.Requests.Count);
         Assert.Equal(5, result.Metadata.TotalCount);
         Assert.Equal(3, result.Metadata.TotalPages);

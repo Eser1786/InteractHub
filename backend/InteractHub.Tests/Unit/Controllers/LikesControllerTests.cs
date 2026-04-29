@@ -14,17 +14,17 @@ public class LikesControllerTests
     [Fact]
     public async Task GetById_ShouldReturnLike_WhenLikeExists()
     {
-        // Given
+        // given
         var like = new Like { Id = 1, PostId = 1, UserId = "u1" };
         var serviceMock = new Mock<ILikeService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(like);
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(1);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -35,16 +35,16 @@ public class LikesControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenLikeMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<ILikeService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Like?)null);
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetById(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -53,7 +53,7 @@ public class LikesControllerTests
     [Fact]
     public async Task GetByPostId_ShouldReturnPostLikes_WhenLikesExist()
     {
-        // Given
+        // given
         var postId = 5;
         var likes = new List<Like>
         {
@@ -65,10 +65,10 @@ public class LikesControllerTests
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByPostId(postId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -79,7 +79,7 @@ public class LikesControllerTests
     [Fact]
     public async Task GetByPostId_ShouldReturnEmpty_WhenNoLikesForPost()
     {
-        // Given
+        // given
         var postId = 5;
         var likes = new List<Like>();
         var serviceMock = new Mock<ILikeService>();
@@ -87,10 +87,10 @@ public class LikesControllerTests
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetByPostId(postId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -100,7 +100,7 @@ public class LikesControllerTests
     [Fact]
     public async Task GetLikeCount_ShouldReturnLikeCount_WhenPostExists()
     {
-        // Given
+        // given
         var postId = 5;
         var count = 10;
         var serviceMock = new Mock<ILikeService>();
@@ -108,10 +108,10 @@ public class LikesControllerTests
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetLikeCount(postId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -122,7 +122,7 @@ public class LikesControllerTests
     [Fact]
     public async Task GetLikeCount_ShouldReturnZero_WhenNoLikesForPost()
     {
-        // Given
+        // given
         var postId = 5;
         var count = 0;
         var serviceMock = new Mock<ILikeService>();
@@ -130,10 +130,10 @@ public class LikesControllerTests
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.GetLikeCount(postId);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -143,7 +143,7 @@ public class LikesControllerTests
     [Fact]
     public async Task Create_ShouldReturnCreated_WhenLikeIsValid()
     {
-        // Given
+        // given
         var createDto = new CreateLikeDto { PostId = 10 };
         var like = new Like { Id = 1, PostId = 10, UserId = "u1" };
         var serviceMock = new Mock<ILikeService>();
@@ -151,10 +151,10 @@ public class LikesControllerTests
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Create(createDto);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
         serviceMock.Verify(s => s.CreateAsync(It.IsAny<Like>()), Times.Once);
@@ -164,15 +164,15 @@ public class LikesControllerTests
     [Fact]
     public async Task Create_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
-        // Given
+        // given
         var serviceMock = new Mock<ILikeService>();
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // When
+        // when
         var result = await controller.Create(new CreateLikeDto { PostId = 9 });
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
@@ -181,7 +181,7 @@ public class LikesControllerTests
     [Fact]
     public async Task Delete_ShouldReturnOk_WhenLikeOwner()
     {
-        // Given
+        // given
         var like = new Like { Id = 6, PostId = 2, UserId = "u1" };
         var serviceMock = new Mock<ILikeService>();
         serviceMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
@@ -189,10 +189,10 @@ public class LikesControllerTests
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(6);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         serviceMock.Verify(s => s.DeleteAsync(6), Times.Once);
@@ -202,16 +202,16 @@ public class LikesControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenLikeMissing()
     {
-        // Given
+        // given
         var serviceMock = new Mock<ILikeService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Like?)null);
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(999);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
@@ -220,17 +220,17 @@ public class LikesControllerTests
     [Fact]
     public async Task Delete_ShouldReturnForbidden_WhenCurrentUserIsNotLikeOwner()
     {
-        // Given
+        // given
         var like = new Like { Id = 6, PostId = 2, UserId = "owner" };
         var serviceMock = new Mock<ILikeService>();
         serviceMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "other");
 
-        // When
+        // when
         var result = await controller.Delete(6);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }
@@ -239,7 +239,7 @@ public class LikesControllerTests
     [Fact]
     public async Task Delete_ShouldReturnNotFound_WhenDeleteFails()
     {
-        // Given
+        // given
         var like = new Like { Id = 6, PostId = 2, UserId = "u1" };
         var serviceMock = new Mock<ILikeService>();
         serviceMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
@@ -247,10 +247,10 @@ public class LikesControllerTests
         var controller = new LikesController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // When
+        // when
         var result = await controller.Delete(6);
 
-        // Then
+        // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }

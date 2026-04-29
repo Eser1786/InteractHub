@@ -10,6 +10,7 @@ public class PostReportServiceTests
     // Kiểm tra cập nhật báo cáo: Phải lưu lại được đúng lý do vi phạm mới chỉnh sửa vào hệ thống.
     public async Task UpdateAsync_ShouldPersistChangedReason()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var service = new PostReportService(context);
         context.Users.Add(new User { Id = "u1", UserName = "u1", Email = "u1@mail.com", FullName = "User One" });
@@ -19,9 +20,11 @@ public class PostReportServiceTests
         var created = await service.CreateAsync(new PostReport { PostId = 1, UserId = "u1", Reason = "spam" });
         created.Reason = "abuse";
 
+        // when
         var updated = await service.UpdateAsync(created);
+        
+        // then
         var reloaded = context.PostReports.Single();
-
         Assert.True(updated);
         Assert.Equal("abuse", reloaded!.Reason);
     }
@@ -30,11 +33,14 @@ public class PostReportServiceTests
     // Kiểm tra xóa báo cáo (Report): Trả về False và không sập nguồn nếu ID của bản báo lỗi không tồn tại.
     public async Task DeleteAsync_ShouldReturnFalse_WhenReportMissing()
     {
+        // given
         using var context = TestDbContextFactory.Create();
         var service = new PostReportService(context);
 
+        // when
         var deleted = await service.DeleteAsync(809);
 
+        // then
         Assert.False(deleted);
     }
 }

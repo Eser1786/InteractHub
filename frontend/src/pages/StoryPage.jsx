@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
-import { getStoryById } from '../api';
+import { getStoryById, getStories } from '../api';
 import '../styles/StoryPage.css';
 
 export default function StoryPage() {
   const [story, setStory] = useState(null);
+  const [storiesList, setStoriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [messageInput, setMessageInput] = useState('');
@@ -16,6 +17,22 @@ export default function StoryPage() {
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
     setCurrentUser(userData);
+  }, []);
+
+  useEffect(() => {
+    const loadStories = async () => {
+      try {
+        const allStories = await getStories();
+        const activeStories = (allStories || []).filter(story => {
+          return !story.ExpireAt || new Date(story.ExpireAt) > new Date();
+        });
+        setStoriesList(activeStories);
+      } catch (err) {
+        console.error('Error loading story list:', err);
+      }
+    };
+
+    loadStories();
   }, []);
 
   useEffect(() => {
@@ -67,6 +84,40 @@ export default function StoryPage() {
           ←
         </button>
 
+        <aside className="story-sidebar">
+          <div className="sidebar-top">
+            <div className="sidebar-title-row">
+              <h3>Tin</h3>
+              <span className="sidebar-subtitle">Kho lưu trữ</span>
+            </div>
+            <div className="story-card-mini create-story-card-mini" onClick={() => navigate('/home')}>
+              <div className="story-icon-btn">+</div>
+              <div>
+                <p className="story-mini-title">Tạo tin</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="stories-list-section">
+            <p className="stories-list-heading">Tất cả tin</p>
+            <div className="stories-list">
+              {storiesList.map((item) => (
+                <div
+                  key={item.Id}
+                  className={`story-item ${item.Id.toString() === storyId ? 'active' : ''}`}
+                  onClick={() => navigate(`/story/${item.Id}`)}
+                >
+                  <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
+                  <div className="story-name-group">
+                    <p className="story-name">{item.UserName || 'Người dùng'}</p>
+                    <span className="story-time-small">{new Date(item.CreatedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
+
         <main className="story-main">
           {loading ? (
             <div className="story-empty">
@@ -115,7 +166,7 @@ export default function StoryPage() {
                 )}
               </div>
 
-              <div className="story-input-section">
+              <div className="story-input-section story-input-section-bottom">
                 <input
                   type="text"
                   value={messageInput}
@@ -132,7 +183,7 @@ export default function StoryPage() {
             </div>
           )}
         </main>
-      </div>
+          </div>
     </div>
   );
 }

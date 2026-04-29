@@ -15,4 +15,6 @@ public class StoryResponseDto
     public DateTime CreatedAt {get; set;}
     public DateTime ExpireAt {get; set;}
     public string UserId {get; set;} = string.Empty;
+    public string? UserName {get; set;}
+    public string? UserProfilePictureUrl {get; set;}
 }

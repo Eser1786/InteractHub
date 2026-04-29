@@ -1,66 +1,51 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
+import { getStoryById } from '../api';
 import '../styles/StoryPage.css';
 
 export default function StoryPage() {
-  const [stories, setStories] = useState([]);
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [story, setStory] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
+  const { storyId } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
     setCurrentUser(userData);
-
-    // Mock stories data
-    const mockStories = [
-      {
-        id: '1',
-        userId: '2',
-        userName: 'Trần Siu Ngàu',
-        userAvatar: <i className="fa-solid fa-user"></i>,
-        content: 'Hôm nay thời tiết tuyệt vời!',
-        imageUrl: null,
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        likes: 5
-      },
-      {
-        id: '2',
-        userId: '3',
-        userName: 'Thái Anh Gay',
-        userAvatar: <i className="fa-solid fa-user"></i>,
-        content: 'Vừa mới hoàn thành một dự án lớn 🎉',
-        imageUrl: null,
-        createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        likes: 12
-      },
-      {
-        id: '3',
-        userId: '4',
-        userName: 'Meo Lành Mạnh',
-        userAvatar: <i className="fa-solid fa-user"></i>,
-        content: 'Đi du lịch tại đảo Phú Quốc',
-        imageUrl: 'https://via.placeholder.com/400x300?text=Beach',
-        createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        likes: 23
-      },
-      {
-        id: '4',
-        userId: '5',
-        userName: 'Sang Không Long',
-        userAvatar: <i className="fa-solid fa-user"></i>,
-        content: 'Mình yêu lập trình React!',
-        imageUrl: null,
-        createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-        likes: 8
-      }
-    ];
-    
-    setStories(mockStories);
   }, []);
+
+  useEffect(() => {
+    const loadStory = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        if (!storyId) {
+          setError('Story ID không hợp lệ');
+          setLoading(false);
+          return;
+        }
+
+        const storyData = await getStoryById(storyId);
+        if (!storyData) {
+          setError('Không tìm thấy story');
+        } else {
+          setStory(storyData);
+        }
+      } catch (err) {
+        console.error('Error loading story:', err);
+        setError(err.message || 'Lỗi khi tải story');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStory();
+  }, [storyId]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -69,29 +54,12 @@ export default function StoryPage() {
     navigate('/login');
   };
 
-  const handlePrevStory = () => {
-    setCurrentStoryIndex((prev) => (prev === 0 ? stories.length - 1 : prev - 1));
-  };
-
-  const handleNextStory = () => {
-    setCurrentStoryIndex((prev) => (prev === stories.length - 1 ? 0 : prev + 1));
-  };
-
-  const filteredStories = searchQuery.trim()
-    ? stories.filter(story =>
-        story.userName.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : stories;
-
-  const activeStory = stories[currentStoryIndex];
-
   return (
     <div className="story-page-wrapper">
       <Header onLogout={handleLogout} />
-      
+
       <div className="story-page-container">
-        {/* Back Button */}
-        <button 
+        <button
           className="story-back-btn"
           onClick={() => navigate('/home')}
           title="Quay lại"
@@ -99,76 +67,54 @@ export default function StoryPage() {
           ←
         </button>
 
-        {/* Left Sidebar */}
-        <aside className="story-sidebar">
-          <div className="sidebar-section">
-            <h3 className="section-title">Tin</h3>
-            <div className="section-tabs">
-              <span className="tab active">Kho lưu trữ</span>
-            </div>
-
-            {/* Create Story */}
-            <div className="story-item create-story-item">
-              <div className="story-icon-btn">+</div>
-              <span className="story-text">Tạo tin</span>
-            </div>
-          </div>
-
-          {/* All Stories Section */}
-          <div className="sidebar-section">
-            <h3 className="section-title">Tất cả tin</h3>
-            <div className="stories-list">
-              {filteredStories.map((story, idx) => (
-                <div
-                  key={story.id}
-                  className={`story-item ${currentStoryIndex === idx ? 'active' : ''}`}
-                  onClick={() => setCurrentStoryIndex(idx)}
-                >
-                  <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
-                  <span className="story-name">{story.userName}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
         <main className="story-main">
-          {activeStory ? (
-            <div className="story-viewer">
-              {/* Story Header */}
+          {loading ? (
+            <div className="story-empty">
+              <p>Đang tải story...</p>
+            </div>
+          ) : error ? (
+            <div className="story-empty">
+              <p>{error}</p>
+            </div>
+          ) : story ? (
+            <div className="story-viewer story-page-viewer">
               <div className="story-header">
                 <div className="story-user-info">
-                  <div className="story-user-avatar"><i className="fa-solid fa-user"></i></div>
+                  <div className="story-user-avatar">
+                    {story.UserProfilePictureUrl ? (
+                      <img src={story.UserProfilePictureUrl} alt="Avatar" />
+                    ) : (
+                      <i className="fa-solid fa-user"></i>
+                    )}
+                  </div>
                   <div className="story-user-details">
-                    <p className="story-username">{activeStory.userName}</p>
+                    <p className="story-username">{story.UserName || 'Người dùng'}</p>
                     <p className="story-time">
-                      {new Date(activeStory.createdAt).toLocaleDateString('vi-VN', {
+                      {new Date(story.CreatedAt).toLocaleDateString('vi-VN', {
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
                       })}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Story Content */}
               <div className="story-content-area">
-                <div className="story-background">
-                  {activeStory.content && (
-                    <p className="story-text-content">{activeStory.content}</p>
-                  )}
-                  {activeStory.imageUrl && (
-                    <img src={activeStory.imageUrl} alt="Story" className="story-image-content" />
-                  )}
-                </div>
-
-                {/* Navigation Arrows */}
-                <button className="nav-arrow prev-arrow" onClick={handlePrevStory}>‹</button>
-                <button className="nav-arrow next-arrow" onClick={handleNextStory}>›</button>
+                {story.ImageUrl ? (
+                  <img src={story.ImageUrl} alt="Story" className="story-image-content" />
+                ) : (
+                  <div className="story-viewer-text-card">
+                    <p>{story.Content || 'Không có nội dung.'}</p>
+                  </div>
+                )}
+                {story.Content && story.ImageUrl && (
+                  <p className="story-viewer-caption">{story.Content}</p>
+                )}
               </div>
 
-              {/* Story Input */}
               <div className="story-input-section">
                 <input
                   type="text"
@@ -182,7 +128,7 @@ export default function StoryPage() {
             </div>
           ) : (
             <div className="story-empty">
-              <p>Không có tin nào</p>
+              <p>Không có story để hiển thị.</p>
             </div>
           )}
         </main>

@@ -26,7 +26,10 @@ public class StoryService : IStoryService
 
     public async Task<List<Story>> GetByUserIdAsync(string userId)
     {
-        return await _context.Stories.Where(s => s.UserId == userId).ToListAsync();
+        return await _context.Stories
+            .Where(s => s.UserId == userId)
+            .Include(s => s.User)
+            .ToListAsync();
     }
 
     public async Task<Story> CreateAsync(Story story)

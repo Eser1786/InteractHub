@@ -135,6 +135,35 @@ export async function createPost({ content, imageUrl }) {
   return data?.Data || null;
 }
 
+export async function getStories() {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/stories`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
+export async function getStoryById(storyId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/stories/${storyId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function createStory({ content, imageUrl, expireAt }) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/stories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ content, imageUrl, expireAt })
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
 export async function likePost(postId, userId) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/likes`, {

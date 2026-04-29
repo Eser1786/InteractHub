@@ -35,7 +35,9 @@ public class StoriesController : ControllerBase
             Content = s.Content,
             CreatedAt = s.CreatedAt,
             ExpireAt = s.ExpireAt,
-            UserId = s.UserId
+            UserId = s.UserId,
+            UserName = s.User?.FullName ?? s.User?.UserName,
+            UserProfilePictureUrl = s.User?.ProfilePictureUrl
         }).ToList();
 
         return this.SuccessResponse(storyDtos);
@@ -58,7 +60,9 @@ public class StoriesController : ControllerBase
             Content = story.Content,
             CreatedAt = story.CreatedAt,
             ExpireAt = story.ExpireAt,
-            UserId = story.UserId
+            UserId = story.UserId,
+            UserName = story.User?.FullName ?? story.User?.UserName,
+            UserProfilePictureUrl = story.User?.ProfilePictureUrl
         };
 
         return this.SuccessResponse(storyDto);
@@ -77,7 +81,9 @@ public class StoriesController : ControllerBase
             Content = s.Content,
             CreatedAt = s.CreatedAt,
             ExpireAt = s.ExpireAt,
-            UserId = s.UserId
+            UserId = s.UserId,
+            UserName = s.User?.FullName ?? s.User?.UserName,
+            UserProfilePictureUrl = s.User?.ProfilePictureUrl
         }).ToList();
 
         return this.SuccessResponse(storyDtos);

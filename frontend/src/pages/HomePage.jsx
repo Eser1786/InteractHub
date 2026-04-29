@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
- import { getPosts, getAcceptedFriends, getAllUsers, createPost, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser } from '../api';
+ import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -110,16 +110,12 @@ export default function HomePage() {
         
         setSuggestedUsers(suggested);
 
-        // Load stories from friends
-        const friendStories = ((friendsData || []).map((friend, idx) => {
-          const friendId = friend.FriendId || friend.friendId;
-          return {
-            id: friendId,
-            userName: friend.friendName || `Bạn ${idx + 1}`,
-            createdAt: new Date().toISOString()
-          };
-        }));
-        setStories(friendStories);
+        // Load stories from backend
+        const storyData = await getStories();
+        const activeStories = (storyData || []).filter(story => {
+          return !story.ExpireAt || new Date(story.ExpireAt) > new Date();
+        });
+        setStories(activeStories);
       } catch (err) {
         console.error('Error loading data:', err);
         setError(err.message || 'Failed to load data');
@@ -276,28 +272,24 @@ export default function HomePage() {
         imageBase64 = storyImagePreview;
       }
 
-      // Create story object
-      const newStory = {
-        id: Date.now().toString(),
-        userId: currentUser?.Id,
-        userName: currentUser?.UserName || currentUser?.FullName,
-        userAvatar: currentUser?.ProfilePictureUrl,
+      const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const createdStory = await createStory({
         content: newStoryContent,
         imageUrl: imageBase64,
-        createdAt: new Date().toISOString(),
-        likes: 0
-      };
+        expireAt
+      });
 
-      // Add story to the beginning of the list
-      setStories([newStory, ...stories]);
-      
-      // Reset form
+      if (!createdStory) {
+        throw new Error('Tạo tin thất bại');
+      }
+
+      setStories([createdStory, ...stories]);
       setNewStoryContent('');
       setNewStoryFile(null);
       setStoryImagePreview('');
       setShowCreateStoryModal(false);
       setError('');
-      
+      navigate(`/story/${createdStory.Id}`);
     } catch (err) {
       setError(err.message);
       console.error('Error creating story:', err);
@@ -704,10 +696,14 @@ export default function HomePage() {
 
               {/* Friend Stories */}
               {stories.map((story) => (
-                <div key={story.id} className="story-card">
+                <div
+                  key={story.Id}
+                  className="story-card story-card-clickable"
+                  onClick={() => navigate(`/story/${story.Id}`)}
+                >
                   <div className="story-background"></div>
                   <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
-                  <p className="story-label">{story.userName}</p>
+                  <p className="story-label">{story.UserName || 'Tin mới'}</p>
                 </div>
               ))}
             </div>

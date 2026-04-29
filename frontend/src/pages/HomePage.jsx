@@ -29,6 +29,11 @@ export default function HomePage() {
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [hashtagSearch, setHashtagSearch] = useState(null);
+  const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  const [newStoryContent, setNewStoryContent] = useState('');
+  const [newStoryFile, setNewStoryFile] = useState(null);
+  const [storyImagePreview, setStoryImagePreview] = useState('');
+  const [creatingStory, setCreatingStory] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -234,6 +239,65 @@ export default function HomePage() {
       console.error('Error creating post:', err);
     } finally {
       setPosting(false);
+    }
+  };
+
+  const handleStoryFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewStoryFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setStoryImagePreview(event.target?.result || '');
+      };
+      reader.onerror = () => {
+        setError('Lỗi đọc tệp hình ảnh');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCreateStory = async (e) => {
+    e.preventDefault();
+    if (!newStoryContent.trim() && !newStoryFile) {
+      setError('Vui lòng nhập nội dung hoặc chọn hình ảnh cho tin');
+      return;
+    }
+
+    setCreatingStory(true);
+    try {
+      let imageBase64 = null;
+      if (newStoryFile) {
+        imageBase64 = storyImagePreview;
+      }
+
+      // Create story object
+      const newStory = {
+        id: Date.now().toString(),
+        userId: currentUser?.Id,
+        userName: currentUser?.UserName || currentUser?.FullName,
+        userAvatar: currentUser?.ProfilePictureUrl,
+        content: newStoryContent,
+        imageUrl: imageBase64,
+        createdAt: new Date().toISOString(),
+        likes: 0
+      };
+
+      // Add story to the beginning of the list
+      setStories([newStory, ...stories]);
+      
+      // Reset form
+      setNewStoryContent('');
+      setNewStoryFile(null);
+      setStoryImagePreview('');
+      setShowCreateStoryModal(false);
+      setError('');
+      
+    } catch (err) {
+      setError(err.message);
+      console.error('Error creating story:', err);
+    } finally {
+      setCreatingStory(false);
     }
   };
 
@@ -613,27 +677,29 @@ export default function HomePage() {
           </section>
 
 
-          {/* Stories Section - Only show if there are stories or always show create story */}
-          {friends.length > 0 || stories.length > 0 ? (
-            <section className="stories-section">
-              <div className="stories-carousel">
-                {/* Create Story Card */}
-                <div className="story-card create-story-card">
-                  <div className="story-create-icon">+</div>
-                  <p className="story-label">Tạo tin</p>
-                </div>
-
-                {/* Friend Stories */}
-                {stories.map((story) => (
-                  <div key={story.id} className="story-card">
-                    <div className="story-background"></div>
-                    <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
-                    <p className="story-label">{story.userName}</p>
-                  </div>
-                ))}
+          {/* Stories Section - Always show */}
+          <section className="stories-section">
+            <div className="stories-carousel">
+              {/* Create Story Card */}
+              <div 
+                className="story-card create-story-card"
+                onClick={() => setShowCreateStoryModal(true)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="story-create-icon">+</div>
+                <p className="story-label">Tạo tin</p>
               </div>
-            </section>
-          ) : null}
+
+              {/* Friend Stories */}
+              {stories.map((story) => (
+                <div key={story.id} className="story-card">
+                  <div className="story-background"></div>
+                  <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
+                  <p className="story-label">{story.userName}</p>
+                </div>
+              ))}
+            </div>
+          </section>
 
           <section className="posts-feed">
             {displayedPosts.length === 0 ? (
@@ -933,6 +999,74 @@ export default function HomePage() {
           )}
         </aside>
       </div>
+
+      {/* Create Story Modal */}
+      {showCreateStoryModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateStoryModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Tạo tin</h2>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowCreateStoryModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateStory} className="create-story-form">
+              <div className="create-story-container">
+                <div className="story-preview">
+                  {storyImagePreview && (
+                    <img src={storyImagePreview} alt="Preview" className="story-preview-image" />
+                  )}
+                  <div className="story-content-display">
+                    <p className="story-text">{newStoryContent}</p>
+                  </div>
+                </div>
+
+                <div className="story-form-inputs">
+                  <textarea
+                    value={newStoryContent}
+                    onChange={(e) => setNewStoryContent(e.target.value)}
+                    placeholder="Chia sẻ tin của bạn..."
+                    className="story-textarea"
+                    rows="4"
+                  />
+                  
+                  <div className="story-form-bottom">
+                    <div className="file-input-wrapper">
+                      <label htmlFor="story-image-input" className="file-input-label">
+                        <i className="fa-solid fa-image"></i>
+                        <span>Thêm hình ảnh</span>
+                      </label>
+                      <input
+                        id="story-image-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={handleStoryFileChange}
+                        className="post-file-input"
+                      />
+                      {newStoryFile && (
+                        <span className="file-selected">
+                          ✓ {newStoryFile.name}
+                        </span>
+                      )}
+                    </div>
+                    <button 
+                      type="submit" 
+                      className="btn-post"
+                      disabled={creatingStory}
+                    >
+                      {creatingStory ? 'Đang đăng...' : 'Đăng tin'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -43,16 +43,23 @@ function isTokenValid(token) {
 function App() {
   const [token, setToken] = useState(() => {
     // Initialize token from localStorage, but validate it
-    const savedToken = localStorage.getItem('token');
-    if (savedToken && isTokenValid(savedToken)) {
-      return savedToken;
-    } else {
-      // Clear invalid/expired token
-      if (savedToken) {
-        console.log('Token is expired or invalid, clearing...');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    try {
+      const savedToken = localStorage.getItem('token');
+      if (savedToken && isTokenValid(savedToken)) {
+        return savedToken;
+      } else {
+        // Clear invalid/expired token
+        if (savedToken) {
+          console.log('Token is expired or invalid, clearing...');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+        return null;
       }
+    } catch (err) {
+      console.error('Error initializing token:', err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       return null;
     }
   });

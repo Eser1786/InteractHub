@@ -33,7 +33,8 @@ export default function Header({ onLogout, showControls = true, onSearch, search
           });
         }
       } catch (err) {
-        console.error('Error loading user data:', err);
+        console.error('Error loading user data in Header:', err);
+        setCurrentUser(null);
       }
     };
 

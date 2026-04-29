@@ -102,6 +102,12 @@ export const getFriendsForUser = (userId) => {
   return data.friends;
 };
 
+// Get group memberships
+export const getGroupMembershipsForUser = (userId) => {
+  const data = getUserData(userId);
+  return data.groupMemberships;
+};
+
 // Add post
 export const addPost = (userId, post) => {
   const data = getUserData(userId);
@@ -185,8 +191,9 @@ export const addGroupMembership = (userId, group) => {
   }
 };
 
-// Get group memberships
-export const getGroupMembershipsForUser = (userId) => {
+// Remove group membership
+export const removeGroupMembership = (userId, groupId) => {
   const data = getUserData(userId);
-  return data.groupMemberships;
+  data.groupMemberships = data.groupMemberships.filter(g => g.id !== groupId);
+  updateUserData(userId, { groupMemberships: data.groupMemberships });
 };

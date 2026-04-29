@@ -14,8 +14,13 @@ export default function GroupPage() {
   const { groups, joinGroup } = useGroups();
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user'));
-    setCurrentUser(userData);
+    try {
+      const userData = JSON.parse(localStorage.getItem('user'));
+      setCurrentUser(userData);
+    } catch (err) {
+      console.error('Error loading user data:', err);
+      setCurrentUser(null);
+    }
 
     // Check if there's a tab to select from navigation state
     if (location.state?.tab) {
@@ -33,7 +38,7 @@ export default function GroupPage() {
 
   const handleJoinGroup = (group) => {
     if (!group.isJoined) {
-      joinGroup(group.Id);
+      joinGroup(group.id);
     }
   };
 
@@ -107,7 +112,7 @@ export default function GroupPage() {
               </p>
             ) : (
               filteredGroups.map((group) => (
-                <div key={group.Id} className="group-card">
+                <div key={group.id} className="group-card">
                   <div className="group-images">
                     {group.images.map((_, idx) => (
                       <div key={idx} className="group-image-placeholder"></div>

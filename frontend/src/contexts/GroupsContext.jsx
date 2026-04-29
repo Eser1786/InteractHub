@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { getGroupMembershipsForUser, addGroupMembership, removeGroupMembership } from '../utils/userDataManager';
 
 const GroupsContext = createContext();
 
@@ -58,44 +59,63 @@ export const GroupsProvider = ({ children }) => {
   ];
 
   useEffect(() => {
-    // Load joined groups from localStorage
-    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
-    
-    // Update isJoined status based on localStorage
-    const updatedGroups = mockGroups.map(group => ({
-      ...group,
-      isJoined: userJoinedGroups.includes(group.Id)
-    }));
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      if (userData.Id) {
+        const userJoinedGroups = getGroupMembershipsForUser(userData.Id).map(g => g.id);
+        
+        // Update isJoined status based on user's group memberships
+        const updatedGroups = mockGroups.map(group => ({
+          ...group,
+          isJoined: userJoinedGroups.includes(group.id)
+        }));
 
-    setGroups(updatedGroups);
+        setGroups(updatedGroups);
+      } else {
+        // If no user, set all to not joined
+        setGroups(mockGroups.map(group => ({ ...group, isJoined: false })));
+      }
+    } catch (err) {
+      console.error('Error loading user data in GroupsContext:', err);
+      setGroups(mockGroups.map(group => ({ ...group, isJoined: false })));
+    }
   }, []);
 
   const joinGroup = (groupId) => {
-    setGroups(prevGroups =>
-      prevGroups.map(g =>
-        g.id === groupId ? { ...g, isJoined: true } : g
-      )
-    );
-
-    // Save to localStorage
-    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
-    if (!userJoinedGroups.includes(groupId)) {
-      userJoinedGroups.push(groupId);
-      localStorage.setItem('userJoinedGroups', JSON.stringify(userJoinedGroups));
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      if (userData.Id) {
+        const group = mockGroups.find(g => g.id === groupId);
+        if (group) {
+          addGroupMembership(userData.Id, group);
+          
+          setGroups(prevGroups =>
+            prevGroups.map(g =>
+              g.id === groupId ? { ...g, isJoined: true } : g
+            )
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Error in joinGroup:', err);
     }
   };
 
   const leaveGroup = (groupId) => {
-    setGroups(prevGroups =>
-      prevGroups.map(g =>
-        g.id === groupId ? { ...g, isJoined: false } : g
-      )
-    );
-
-    // Remove from localStorage
-    const userJoinedGroups = JSON.parse(localStorage.getItem('userJoinedGroups') || '[]');
-    const updatedGroups = userJoinedGroups.filter(id => id !== groupId);
-    localStorage.setItem('userJoinedGroups', JSON.stringify(updatedGroups));
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      if (userData.Id) {
+        removeGroupMembership(userData.Id, groupId);
+        
+        setGroups(prevGroups =>
+          prevGroups.map(g =>
+            g.id === groupId ? { ...g, isJoined: false } : g
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Error in leaveGroup:', err);
+    }
   };
 
   return (

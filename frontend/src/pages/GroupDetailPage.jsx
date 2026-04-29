@@ -15,8 +15,8 @@ export default function GroupDetailPage() {
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [loading, setLoading] = useState(true);
   const [newPostContent, setNewPostContent] = useState('');
-  const [newPostImage, setNewPostImage] = useState('');
-  const [postType, setPostType] = useState('text');
+  const [newPostFile, setNewPostFile] = useState(null);
+  const [postImagePreview, setPostImagePreview] = useState('');
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -181,6 +181,25 @@ export default function GroupDetailPage() {
     }
   };
 
+  const handleGroupFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setNewPostFile(file);
+    setNewPostImage('');
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPostImagePreview(event.target?.result || '');
+    };
+    reader.onerror = () => {
+      setError('Lỗi đọc tệp hình ảnh');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleLeaveGroup = () => {
     leaveGroup(group.id);
     // Navigate back to group list with discover tab selected
@@ -193,13 +212,15 @@ export default function GroupDetailPage() {
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
-    if (!newPostContent.trim() && !newPostImage.trim()) {
+    if (!newPostContent.trim() && !newPostImage.trim() && !postImagePreview) {
       setError('Vui lòng nhập nội dung hoặc chọn hình ảnh');
       return;
     }
 
     setPosting(true);
     try {
+      const imageUrl = postImagePreview || newPostImage || null;
+
       // Create new post for the group
       const newPost = {
         id: `${group.id}-${Date.now()}`,
@@ -207,7 +228,7 @@ export default function GroupDetailPage() {
         groupId: group.id,
         username: currentUser?.fullName || currentUser?.userName || 'Bạn',
         content: newPostContent,
-        imageUrl: newPostImage || null,
+        imageUrl,
         createdAt: new Date(),
         likesCount: 0,
         commentsCount: 0,
@@ -216,6 +237,8 @@ export default function GroupDetailPage() {
 
       setNewPostContent('');
       setNewPostImage('');
+      setNewPostFile(null);
+      setPostImagePreview('');
       setPostType('text');
       setError('');
       
@@ -321,59 +344,50 @@ export default function GroupDetailPage() {
               </p>
             </div>
 
-            <div className="create-post-tabs">
-              <button 
-                className={`tab ${postType === 'text' ? 'active' : ''}`}
-                onClick={() => setPostType('text')}
-              >
-                <span className="tab-icon"><i className="fa-solid fa-pen"></i></span>
-                <span>Văn bản</span>
-              </button>
-              <button 
-                className={`tab ${postType === 'image' ? 'active' : ''}`}
-                onClick={() => setPostType('image')}
-              >
-                <span className="tab-icon"><i class="fa-solid fa-image"></i></span>
-                <span>Hình ảnh</span>
-              </button>
-            </div>
-
             {error && <div className="error-message">{error}</div>}
 
             <form onSubmit={handleCreatePost} className="create-post-form">
-              {postType === 'text' ? (
-                <textarea
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="Chia sẻ suy nghĩ của bạn..."
-                  className="post-textarea"
-                  rows="4"
-                />
-              ) : (
-                <div className="image-input-wrapper">
+              <textarea
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+                placeholder="Chia sẻ suy nghĩ của bạn..."
+                className="post-textarea"
+                rows="4"
+              />
+              
+              <div className="post-form-bottom">
+                <div className="file-input-wrapper">
+                  <label htmlFor="group-post-image-input" className="file-input-label">
+                    <i className="fa-solid fa-image"></i>
+                    <span>Thêm hình ảnh</span>
+                  </label>
                   <input
-                    type="text"
-                    value={newPostImage}
-                    onChange={(e) => setNewPostImage(e.target.value)}
-                    placeholder="Nhập URL hình ảnh"
-                    className="post-image-input"
+                    id="group-post-image-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleGroupFileChange}
+                    className="post-file-input"
                   />
-                  {newPostImage && (
-                    <img src={newPostImage} alt="Preview" className="image-preview" />
+                  {newPostFile && (
+                    <span className="file-selected">✓ {newPostFile.name}</span>
                   )}
                 </div>
+                <button 
+                  type="submit" 
+                  className="btn-post"
+                  disabled={posting}
+                >
+                  {posting ? 'Đang đăng...' : 'Đăng'}
+                </button>
+              </div>
+              {postImagePreview && (
+                <div className="post-image-preview-wrapper">
+                  <img src={postImagePreview} alt="Preview" className="post-image-preview" />
+                </div>
               )}
-              <button 
-                type="submit" 
-                className="btn-post"
-                disabled={posting}
-              >
-                {posting ? 'Đang đăng...' : 'Đăng'}
-              </button>
             </form>
           </section>
 
-          {/* Posts Feed */}
           <section className="posts-feed">
             {posts.length === 0 ? (
               <p className="no-posts">Chưa có bài viết nào trong nhóm</p>
@@ -406,19 +420,20 @@ export default function GroupDetailPage() {
 
                   <div className="post-actions">
                     <button 
-                      className={`post-action-btn ${(post.likedBy || []).includes(currentUser?.id) ? 'liked' : ''}`}
+                      className={`post-action-btn ${(post.likedBy || []).includes(currentUser?.Id) ? 'liked' : ''}`}
                       onClick={() => handleLike(post)}
                     >
-                      <span>{(post.likedBy || []).includes(currentUser?.id) ? '❤️' : '🤍'}</span> 
-                      {(post.likedBy || []).includes(currentUser?.id) ? 'Bỏ thích' : 'Thích'}
+                      <span>{(post.likedBy || []).includes(currentUser?.Id) ? '❤️' : '🤍'}</span> 
+                      {(post.likedBy || []).includes(currentUser?.Id) ? 'Bỏ thích' : 'Thích'}
                     </button>
                     <button className="post-action-btn" onClick={() => handleToggleComments(post)}>
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
                     <button className="post-action-btn">
-                      <span><i class="fa-solid fa-share"></i></span> Chia sẻ
+                      <span><i className="fa-solid fa-share"></i></span> Chia sẻ
                     </button>
                   </div>
+
                   {activeCommentPostId === post.id && (
                     <CommentSection
                       post={post}

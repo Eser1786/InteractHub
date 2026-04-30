@@ -4,6 +4,7 @@ public class CreatePostDto
 {
     public string Content { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
+    public int? GroupId { get; set; }
     // public string UserId { get; set; } = string.Empty;
 }
 
@@ -15,6 +16,7 @@ public class UpdatePostDto{
 public class PostResponseDto
 {
     public int Id { get; set; }
+    public int? GroupId { get; set; }
     public string Content { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; }

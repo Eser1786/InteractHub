@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
 import { useGroups } from '../contexts/GroupsContext';
+import { getPostsByGroup, createPost, deletePost } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import '../styles/GroupDetailPage.css';
@@ -23,86 +24,55 @@ export default function GroupDetailPage() {
   const navigate = useNavigate();
   const { groups, leaveGroup } = useGroups();
 
-  // Mock posts data
-  const mockPosts = [
-    {
-      id: '1',
-      groupName: 'Nhóm lập trình Java',
-      groupId: '1',
-      username: 'Nhóm lập trình Java',
-      content: 'Tối nay nộp đồ án nhé!',
-      imageUrl: 'https://via.placeholder.com/300',
-      createdAt: new Date(),
-      likesCount: 5,
-      commentsCount: 38,
-      likedBy: []
-    },
-    {
-      id: '2',
-      groupName: 'Nhóm lập trình Java',
-      groupId: '1',
-      username: 'Nhóm lập trình Java',
-      content: 'Mai kiểm tra giữa kì nhé các em.',
-      imageUrl: 'https://via.placeholder.com/300',
-      createdAt: new Date(Date.now() - 86400000),
-      likesCount: 5,
-      commentsCount: 38,
-      likedBy: []
-    }
-  ];
-
-  // Helper function to get total likes for a post from all users
-  const getTotalLikesForPost = (postId) => {
-    const likeCounts = JSON.parse(localStorage.getItem('post_likes') || '{}');
-    return likeCounts[postId] || 0;
-  };
-
-  // Helper function to save total likes for a post
-  const saveTotalLikesForPost = (postId, count) => {
-    const likeCounts = JSON.parse(localStorage.getItem('post_likes') || '{}');
-    if (count > 0) {
-      likeCounts[postId] = count;
-    } else {
-      delete likeCounts[postId];
-    }
-    localStorage.setItem('post_likes', JSON.stringify(likeCounts));
-  };
+  const normalizePost = (post) => ({
+    id: post.id || post.Id,
+    groupId: post.groupId || post.GroupId,
+    userId: post.userId || post.UserId,
+    username: post.username || post.UserFullName || post.UserName || 'Người dùng',
+    content: post.content || post.Content,
+    imageUrl: post.imageUrl || post.ImageUrl,
+    createdAt: post.createdAt || post.CreatedAt,
+    likesCount: post.likesCount ?? post.LikesCount ?? 0,
+    commentsCount: post.commentsCount ?? post.CommentsCount ?? 0,
+    likedBy: post.likedBy || post.LikedByUserIds || []
+  });
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user'));
-    setCurrentUser(userData);
+    const loadGroupAndPosts = async () => {
+      const userData = JSON.parse(localStorage.getItem('user'));
+      setCurrentUser(userData);
 
-    // Find group by slug from context
-    const foundGroup = groups.find(g => g.slug === groupSlug);
-    if (foundGroup) {
-      setGroup(foundGroup);
-      // Filter posts for this group
-      const groupPosts = mockPosts.filter(p => p.groupId === foundGroup.Id);
-      
-      // Apply user's liked posts to posts (check userData exists first)
-      if (userData && userData.Id) {
-        const userLikedPosts = getLikedPostsForUser(userData.Id);
-        const updatedPosts = groupPosts.map(p => {
-          const likedByArray = userLikedPosts[p.Id] || [];
-          const totalLikes = getTotalLikesForPost(p.Id);
-          return {
-            ...p,
-            likedBy: likedByArray,
-            likesCount: totalLikes > 0 ? totalLikes : likedByArray.length,
-            commentsCount: commentsByPost[p.Id]?.length ?? 0
-          };
-        });
-        setPosts(updatedPosts);
-      } else {
-        // If no user, just show posts without liked info
-        setPosts(groupPosts.map(p => ({
-          ...p,
-          commentsCount: commentsByPost[p.Id]?.length ?? 0
-        })));
+      // Find group by slug from context
+      const foundGroup = groups.find(g => g.slug === groupSlug);
+      if (foundGroup) {
+        setGroup(foundGroup);
+
+        try {
+          const groupPosts = await getPostsByGroup(foundGroup.id);
+
+          const normalizedPosts = groupPosts.map((p) => {
+            const normalized = normalizePost(p);
+            const userLikedPosts = userData?.Id ? getLikedPostsForUser(userData.Id) : {};
+            const likedByArray = userLikedPosts[normalized.id] || [];
+            return {
+              ...normalized,
+              likedBy: likedByArray,
+              likesCount: normalized.likesCount || likedByArray.length,
+              commentsCount: normalized.commentsCount || 0
+            };
+          });
+
+          setPosts(normalizedPosts);
+        } catch (error) {
+          console.error('Error loading group posts:', error);
+          setPosts([]);
+        }
       }
-    }
 
-    setLoading(false);
+      setLoading(false);
+    };
+
+    loadGroupAndPosts();
   }, [groupSlug, groups]);
 
   useEffect(() => {
@@ -132,44 +102,38 @@ export default function GroupDetailPage() {
     try {
       const likedBy = post.likedBy || [];
       const isLiked = likedBy.includes(currentUser.Id);
-      
-      // Get current user data
+      const postId = post.id || post.Id;
+
       const userData = getUserData(currentUser.Id);
       const likedPosts = userData.likedPosts || {};
-      
       let newLikesCount = post.likesCount || 0;
-      
-      // Update liked posts
+
       if (isLiked) {
-        if (likedPosts[post.Id]) {
-          likedPosts[post.Id] = likedPosts[post.Id].filter(id => id !== currentUser.Id);
-          if (likedPosts[post.Id].length === 0) {
-            delete likedPosts[post.Id];
+        if (likedPosts[postId]) {
+          likedPosts[postId] = likedPosts[postId].filter(id => id !== currentUser.Id);
+          if (likedPosts[postId].length === 0) {
+            delete likedPosts[postId];
           }
         }
         newLikesCount = Math.max(0, newLikesCount - 1);
       } else {
-        if (!likedPosts[post.Id]) {
-          likedPosts[post.Id] = [];
+        if (!likedPosts[postId]) {
+          likedPosts[postId] = [];
         }
-        if (!likedPosts[post.Id].includes(currentUser.Id)) {
-          likedPosts[post.Id].push(currentUser.Id);
+        if (!likedPosts[postId].includes(currentUser.Id)) {
+          likedPosts[postId].push(currentUser.Id);
         }
-        newLikesCount = newLikesCount + 1;
+        newLikesCount += 1;
       }
-      
-      // Update user data
+
       updateUserData(currentUser.Id, { likedPosts });
-      
-      // Save total likes count for this post
-      saveTotalLikesForPost(post.Id, newLikesCount);
-      
-      // Update local posts state
+
       const newPosts = posts.map(p => {
-        if (p.id === post.id) {
+        const normalizedId = p.id || p.Id;
+        if (normalizedId === postId) {
           return {
             ...p,
-            likedBy: likedPosts[p.id] || [],
+            likedBy: likedPosts[postId] || [],
             likesCount: newLikesCount
           };
         }
@@ -221,29 +185,29 @@ export default function GroupDetailPage() {
     try {
       const imageUrl = postImagePreview || null;
 
-      // Create new post for the group
-      const newPost = {
-        id: `${group.id}-${Date.now()}`,
-        groupName: group.name,
-        groupId: group.id,
-        username: currentUser?.fullName || currentUser?.userName || 'Bạn',
-        userId: currentUser?.Id,
+      // Create post via API
+      const createdPost = await createPost({
         content: newPostContent,
         imageUrl,
-        createdAt: new Date(),
-        likesCount: 0,
-        commentsCount: 0,
-        likedBy: []
-      };
+        groupId: group.id
+      });
+
+      if (createdPost) {
+        // Add the created post to the list and normalize keys for this page
+        const normalized = normalizePost(createdPost);
+        const newPost = {
+          ...normalized,
+          likedBy: [],
+          commentsCount: 0
+        };
+        setPosts([newPost, ...posts]);
+      }
 
       setNewPostContent('');
       setNewPostFile(null);
       setPostImagePreview('');
       setActivePostMenuId(null);
       setError('');
-      
-      // Add new post to the beginning of the list
-      setPosts([newPost, ...posts]);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -251,7 +215,7 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleDeletePost = (post) => {
+  const handleDeletePost = async (post) => {
     if (!currentUser || post.userId !== currentUser.Id) {
       setError('Bạn chỉ có thể xóa bài viết của chính mình');
       return;
@@ -261,9 +225,14 @@ export default function GroupDetailPage() {
       return;
     }
 
-    setPosts(posts.filter((p) => p.id !== post.id));
-    setActivePostMenuId(null);
-    setError('');
+    try {
+      await deletePost(post.id);
+      setPosts(posts.filter((p) => p.id !== post.id));
+      setActivePostMenuId(null);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleAddComment = (postId, content) => {

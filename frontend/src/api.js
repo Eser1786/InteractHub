@@ -90,9 +90,9 @@ export async function register({ userName, email, fullName, password }) {
   return { token, user };
 }
 
-export async function getPosts() {
+export async function getPostsByGroup(groupId) {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE}/posts`, {
+  const response = await fetch(`${API_BASE}/posts/group/${groupId}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   
@@ -123,12 +123,21 @@ export async function getUserPosts(userId) {
   return data?.Data || [];
 }
 
-export async function createPost({ content, imageUrl }) {
+export async function getPosts() {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/posts`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
+export async function createPost({ content, imageUrl, groupId }) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/posts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify({ content, imageUrl })
+    body: JSON.stringify({ content, imageUrl, groupId })
   });
   
   const data = await handleResponse(response);

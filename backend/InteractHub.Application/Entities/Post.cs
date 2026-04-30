@@ -11,6 +11,8 @@ public class Post
     public string UserId {get; set;}
     public User User {get; set;}
 
+    public int? GroupId {get; set;}
+    public Group? Group {get; set;}
 
     public ICollection <Comment> Comments {get; set;}
     public ICollection <Like> Likes {get; set;}

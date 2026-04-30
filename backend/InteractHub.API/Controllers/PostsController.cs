@@ -23,29 +23,20 @@ public class PostsController : ControllerBase
         _postService = postService;
     }
 
-    [HttpGet("user/{userId}")]
+    [HttpGet("group/{groupId}")]
     [ProducesResponseType(typeof(ApiResponse<List<PostResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetByUserId(string userId)
+    public async Task<IActionResult> GetByGroupId(int groupId)
     {
-        Console.WriteLine($"GetByUserId called with userId: '{userId}'");
-        
         var posts = await _postService.GetAllAsync();
-        Console.WriteLine($"Total posts in database: {posts.Count()}");
+        var groupPosts = posts.Where(p => p.GroupId == groupId)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToList();
         
-        var userPosts = posts.Where(p => 
-        {
-            Console.WriteLine($"Comparing: p.UserId='{p.UserId}' with userId='{userId}' => {p.UserId == userId}");
-            return p.UserId == userId;
-        })
-        .OrderByDescending(p => p.CreatedAt)
-        .ToList();
-        
-        Console.WriteLine($"User posts found: {userPosts.Count()}");
-        
-        var postDtos = userPosts.Select(p => new PostResponseDto
+        var postDtos = groupPosts.Select(p => new PostResponseDto
         {
             Id = p.Id,
+            GroupId = p.GroupId,
             Content = p.Content,
             ImageUrl = p.ImageUrl,
             CreatedAt = p.CreatedAt,
@@ -59,7 +50,7 @@ public class PostsController : ControllerBase
             LikedByUserIds = p.Likes?.Select(l => l.UserId).ToList() ?? new()
         }).ToList();
         
-        return this.SuccessResponse(postDtos, "User posts retrieved successfully", 200);
+        return this.SuccessResponse(postDtos, "Group posts retrieved successfully", 200);
     }
 
     [HttpGet]
@@ -71,6 +62,7 @@ public class PostsController : ControllerBase
         var postDtos = posts.Select(p => new PostResponseDto
         {
             Id = p.Id,
+            GroupId = p.GroupId,
             Content = p.Content,
             ImageUrl = p.ImageUrl,
             CreatedAt = p.CreatedAt,
@@ -100,6 +92,7 @@ public class PostsController : ControllerBase
         var postDto = new PostResponseDto
         {
             Id = post.Id,
+            GroupId = post.GroupId,
             Content = post.Content,
             ImageUrl = post.ImageUrl,
             CreatedAt = post.CreatedAt,
@@ -130,7 +123,8 @@ public class PostsController : ControllerBase
         {
             Content = createPostDto.Content,
             ImageUrl = createPostDto.ImageUrl,
-            UserId = userId
+            UserId = userId,
+            GroupId = createPostDto.GroupId
         };
 
         var created = await _postService.CreateAsync(post);
@@ -144,6 +138,7 @@ public class PostsController : ControllerBase
         var postDto = new PostResponseDto
         {
             Id = createdWithUser.Id,
+            GroupId = createdWithUser.GroupId,
             Content = createdWithUser.Content,
             ImageUrl = createdWithUser.ImageUrl,
             CreatedAt = createdWithUser.CreatedAt,

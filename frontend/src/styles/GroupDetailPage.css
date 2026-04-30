@@ -134,21 +134,50 @@
   background: #e0e0e0;
 }
 
-.btn-leave-group {
-  padding: 8px 16px;
-  background: #ff6b6b;
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
+.group-menu-container {
+  position: relative;
 }
 
-.btn-leave-group:hover {
-  background: #ff5252;
+.btn-group-menu {
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #6b4fc7;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-group-menu:hover {
+  background: rgba(107, 79, 199, 0.08);
+}
+
+.group-menu-dropdown {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  min-width: 150px;
+  background: white;
+  border: 1px solid #e8e0f7;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  padding: 8px 0;
+}
+
+.group-menu-dropdown .menu-item {
+  color: #333;
+}
+
+.group-menu-dropdown .menu-item.leave {
+  color: #ff6b6b;
+}
+
+.group-menu-dropdown .menu-item.leave:hover {
+  background: #fee9ef;
+  color: #ff5252;
 }
 
 .group-title {

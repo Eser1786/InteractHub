@@ -21,6 +21,7 @@ export default function GroupDetailPage() {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
   const [activePostMenuId, setActivePostMenuId] = useState(null);
+  const [showGroupMenu, setShowGroupMenu] = useState(false);
   const navigate = useNavigate();
   const { groups, leaveGroup } = useGroups();
 
@@ -312,9 +313,27 @@ export default function GroupDetailPage() {
               </button>
               <h1 className="group-title">{group.name}</h1>
             </div>
-            <button className="btn-leave-group" onClick={handleLeaveGroup}>
-              ✕ Rời nhóm
-            </button>
+            <div className="group-menu-container">
+              <button 
+                className="btn-group-menu" 
+                onClick={() => setShowGroupMenu(!showGroupMenu)}
+              >
+                ⋯
+              </button>
+              {showGroupMenu && (
+                <div className="group-menu-dropdown">
+                  <button 
+                    className="menu-item leave" 
+                    onClick={() => {
+                      handleLeaveGroup();
+                      setShowGroupMenu(false);
+                    }}
+                  >
+                    Rời nhóm
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Create Post Section */}

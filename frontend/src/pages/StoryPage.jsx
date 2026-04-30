@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
-import { getStoryById, getStories } from '../api';
+import { getStoryById, getStories, deleteStory } from '../api';
 import '../styles/StoryPage.css';
 
 export default function StoryPage() {
@@ -11,6 +11,7 @@ export default function StoryPage() {
   const [error, setError] = useState('');
   const [messageInput, setMessageInput] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
+  const [showStoryOptions, setShowStoryOptions] = useState(false);
   const { storyId } = useParams();
   const navigate = useNavigate();
 
@@ -69,6 +70,19 @@ export default function StoryPage() {
     localStorage.removeItem('user');
     window.dispatchEvent(new Event('tokenUpdated'));
     navigate('/login');
+  };
+
+  const handleDeleteStory = async () => {
+    if (!story || currentUser?.Id !== story.UserId) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa tin này?')) return;
+
+    try {
+      await deleteStory(story.Id);
+      navigate('/home');
+    } catch (err) {
+      console.error('Error deleting story:', err);
+      setError(`Lỗi xóa tin: ${err.message}`);
+    }
   };
 
   return (
@@ -143,6 +157,33 @@ export default function StoryPage() {
                     </p>
                   </div>
                 </div>
+                {currentUser?.Id === story.UserId && (
+                  <div className="story-options">
+                    <button
+                      type="button"
+                      className="story-options-dot"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowStoryOptions((current) => !current);
+                      }}
+                      aria-label="Tùy chọn tin"
+                    />
+                    {showStoryOptions && (
+                      <div className="story-options-dropdown">
+                        <button
+                          type="button"
+                          className="menu-item delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteStory();
+                          }}
+                        >
+                          <i className="fa-solid fa-trash"></i> Xóa tin
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="story-content-area">

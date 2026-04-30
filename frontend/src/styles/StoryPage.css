@@ -210,6 +210,63 @@
 .story-header {
   padding: 20px;
   background: white;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.story-options {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.story-options-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #6b4fc7;
+  border: none;
+  cursor: pointer;
+}
+
+.story-options-dot:hover {
+  transform: scale(1.1);
+}
+
+.story-options-dropdown {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(76, 50, 130, 0.12);
+  border: 1px solid rgba(145, 107, 197, 0.16);
+  padding: 8px 0;
+  z-index: 20;
+}
+
+.story-options-dropdown .menu-item {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: #3d2f6a;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.story-options-dropdown .menu-item.delete {
+  color: #c23838;
+}
+
+.story-options-dropdown .menu-item:hover {
+  background: rgba(107, 79, 199, 0.08);
 }
 
 .story-user-info {

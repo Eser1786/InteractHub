@@ -162,6 +162,16 @@ export async function getStoryById(storyId) {
   return data?.Data || null;
 }
 
+export async function deleteStory(storyId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/stories/${storyId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  await handleResponse(response);
+  return true;
+}
+
 export async function createStory({ content, imageUrl, expireAt }) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/stories`, {
@@ -272,9 +282,10 @@ export async function leaveGroupApi(groupId) {
   await handleResponse(response);
 }
 
-export async function getAllUsers() {
+export async function getAllUsers(search = '') {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE}/users`, {
+  const url = `${API_BASE}/users${search ? `?search=${encodeURIComponent(search)}` : ''}`;
+  const response = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   

@@ -919,6 +919,13 @@
   overflow: hidden;
 }
 
+.story-menu-container {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+
 .story-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 5px 15px rgba(107, 79, 199, 0.2);

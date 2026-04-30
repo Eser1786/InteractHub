@@ -66,6 +66,73 @@ export default function HomePage() {
     }
   };
 
+  const loadFriendAndRequesterInfo = async (friendsData, requestsData) => {
+    const friendIds = friendsData
+      .map(f => f.FriendId || f.friendId)
+      .filter(Boolean);
+    const requesterIds = requestsData
+      .map(r => r.UserId)
+      .filter(Boolean);
+
+    const idsToLoad = [...new Set([...friendIds, ...requesterIds])]
+      .filter(id => !friendsInfo[id] && !requestersInfo[id]);
+
+    if (idsToLoad.length === 0) {
+      return;
+    }
+
+    try {
+      const users = await Promise.all(idsToLoad.map(async (id) => {
+        try {
+          return await getUser(id);
+        } catch (err) {
+          console.error('Error preloading user info:', err);
+          return null;
+        }
+      }));
+
+      const newFriendsInfo = {};
+      const newRequestersInfo = {};
+
+      users.forEach((user) => {
+        if (!user) return;
+        if (friendIds.includes(user.Id)) {
+          newFriendsInfo[user.Id] = user;
+        }
+        if (requesterIds.includes(user.Id)) {
+          newRequestersInfo[user.Id] = user;
+        }
+      });
+
+      if (Object.keys(newFriendsInfo).length > 0) {
+        setFriendsInfo((prev) => ({ ...prev, ...newFriendsInfo }));
+      }
+      if (Object.keys(newRequestersInfo).length > 0) {
+        setRequestersInfo((prev) => ({ ...prev, ...newRequestersInfo }));
+      }
+    } catch (err) {
+      console.error('Error loading friend/requester info:', err);
+    }
+  };
+
+  const fetchAllUsers = async (searchTerm = '') => {
+    try {
+      const users = await getAllUsers(searchTerm);
+      setAllUsers(users || []);
+
+      if (!searchTerm.trim()) {
+        const friendIds = friends.map(f => f.FriendId || f.friendId);
+        const availableUsers = (users || []).filter(
+          u => u.Id !== currentUser?.Id && !friendIds.includes(u.Id)
+        );
+        const shuffled = [...availableUsers].sort(() => Math.random() - 0.5);
+        setSuggestedUsers(shuffled.slice(0, 3));
+      }
+    } catch (err) {
+      console.error('Error loading all users:', err);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -85,37 +152,25 @@ export default function HomePage() {
           profilePictureUrl: userData.profilePictureUrl
         });
 
-        await loadPosts(userData);
+        const loadPostsPromise = loadPosts(userData);
+        const [friendsData, requestsData, storyData] = await Promise.all([
+          getAcceptedFriends(userData.Id, 1, 10),
+          getPendingRequests(userData.Id, 1, 20),
+          getStories()
+        ]);
 
-        const friendsData = await getAcceptedFriends(userData.Id, 1, 10);
         console.log('Friends data from API:', friendsData);
         setFriends(friendsData || []);
 
-        const requestsData = await getPendingRequests(userData.Id, 1, 20);
         setPendingRequests(requestsData || []);
 
-        const allUsersData = await getAllUsers();
-        setAllUsers(allUsersData || []);
-        const friendIds = ((friendsData || []).map(f => f.FriendId || f.friendId));
-        console.log('Friend IDs extracted:', friendIds);
-        
-        // Get 3 random users excluding current user and friends (check both as FriendId and UserId)
-        const availableUsers = (allUsersData || []).filter(
-          u => u.Id !== userData.Id && !friendIds.includes(u.Id)
-        );
-        
-        // Fisher-Yates shuffle for random selection
-        const shuffled = [...availableUsers].sort(() => Math.random() - 0.5);
-        const suggested = shuffled.slice(0, 3);
-        
-        setSuggestedUsers(suggested);
-
-        // Load stories from backend
-        const storyData = await getStories();
         const activeStories = (storyData || []).filter(story => {
           return !story.ExpireAt || new Date(story.ExpireAt) > new Date();
         });
         setStories(activeStories);
+
+        await loadFriendAndRequesterInfo(friendsData || [], requestsData || []);
+        await loadPostsPromise;
       } catch (err) {
         console.error('Error loading data:', err);
         setError(err.message || 'Failed to load data');
@@ -170,6 +225,69 @@ export default function HomePage() {
       window.removeEventListener('friendAccepted', handleFriendAccepted);
     };
   }, []);
+
+  useEffect(() => {
+    const loadInfoForFriends = async () => {
+      const friendIds = friends
+        .map(f => f.FriendId || f.friendId)
+        .filter(Boolean);
+      const requesterIds = pendingRequests
+        .map(r => r.UserId)
+        .filter(Boolean);
+
+      const idsToLoad = [...new Set([...friendIds, ...requesterIds])]
+        .filter(id => !friendsInfo[id] && !requestersInfo[id]);
+
+      if (idsToLoad.length === 0) {
+        return;
+      }
+
+      try {
+        const users = await Promise.all(idsToLoad.map(async (id) => {
+          try {
+            return await getUser(id);
+          } catch (err) {
+            console.error('Error preloading user info:', err);
+            return null;
+          }
+        }));
+
+        const newFriendsInfo = {};
+        const newRequestersInfo = {};
+
+        users.forEach((user) => {
+          if (!user) return;
+          if (friendIds.includes(user.Id)) {
+            newFriendsInfo[user.Id] = user;
+          }
+          if (requesterIds.includes(user.Id)) {
+            newRequestersInfo[user.Id] = user;
+          }
+        });
+
+        if (Object.keys(newFriendsInfo).length > 0) {
+          setFriendsInfo((prev) => ({ ...prev, ...newFriendsInfo }));
+        }
+        if (Object.keys(newRequestersInfo).length > 0) {
+          setRequestersInfo((prev) => ({ ...prev, ...newRequestersInfo }));
+        }
+      } catch (err) {
+        console.error('Error loading friend/requester info:', err);
+      }
+    };
+
+    loadInfoForFriends();
+  }, [friends, pendingRequests, friendsInfo, requestersInfo]);
+
+  useEffect(() => {
+    if (selectedNav !== 'add-friends') return;
+
+    const loadUsers = async () => {
+      await fetchAllUsers(searchQuery.trim());
+    };
+
+    loadUsers();
+  }, [selectedNav, searchQuery]);
 
   useEffect(() => {
     localStorage.setItem('postComments', JSON.stringify(commentsByPost));
@@ -491,38 +609,6 @@ export default function HomePage() {
     }
   };
 
-  const loadRequesterInfo = async (userId) => {
-    if (requestersInfo[userId]) {
-      return; // Already loaded
-    }
-    
-    try {
-      const userData = await getUser(userId);
-      setRequestersInfo(prev => ({
-        ...prev,
-        [userId]: userData
-      }));
-    } catch (err) {
-      console.error('Error loading requester info:', err);
-    }
-  };
-
-  const loadFriendInfo = async (friendId) => {
-    if (friendsInfo[friendId]) {
-      return; // Already loaded
-    }
-    
-    try {
-      const userData = await getUser(friendId);
-      setFriendsInfo(prev => ({
-        ...prev,
-        [friendId]: userData
-      }));
-    } catch (err) {
-      console.error('Error loading friend info:', err);
-    }
-  };
-
   const handleHashtagClick = (hashtag) => {
     const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
     navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
@@ -702,6 +788,7 @@ export default function HomePage() {
                   onClick={() => navigate(`/story/${story.Id}`)}
                 >
                   <div className="story-background"></div>
+
                   <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
                   <p className="story-label">{story.UserName || 'Tin mới'}</p>
                 </div>
@@ -929,11 +1016,6 @@ export default function HomePage() {
                 ) : (
                   pendingRequests.map((request) => {
                     const requesterInfo = requestersInfo[request.UserId];
-                    
-                    // Load requester info if not already loaded
-                    if (!requesterInfo) {
-                      loadRequesterInfo(request.UserId);
-                    }
 
                     return (
                       <div key={request.Id} className="friend-request-item">
@@ -987,13 +1069,6 @@ export default function HomePage() {
                   friends.map((friend) => {
                     const friendId = friend.FriendId || friend.friendId;
                     const friendInfo = friendsInfo[friendId];
-                    
-                    console.log('Friend item:', { friend, friendId, friendInfo });
-                    
-                    // Load friend info if not already loaded
-                    if (!friendInfo && friendId) {
-                      loadFriendInfo(friendId);
-                    }
 
                     return (
                       <div 

@@ -27,11 +27,7 @@ export default function MessagePage() {
         const conversationList = friends.map((friend) => ({
           id: friend.FriendId || friend.friendId || friend.Id,
           name: friend.FriendName || friend.friendName || friend.FriendId || 'Bạn',
-          avatar: friend.FriendProfilePictureUrl ? (
-            <img src={friend.FriendProfilePictureUrl} alt={friend.FriendName || 'Avatar'} />
-          ) : (
-            <i className="fa-solid fa-user"></i>
-          ),
+          avatarUrl: friend.FriendProfilePictureUrl || '',
           isUnread: false,
           isActive: true,
           lastMessage: '',
@@ -100,6 +96,11 @@ export default function MessagePage() {
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, nextMessage]);
+      setConversations((prev) => prev.map((item) =>
+        item.id === selectedConversation.id
+          ? { ...item, lastMessage: nextMessage.text, lastTime: nextMessage.timestamp, isUnread: false }
+          : item
+      ));
       setNewMessage('');
     } catch (err) {
       console.error('Error sending message:', err);
@@ -174,7 +175,11 @@ export default function MessagePage() {
                   onClick={() => handleSelectConversation(conversation)}
                 >
                   <div className="conversation-avatar">
-                    {conversation.avatar}
+                    {conversation.avatarUrl ? (
+                      <img src={conversation.avatarUrl} alt={conversation.name} className="conversation-avatar-img" />
+                    ) : (
+                      <span className="conversation-avatar-fallback">{conversation.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                    )}
                     {conversation.isActive && <span className="online-status"></span>}
                   </div>
                   <div className="conversation-info">
@@ -196,7 +201,11 @@ export default function MessagePage() {
               <div className="message-header">
                 <div className="message-header-info">
                   <div className="message-header-avatar">
-                    {selectedConversation.avatar}
+                    {selectedConversation.avatarUrl ? (
+                      <img src={selectedConversation.avatarUrl} alt={selectedConversation.name} className="message-header-avatar-img" />
+                    ) : (
+                      <span className="conversation-avatar-fallback">{selectedConversation.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                    )}
                     {selectedConversation.isActive && <span className="online-status"></span>}
                   </div>
                   <div>
@@ -216,7 +225,13 @@ export default function MessagePage() {
                     className={`message-item ${message.senderId === currentUser?.id ? 'sent' : 'received'}`}
                   >
                     {message.senderId !== currentUser?.id && (
-                      <div className="message-avatar-small">{selectedConversation.avatar}</div>
+                      <div className="message-avatar-small">
+                        {selectedConversation?.avatarUrl ? (
+                          <img src={selectedConversation.avatarUrl} alt={selectedConversation.name} />
+                        ) : (
+                          <span className="conversation-avatar-fallback">{selectedConversation?.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                        )}
+                      </div>
                     )}
                     <div className={`message-bubble ${message.senderId === currentUser?.id ? 'sent-bubble' : 'received-bubble'}`}>
                       <p>{message.text}</p>

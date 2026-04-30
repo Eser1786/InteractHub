@@ -19,6 +19,7 @@ export default function GroupDetailPage() {
   const [postImagePreview, setPostImagePreview] = useState('');
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
+  const [activePostMenuId, setActivePostMenuId] = useState(null);
   const navigate = useNavigate();
   const { groups, leaveGroup } = useGroups();
 
@@ -226,6 +227,7 @@ export default function GroupDetailPage() {
         groupName: group.name,
         groupId: group.id,
         username: currentUser?.fullName || currentUser?.userName || 'Bạn',
+        userId: currentUser?.Id,
         content: newPostContent,
         imageUrl,
         createdAt: new Date(),
@@ -237,6 +239,7 @@ export default function GroupDetailPage() {
       setNewPostContent('');
       setNewPostFile(null);
       setPostImagePreview('');
+      setActivePostMenuId(null);
       setError('');
       
       // Add new post to the beginning of the list
@@ -246,6 +249,21 @@ export default function GroupDetailPage() {
     } finally {
       setPosting(false);
     }
+  };
+
+  const handleDeletePost = (post) => {
+    if (!currentUser || post.userId !== currentUser.Id) {
+      setError('Bạn chỉ có thể xóa bài viết của chính mình');
+      return;
+    }
+
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
+      return;
+    }
+
+    setPosts(posts.filter((p) => p.id !== post.id));
+    setActivePostMenuId(null);
+    setError('');
   };
 
   const handleAddComment = (postId, content) => {
@@ -401,13 +419,21 @@ export default function GroupDetailPage() {
                         </p>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="post-content">
-                    <p>{post.content}</p>
-                    {post.imageUrl && (
-                      <img src={post.imageUrl} alt="Post" className="post-image" />
-                    )}
+                <div className="post-menu-container">
+                  <button
+                    className="post-menu-btn"
+                    onClick={() => setActivePostMenuId(activePostMenuId === post.id ? null : post.id)}
+                  >
+                    ⋯
+                  </button>
+                  {activePostMenuId === post.id && currentUser?.Id === post.userId && (
+                    <div className="post-menu-dropdown">
+                      <button className="menu-item delete" onClick={() => handleDeletePost(post)}>
+                        <i className="fa-solid fa-trash"></i> Xóa bài viết
+                      </button>
+                    </div>
+                  )}
+                </div>
                   </div>
 
                   <div className="post-stats">

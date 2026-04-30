@@ -7,9 +7,7 @@ import '../styles/CreateGroupPage.css';
 
 export default function CreateGroupPage() {
   const [groupName, setGroupName] = useState('');
-  const [groupImage, setGroupImage] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
-  const [selectedTab, setSelectedTab] = useState('all');
   const [commentInput, setCommentInput] = useState('');
   const navigate = useNavigate();
   const { refreshGroups } = useGroups();
@@ -75,47 +73,9 @@ export default function CreateGroupPage() {
         </aside>
 
         <main className="create-group-main">
-          <div className="group-cover">
-            {groupImage ? (
-              <img src={groupImage} alt="Group cover" />
-            ) : (
-              <div className="cover-placeholder">
-                <input
-                  type="text"
-                  value={groupImage}
-                  onChange={(e) => setGroupImage(e.target.value)}
-                  placeholder="Nhập URL ảnh bìa"
-                  className="cover-image-input"
-                />
-              </div>
-            )}
-          </div>
-
           <div className="group-info-section">
             <h2 className="group-display-name">{groupName || 'Tên nhóm'}</h2>
             <p className="group-member-count">1 thành viên</p>
-
-            <div className="group-tabs">
-              <button
-                className={`tab ${selectedTab === 'all' ? 'active' : ''}`}
-                onClick={() => setSelectedTab('all')}
-              >
-                Tất cả
-              </button>
-              <button
-                className={`tab ${selectedTab === 'intro' ? 'active' : ''}`}
-                onClick={() => setSelectedTab('intro')}
-              >
-                Giới thiệu
-              </button>
-              <button
-                className={`tab ${selectedTab === 'posts' ? 'active' : ''}`}
-                onClick={() => setSelectedTab('posts')}
-              >
-                Bài viết
-              </button>
-              <button className="tab-menu">⋮</button>
-            </div>
 
             <div className="comment-section">
               <div className="comment-input-wrapper">

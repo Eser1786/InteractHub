@@ -76,14 +76,6 @@ export default function StoryPage() {
       <Header onLogout={handleLogout} />
 
       <div className="story-page-container">
-        <button
-          className="story-back-btn"
-          onClick={() => navigate('/home')}
-          title="Quay lại"
-        >
-          ←
-        </button>
-
         <aside className="story-sidebar">
           <div className="sidebar-top">
             <div className="sidebar-title-row">
@@ -164,17 +156,6 @@ export default function StoryPage() {
                 {story.Content && story.ImageUrl && (
                   <p className="story-viewer-caption">{story.Content}</p>
                 )}
-              </div>
-
-              <div className="story-input-section story-input-section-bottom">
-                <input
-                  type="text"
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  placeholder="Gửi tin nhắn..."
-                  className="story-message-input"
-                />
-                <button className="btn-like">♡</button>
               </div>
             </div>
           ) : (

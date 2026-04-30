@@ -11,6 +11,12 @@ module.exports = {
         changeOrigin: true,
         rewrite: (path) => path
       },
+      '/notificationHub': {
+        target: 'http://localhost:5142',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path
+      },
     },
   },
 };

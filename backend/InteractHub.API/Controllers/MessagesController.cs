@@ -16,10 +16,12 @@ namespace InteractHub.API.Controllers;
 public class MessagesController : ControllerBase
 {
     private readonly IMessageService _messageService;
+    private readonly INotificationService _notificationService;
 
-    public MessagesController(IMessageService messageService)
+    public MessagesController(IMessageService messageService, INotificationService notificationService)
     {
         _messageService = messageService;
+        _notificationService = notificationService;
     }
 
     [HttpGet("conversation/{userId}")]
@@ -55,6 +57,12 @@ public class MessagesController : ControllerBase
             return Unauthorized();
 
         var message = await _messageService.SendMessageAsync(senderId, dto.ReceiverId, dto.Content);
+
+        if (message.ReceiverId != message.SenderId)
+        {
+            await _notificationService.NotifyMessageAsync(message.ReceiverId, message.SenderId, message.Id, message.Content);
+        }
+
         var messageDto = new MessageResponseDto
         {
             Id = message.Id,

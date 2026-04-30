@@ -1,19 +1,25 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using InteractHub.Application.Interfaces;
 using InteractHub.Infrastructure.Data;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Entities.Enums;
+using InteractHub.Infrastructure.Hubs;
 
 namespace InteractHub.Infrastructure.Service;
 
 public class NotificationService : INotificationService
 {
     private readonly AppDbContext _context;
+    private readonly IHubContext<NotificationHub> _hubContext;
 
-    public NotificationService(AppDbContext context)
+    public NotificationService(AppDbContext context, IHubContext<NotificationHub> hubContext)
     {
         _context = context;
+        _hubContext = hubContext;
     }
+
+    private static string GetGroupName(string userId) => $"notifications-{userId}";
 
     // ==================== CƠ BẢN ====================
 
@@ -85,7 +91,30 @@ public class NotificationService : INotificationService
             IsRead = false
         };
 
-        return await CreateAsync(notification);
+        var createdNotification = await CreateAsync(notification);
+
+        try
+        {
+            await _hubContext.Clients
+                .Group(GetGroupName(userId))
+                .SendAsync("ReceiveNotification", new
+                {
+                    Id = createdNotification.Id,
+                    Content = createdNotification.Content,
+                    IsRead = createdNotification.IsRead,
+                    Type = createdNotification.Type.ToString(),
+                    UserId = createdNotification.UserId,
+                    RelatedUserId = createdNotification.RelatedUserId,
+                    RelatedEntityId = createdNotification.RelatedEntityId,
+                    CreatedAt = createdNotification.CreatedAt
+                });
+        }
+        catch
+        {
+            // Ignore SignalR delivery failures so notification creation still succeeds.
+        }
+
+        return createdNotification;
     }
 
     /// <summary>
@@ -195,6 +224,24 @@ public class NotificationService : INotificationService
             NotificationType.Comment,
             commenterUserId,
             postId
+        );
+    }
+
+    /// <summary>
+    /// Tạo notification khi có tin nhắn
+    /// </summary>
+    public async Task<Notification> NotifyMessageAsync(string userId, string senderId, int messageId, string messageContent)
+    {
+        var sender = await _context.Users.FindAsync(senderId);
+        var preview = messageContent.Length > 50 ? messageContent.Substring(0, 50) + "..." : messageContent;
+        var content = $"{sender?.FullName} đã nhắn tin: \"{preview}\"";
+
+        return await CreateNotificationAsync(
+            userId,
+            content,
+            NotificationType.Message,
+            senderId,
+            messageId
         );
     }
 

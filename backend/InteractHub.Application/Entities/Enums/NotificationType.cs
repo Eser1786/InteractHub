@@ -9,5 +9,6 @@ public enum NotificationType
     CommentReply = 4,       // Trả lời bình luận
     Follow = 5,             // Follow
     PostReport = 6,         // Report bài viết
-    System = 7              // Thông báo hệ thống
+    Message = 7,            // Tin nhắn
+    System = 8              // Thông báo hệ thống
 }

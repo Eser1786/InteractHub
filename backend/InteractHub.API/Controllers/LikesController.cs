@@ -16,10 +16,14 @@ namespace InteractHub.API.Controllers;
 public class LikesController : ControllerBase
 {
     private readonly ILikeService _likeService;
+    private readonly IPostService _postService;
+    private readonly INotificationService _notificationService;
 
-    public LikesController(ILikeService likeService)
+    public LikesController(ILikeService likeService, IPostService postService, INotificationService notificationService)
     {
         _likeService = likeService;
+        _postService = postService;
+        _notificationService = notificationService;
     }
 
     [HttpGet("{id}")]
@@ -84,6 +88,12 @@ public class LikesController : ControllerBase
         };
 
         var created = await _likeService.CreateAsync(like);
+
+        var post = await _postService.GetByIdAsync(created.PostId);
+        if (post != null && post.UserId != created.UserId)
+        {
+            await _notificationService.NotifyLikeAsync(post.UserId, created.UserId, created.PostId);
+        }
 
         var likeDto = new LikeResponseDto
         {

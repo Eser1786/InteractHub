@@ -16,10 +16,14 @@ namespace InteractHub.API.Controllers;
 public class CommentsController : ControllerBase
 {
     private readonly ICommentService _commentService;
+    private readonly IPostService _postService;
+    private readonly INotificationService _notificationService;
 
-    public CommentsController(ICommentService commentService)
+    public CommentsController(ICommentService commentService, IPostService postService, INotificationService notificationService)
     {
         _commentService = commentService;
+        _postService = postService;
+        _notificationService = notificationService;
     }
 
     [HttpGet]
@@ -98,6 +102,12 @@ public class CommentsController : ControllerBase
         };
 
         var created = await _commentService.CreateAsync(comment);
+
+        var post = await _postService.GetByIdAsync(created.PostId);
+        if (post != null && post.UserId != created.UserId)
+        {
+            await _notificationService.NotifyCommentAsync(post.UserId, created.UserId, created.PostId, created.Content);
+        }
 
         var commentDto = new CommentResponseDto
         {

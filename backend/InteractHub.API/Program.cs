@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using InteractHub.API.Middleware;
+using InteractHub.Infrastructure.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,6 +90,20 @@ builder.Services
             ValidAudience = audience,
             ValidateLifetime = true
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 
@@ -108,6 +123,8 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+
+builder.Services.AddSignalR();
 
 // ✅ Add Authorization Policies
 builder.Services.AddAuthorization(options =>
@@ -170,6 +187,7 @@ app.UseCors("AllowLocalhost");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
 
 // ✅ Chuyển hướng các đường dẫn (Router) của React về trang chủ index.html
 app.MapFallbackToFile("index.html");

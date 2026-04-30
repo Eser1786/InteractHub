@@ -227,7 +227,17 @@ export async function getUser(userId) {
   return data?.Data || null;
 }
 
+export async function getNotifications(userId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/notifications/user/${userId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
 const normalizeComment = (comment) => ({
+
   id: comment.Id ?? comment.id,
   content: comment.Content ?? comment.content,
   postId: comment.PostId ?? comment.postId,

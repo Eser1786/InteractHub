@@ -58,6 +58,11 @@ public interface INotificationService
     /// Tạo notification khi có comment
     /// </summary>
     Task<Notification> NotifyCommentAsync(string userId, string commenterUserId, int postId, string commentContent);
+
+    /// <summary>
+    /// Tạo notification khi có tin nhắn
+    /// </summary>
+    Task<Notification> NotifyMessageAsync(string userId, string senderId, int messageId, string messageContent);
     
     /// <summary>
     /// Xóa notifications theo type

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
  import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
@@ -24,11 +25,8 @@ export default function HomePage() {
   const [likedPosts, setLikedPosts] = useState(new Set());
   const [selectedNav, setSelectedNav] = useState('friends');
   const [searchQuery, setSearchQuery] = useState('');
-  const [notifications, setNotifications] = useState([
-    { id: '1', title: 'Bạn có lời mời kết bạn mới', time: '2 giờ trước' },
-    { id: '2', title: 'Bài viết mới từ bạn thân', time: '5 giờ trước' },
-    { id: '3', title: 'Thành viên mới vừa tham gia nhóm', time: '1 ngày trước' }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationConnection, setNotificationConnection] = useState(null);
   const [stories, setStories] = useState([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState({});
@@ -41,6 +39,39 @@ export default function HomePage() {
   const [creatingStory, setCreatingStory] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const formatTimeAgo = (createdAt) => {
+    if (!createdAt) return '';
+    const date = new Date(createdAt);
+    const diff = Date.now() - date.getTime();
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return 'vừa xong';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} phút trước`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} giờ trước`;
+    const days = Math.floor(hours / 24);
+    return `${days} ngày trước`;
+  };
+
+  const loadNotifications = async (userData) => {
+    if (!userData?.Id) return;
+    try {
+      const notificationData = await getNotifications(userData.Id);
+      const sortedNotifications = (notificationData || [])
+        .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+      setNotifications(sortedNotifications);
+    } catch (err) {
+      console.error('Error loading notifications:', err);
+    }
+  };
+
+  const handleSelectNav = async (nav) => {
+    setSelectedNav(nav);
+    if (nav === 'notifications' && currentUser) {
+      await loadNotifications(currentUser);
+    }
+  };
 
   const loadPosts = async (userData) => {
     try {
@@ -141,6 +172,7 @@ export default function HomePage() {
 
         const userData = JSON.parse(userDataJson);
         setCurrentUser(userData);
+        await loadNotifications(userData);
         
         // Debug logging for avatar
         console.log('HomePage - currentUser loaded:', {
@@ -223,6 +255,43 @@ export default function HomePage() {
       window.removeEventListener('friendAccepted', handleFriendAccepted);
     };
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const connection = new HubConnectionBuilder()
+      .withUrl('/notificationHub', { accessTokenFactory: () => token })
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    connection.on('ReceiveNotification', (notification) => {
+      if (!notification) return;
+      setNotifications((prevNotifications) => [
+        notification,
+        ...prevNotifications.filter((item) => item.Id !== notification.Id)
+      ]);
+    });
+
+    connection.start()
+      .then(() => {
+        if (currentUser?.Id) {
+          connection.invoke('JoinNotificationsGroup', currentUser.Id).catch(err => console.error('SignalR join group failed:', err));
+        }
+      })
+      .catch((err) => {
+        console.error('SignalR connection error:', err);
+      });
+
+    setNotificationConnection(connection);
+
+    return () => {
+      connection.stop().catch(() => {});
+    };
+  }, [currentUser]);
 
   useEffect(() => {
     const loadInfoForFriends = async () => {
@@ -671,22 +740,22 @@ export default function HomePage() {
         {/* Left Sidebar */}
         <aside className="sidebar-left">
           <nav className="sidebar-nav">
-            <div className={`sidebar-notification ${selectedNav === 'notifications' ? 'active' : ''}`} onClick={() => setSelectedNav('notifications')}>
+            <div className={`sidebar-notification ${selectedNav === 'notifications' ? 'active' : ''}`} onClick={() => handleSelectNav('notifications')}>
               <span className="nav-icon"><i className="fa-solid fa-bell"></i></span>
               <div className="notification-text">
                 <strong>Thông báo</strong>
                 <p>{notifications.length} cập nhật mới</p>
               </div>
             </div>
-            <div className={`nav-item ${selectedNav === 'friends' ? 'active' : ''}`} onClick={() => setSelectedNav('friends')}>
+            <div className={`nav-item ${selectedNav === 'friends' ? 'active' : ''}`} onClick={() => handleSelectNav('friends')}>
               <span className="nav-icon"><i className="fa-solid fa-people-pulling"></i></span>
               <span>Tất cả bạn bè</span>
             </div>
-            <div className={`nav-item ${selectedNav === 'requests' ? 'active' : ''}`} onClick={() => setSelectedNav('requests')}>
+            <div className={`nav-item ${selectedNav === 'requests' ? 'active' : ''}`} onClick={() => handleSelectNav('requests')}>
               <span className="nav-icon"><i className="fa-solid fa-address-book"></i></span>
               <span>Lời mời kết bạn</span>
             </div>
-            <div className={`nav-item ${selectedNav === 'add-friends' ? 'active' : ''}`} onClick={() => setSelectedNav('add-friends')}>
+            <div className={`nav-item ${selectedNav === 'add-friends' ? 'active' : ''}`} onClick={() => handleSelectNav('add-friends')}>
               <span className="nav-icon">➕</span>
               <span>Thêm bạn bè</span>
             </div>
@@ -959,9 +1028,9 @@ export default function HomePage() {
                   <p className="no-results">Hiện chưa có thông báo</p>
                 ) : (
                   notifications.map((item) => (
-                    <div key={item.id} className="notification-item">
-                      <p className="notification-title">{item.title}</p>
-                      <p className="notification-time">{item.time}</p>
+                    <div key={item.Id || item.id} className="notification-item">
+                      <p className="notification-title">{item.Content || item.title}</p>
+                      <p className="notification-time">{item.TimeAgo || formatTimeAgo(item.CreatedAt) || item.time}</p>
                     </div>
                   ))
                 )}

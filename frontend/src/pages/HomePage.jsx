@@ -789,7 +789,13 @@ export default function HomePage() {
                 >
                   <div className="story-background"></div>
 
-                  <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
+                  <div className="story-avatar">
+                    {story.UserProfilePictureUrl ? (
+                      <img src={story.UserProfilePictureUrl} alt="Avatar" />
+                    ) : (
+                      <i className="fa-solid fa-user"></i>
+                    )}
+                  </div>
                   <p className="story-label">{story.UserName || 'Tin mới'}</p>
                 </div>
               ))}

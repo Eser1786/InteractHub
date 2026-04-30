@@ -113,7 +113,13 @@ export default function StoryPage() {
                   className={`story-item ${item.Id.toString() === storyId ? 'active' : ''}`}
                   onClick={() => navigate(`/story/${item.Id}`)}
                 >
-                  <div className="story-avatar"><i className="fa-solid fa-user"></i></div>
+                  <div className="story-avatar">
+                    {item.UserProfilePictureUrl ? (
+                      <img src={item.UserProfilePictureUrl} alt="Avatar" />
+                    ) : (
+                      <i className="fa-solid fa-user"></i>
+                    )}
+                  </div>
                   <div className="story-name-group">
                     <p className="story-name">{item.UserName || 'Người dùng'}</p>
                     <span className="story-time-small">{new Date(item.CreatedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>

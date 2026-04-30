@@ -300,10 +300,11 @@
 }
 
 .menu-item.delete {
-  color: #d63031;
+  color: #333;
 }
 
 .menu-item.delete:hover {
+  color: #d63031;
   background: #fee9ef;
 }
 

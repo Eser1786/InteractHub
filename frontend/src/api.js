@@ -353,6 +353,26 @@ export async function getAcceptedFriends(userId, pageNumber = 1, pageSize = 20) 
   return data?.Data || [];
 }
 
+export async function getConversationMessages(friendId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/messages/conversation/${friendId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
+export async function sendMessage(receiverId, content) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ receiverId, content })
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
 export async function getPendingRequests(userId, pageNumber = 1, pageSize = 20) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/friendships/user/${userId}/pending?pageNumber=${pageNumber}&pageSize=${pageSize}`, {

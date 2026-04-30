@@ -15,6 +15,8 @@ public class FriendshipResponseDto
     public int Id {get; set;}
     public string UserId {get; set;} = string.Empty;
     public string FriendId {get; set;} = string.Empty;
+    public string FriendName { get; set; } = string.Empty;
+    public string? FriendProfilePictureUrl { get; set; }
     public string Status {get; set;} = "Pending";
     public DateTime CreatedAt {get; set;}
     public DateTime? UpdatedAt {get; set;}

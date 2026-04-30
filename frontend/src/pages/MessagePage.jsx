@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAcceptedFriends } from '../api';
+import { getAcceptedFriends, getConversationMessages, sendMessage } from '../api';
 import Header from '../components/Header';
 import '../styles/MessagePage.css';
 
@@ -21,25 +21,27 @@ export default function MessagePage() {
         const userData = JSON.parse(localStorage.getItem('user'));
         setCurrentUser(userData);
 
-        // Load friends as conversations
         const friendsData = await getAcceptedFriends(userData.Id, 1, 100);
         const friends = friendsData || [];
 
-        // Mock conversations with friends
-        const conversationList = friends.map((friend, idx) => ({
-          id: friend.friendId,
-          name: friend.friendName || 'Bạn',
-          lastMessage: ['Tôi nằp lí một lúc Trần', 'May vừa vào', 'Bạn ơi, bạn khỏe không?', 'OK, see you!'][idx % 4],
-          lastTime: ['2 phút', '5 phút', '30 phút', '1 giờ'][idx % 4],
-          isUnread: idx % 2 === 0,
-          isActive: idx % 3 !== 0,
-          avatar: <i className="fa-solid fa-user"></i>
+        const conversationList = friends.map((friend) => ({
+          id: friend.FriendId || friend.friendId || friend.Id,
+          name: friend.FriendName || friend.friendName || friend.FriendId || 'Bạn',
+          avatar: friend.FriendProfilePictureUrl ? (
+            <img src={friend.FriendProfilePictureUrl} alt={friend.FriendName || 'Avatar'} />
+          ) : (
+            <i className="fa-solid fa-user"></i>
+          ),
+          isUnread: false,
+          isActive: true,
+          lastMessage: '',
+          lastTime: ''
         }));
 
         setConversations(conversationList);
         if (conversationList.length > 0) {
           setSelectedConversation(conversationList[0]);
-          loadMessages(conversationList[0]);
+          await loadMessages(conversationList[0]);
         }
       } catch (err) {
         console.error('Error loading messages:', err);
@@ -51,33 +53,56 @@ export default function MessagePage() {
     loadData();
   }, []);
 
-  const loadMessages = (conversation) => {
-    // Mock messages for the conversation
-    const mockMessages = [
-      { id: 1, senderId: conversation.id, text: 'Chào bạn!', timestamp: '10:30' },
-      { id: 2, senderId: currentUser?.id, text: 'Chào, bạn khỏe không?', timestamp: '10:31' },
-      { id: 3, senderId: conversation.id, text: 'Khỏe, cảm ơn! Bạn thì sao?', timestamp: '10:32' },
-      { id: 4, senderId: currentUser?.id, text: 'Tôi cũng khỏe, cảm ơn', timestamp: '10:33' },
-      { id: 5, senderId: conversation.id, text: 'Bạn có rảnh không? Gặp nhau nào', timestamp: '10:35' },
-    ];
-    setMessages(mockMessages);
+  const loadMessages = async (conversation) => {
+    if (!conversation) {
+      setMessages([]);
+      return;
+    }
+
+    try {
+      const messageData = await getConversationMessages(conversation.id);
+      const normalized = (messageData || []).map((message) => ({
+        id: message.Id || message.id,
+        senderId: message.SenderId || message.senderId,
+        text: message.Content || message.content,
+        timestamp: new Date(message.CreatedAt || message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      }));
+      setMessages(normalized);
+
+      if (normalized.length > 0) {
+        const last = normalized[normalized.length - 1];
+        setConversations((prev) => prev.map((item) =>
+          item.id === conversation.id
+            ? { ...item, lastMessage: last.text, lastTime: last.timestamp, isUnread: false }
+            : item
+        ));
+      }
+    } catch (err) {
+      console.error('Không thể tải cuộc trò chuyện:', err);
+      setMessages([]);
+    }
   };
 
-  const handleSelectConversation = (conversation) => {
+  const handleSelectConversation = async (conversation) => {
     setSelectedConversation(conversation);
-    loadMessages(conversation);
+    await loadMessages(conversation);
   };
 
-  const handleSendMessage = () => {
-    if (newMessage.trim() && selectedConversation) {
-      const message = {
-        id: messages.length + 1,
-        senderId: currentUser?.id,
-        text: newMessage,
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    try {
+      const sentMessage = await sendMessage(selectedConversation.id, newMessage.trim());
+      const nextMessage = {
+        id: sentMessage?.Id || sentMessage?.id || messages.length + 1,
+        senderId: sentMessage?.SenderId || sentMessage?.senderId || currentUser?.Id || currentUser?.id,
+        text: sentMessage?.Content || sentMessage?.content || newMessage.trim(),
+        timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages([...messages, message]);
+      setMessages((prev) => [...prev, nextMessage]);
       setNewMessage('');
+    } catch (err) {
+      console.error('Error sending message:', err);
     }
   };
 

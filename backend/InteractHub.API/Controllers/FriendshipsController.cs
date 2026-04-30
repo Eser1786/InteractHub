@@ -56,14 +56,19 @@ public class FriendshipsController : ControllerBase
             var (friends, metadata) = await _friendshipService.GetAcceptedFriendsPaginatedAsync(userId, pageNumber, pageSize);
             
             // Map Friendship to FriendshipResponseDto, ensuring we get the "other friend" for two-way relationships
-            var friendshipDtos = friends.Select(f => new FriendshipResponseDto
-            {
-                Id = f.Id,
-                UserId = userId,
-                FriendId = f.UserId == userId ? f.FriendId : f.UserId, // Get the OTHER person in the friendship
-                Status = f.Status.ToString(),
-                CreatedAt = f.CreatedAt,
-                UpdatedAt = f.UpdatedAt
+            var friendshipDtos = friends.Select(f => {
+                var friend = f.UserId == userId ? f.Friend : f.User;
+                return new FriendshipResponseDto
+                {
+                    Id = f.Id,
+                    UserId = userId,
+                    FriendId = friend?.Id ?? string.Empty,
+                    FriendName = friend?.UserName ?? string.Empty,
+                    FriendProfilePictureUrl = friend?.ProfilePictureUrl,
+                    Status = f.Status.ToString(),
+                    CreatedAt = f.CreatedAt,
+                    UpdatedAt = f.UpdatedAt
+                };
             }).ToList();
 
             // Return just the array, pagination info can be added later if needed

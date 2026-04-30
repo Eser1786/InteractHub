@@ -17,4 +17,6 @@ public class User : IdentityUser
     public ICollection<PostReport> Reports {get; set;}
     public ICollection<GroupMembership> GroupMemberships { get; set; }
     public ICollection<Group> CreatedGroups { get; set; }
+    public ICollection<Message> SentMessages { get; set; }
+    public ICollection<Message> ReceivedMessages { get; set; }
 }

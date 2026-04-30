@@ -33,6 +33,7 @@ builder.Services.AddScoped<IPostReportService, PostReportService>();
 builder.Services.AddScoped<IHashtagService, HashtagService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IFileService, CloudinaryService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
 
 builder.Services.AddSwaggerGen(c =>
 {

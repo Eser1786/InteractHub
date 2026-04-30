@@ -20,10 +20,24 @@ public class AppDbContext : IdentityDbContext<User>
     public DbSet<PostReport> PostReports {get; set;}  
     public DbSet<PostHashtag> PostHashtags {get; set;}      public DbSet<Group> Groups { get; set; }
     public DbSet<GroupMembership> GroupMemberships { get; set; }
+    public DbSet<Message> Messages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<Message>(entity =>
+        {
+            entity.HasOne(m => m.Sender)
+                .WithMany(u => u.SentMessages)
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(m => m.Receiver)
+                .WithMany(u => u.ReceivedMessages)
+                .HasForeignKey(m => m.ReceiverId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }

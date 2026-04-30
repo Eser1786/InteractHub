@@ -167,7 +167,9 @@ export default function StoryPage() {
                         setShowStoryOptions((current) => !current);
                       }}
                       aria-label="Tùy chọn tin"
-                    />
+                    >
+                      <i className="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
                     {showStoryOptions && (
                       <div className="story-options-dropdown">
                         <button

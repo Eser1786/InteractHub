@@ -163,10 +163,31 @@ public class NotificationService : INotificationService
     /// <summary>
     /// Tạo notification khi có friend request
     /// </summary>
+    private string GetDisplayName(User? user)
+    {
+        if (user == null)
+            return "Một người dùng";
+
+        return !string.IsNullOrWhiteSpace(user.FullName)
+            ? user.FullName
+            : !string.IsNullOrWhiteSpace(user.UserName)
+                ? user.UserName
+                : "Một người dùng";
+    }
+
+    private string GetPreview(string text, int maxLength = 50)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        return text.Length > maxLength ? text.Substring(0, maxLength) + "..." : text;
+    }
+
     public async Task<Notification> NotifyFriendRequestAsync(string receiverId, string senderId)
     {
         var sender = await _context.Users.FindAsync(senderId);
-        var content = $"{sender?.FullName} đã gửi lời mời kết bạn";
+        var displayName = GetDisplayName(sender);
+        var content = $"{displayName} vừa gửi lời mời kết bạn";
 
         return await CreateNotificationAsync(
             receiverId,
@@ -182,7 +203,8 @@ public class NotificationService : INotificationService
     public async Task<Notification> NotifyFriendRequestAcceptedAsync(string receiverId, string accepterId)
     {
         var accepter = await _context.Users.FindAsync(accepterId);
-        var content = $"{accepter?.FullName} đã chấp nhận lời mời kết bạn";
+        var displayName = GetDisplayName(accepter);
+        var content = $"{displayName} vừa chấp nhận lời mời kết bạn của bạn";
 
         return await CreateNotificationAsync(
             receiverId,
@@ -198,7 +220,8 @@ public class NotificationService : INotificationService
     public async Task<Notification> NotifyLikeAsync(string userId, string likerUserId, int postId)
     {
         var liker = await _context.Users.FindAsync(likerUserId);
-        var content = $"{liker?.FullName} đã thích bài viết của bạn";
+        var displayName = GetDisplayName(liker);
+        var content = $"{displayName} vừa thích bài đăng của bạn";
 
         return await CreateNotificationAsync(
             userId,
@@ -215,8 +238,9 @@ public class NotificationService : INotificationService
     public async Task<Notification> NotifyCommentAsync(string userId, string commenterUserId, int postId, string commentContent)
     {
         var commenter = await _context.Users.FindAsync(commenterUserId);
-        var preview = commentContent.Length > 50 ? commentContent.Substring(0, 50) + "..." : commentContent;
-        var content = $"{commenter?.FullName} đã bình luận: \"{preview}\"";
+        var displayName = GetDisplayName(commenter);
+        var preview = GetPreview(commentContent);
+        var content = $"{displayName} vừa bình luận trên bài đăng của bạn: \"{preview}\"";
 
         return await CreateNotificationAsync(
             userId,
@@ -233,8 +257,9 @@ public class NotificationService : INotificationService
     public async Task<Notification> NotifyMessageAsync(string userId, string senderId, int messageId, string messageContent)
     {
         var sender = await _context.Users.FindAsync(senderId);
-        var preview = messageContent.Length > 50 ? messageContent.Substring(0, 50) + "..." : messageContent;
-        var content = $"{sender?.FullName} đã nhắn tin: \"{preview}\"";
+        var displayName = GetDisplayName(sender);
+        var preview = GetPreview(messageContent);
+        var content = $"{displayName} vừa gửi tin nhắn cho bạn: \"{preview}\"";
 
         return await CreateNotificationAsync(
             userId,

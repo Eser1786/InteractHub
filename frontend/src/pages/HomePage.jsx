@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
- import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
+ import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment, getNotifications } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';

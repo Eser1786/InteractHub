@@ -227,6 +227,56 @@ export async function getUser(userId) {
   return data?.Data || null;
 }
 
+const normalizeComment = (comment) => ({
+  id: comment.Id ?? comment.id,
+  content: comment.Content ?? comment.content,
+  postId: comment.PostId ?? comment.postId,
+  userId: comment.UserId ?? comment.userId,
+  createdAt: comment.CreatedAt ?? comment.createdAt
+});
+
+export async function getCommentsByPost(postId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/comments/post/${postId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  const comments = data?.Data || [];
+  return (comments || []).map(normalizeComment);
+}
+
+export async function createComment(postId, content) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ postId, content })
+  });
+  const data = await handleResponse(response);
+  return normalizeComment(data?.Data || {});
+}
+
+export async function updateComment(commentId, content) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/comments/${commentId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ content })
+  });
+  await handleResponse(response);
+  return true;
+}
+
+export async function deleteComment(commentId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/comments/${commentId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  await handleResponse(response);
+  return true;
+}
+
 const normalizeGroup = (group) => ({
   id: group.Id,
   name: group.Name,

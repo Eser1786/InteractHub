@@ -51,7 +51,6 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingCommentText, setEditingCommentText] = useState('');
   const [activeMenuCommentId, setActiveMenuCommentId] = useState(null);
-  const [localComments, setLocalComments] = useState(comments);
 
   useEffect(() => {
     setNewComment('');
@@ -94,34 +93,6 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
       loadUserData();
     }
   }, [comments]);
-
-  // Fix old comments format - add userId from currentUser if missing
-  useEffect(() => {
-    if (!currentUser || !post) return;
-    
-    const needsUpdate = comments.some(comment => !comment.userId);
-    if (needsUpdate) {
-      console.log('Migrating old comment format - adding userId', currentUser?.Id || currentUser?.id);
-      const postCommentsStr = localStorage.getItem('postComments');
-      const allComments = JSON.parse(postCommentsStr || '{}');
-      
-      if (allComments[post.Id]) {
-        const userId = currentUser.Id || currentUser.id;
-        const updatedComments = allComments[post.Id].map(comment => {
-          const newComment = {
-            ...comment,
-            userId: comment.userId || userId
-          };
-          console.log('Updated comment:', newComment);
-          return newComment;
-        });
-        allComments[post.Id] = updatedComments;
-        localStorage.setItem('postComments', JSON.stringify(allComments));
-        console.log('Saved to localStorage:', allComments[post.Id]);
-        window.dispatchEvent(new Event('commentUpdated'));
-      }
-    }
-  }, [currentUser?.Id, post?.Id, comments.length]);
 
   // Listen for user updates to refresh comment user data (e.g., when profile name changes)
   useEffect(() => {

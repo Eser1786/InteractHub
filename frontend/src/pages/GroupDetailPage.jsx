@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
 import { useGroups } from '../contexts/GroupsContext';
-import { getPostsByGroup, createPost, deletePost } from '../api';
+import { getPostsByGroup, createPost, deletePost, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import '../styles/GroupDetailPage.css';
@@ -13,7 +13,7 @@ export default function GroupDetailPage() {
   const [posts, setPosts] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
-  const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
+  const [commentsByPost, setCommentsByPost] = useState({});
   const [loading, setLoading] = useState(true);
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostFile, setNewPostFile] = useState(null);
@@ -29,6 +29,7 @@ export default function GroupDetailPage() {
     id: post.id || post.Id,
     groupId: post.groupId || post.GroupId,
     userId: post.userId || post.UserId,
+    UserId: post.userId || post.UserId,
     username: post.username || post.UserFullName || post.UserName || 'Người dùng',
     content: post.content || post.Content,
     imageUrl: post.imageUrl || post.ImageUrl,
@@ -77,8 +78,24 @@ export default function GroupDetailPage() {
   }, [groupSlug, groups]);
 
   useEffect(() => {
-    localStorage.setItem('postComments', JSON.stringify(commentsByPost));
-  }, [commentsByPost]);
+    if (!activeCommentPostId) {
+      return;
+    }
+
+    const loadComments = async () => {
+      try {
+        const comments = await getCommentsByPost(activeCommentPostId);
+        setCommentsByPost((prev) => ({
+          ...prev,
+          [activeCommentPostId]: comments
+        }));
+      } catch (err) {
+        console.error('Error loading comments for post:', activeCommentPostId, err);
+      }
+    };
+
+    loadComments();
+  }, [activeCommentPostId]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -175,6 +192,26 @@ export default function GroupDetailPage() {
     setActiveCommentPostId((current) => (current === post.id ? null : post.id));
   };
 
+  useEffect(() => {
+    if (!activeCommentPostId) {
+      return;
+    }
+
+    const loadComments = async () => {
+      try {
+        const comments = await getCommentsByPost(activeCommentPostId);
+        setCommentsByPost((prev) => ({
+          ...prev,
+          [activeCommentPostId]: comments
+        }));
+      } catch (err) {
+        console.error('Error loading comments for post:', activeCommentPostId, err);
+      }
+    };
+
+    loadComments();
+  }, [activeCommentPostId]);
+
   const handleCreatePost = async (e) => {
     e.preventDefault();
     if (!newPostContent.trim() && !postImagePreview) {
@@ -236,19 +273,58 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleAddComment = (postId, content) => {
-    const newComment = {
-      id: `${postId}-${Date.now()}`,
-      userName: currentUser?.fullName || currentUser?.userName || 'Bạn',
-      content,
-      createdAt: 'Vừa xong',
-      replies: []
-    };
+  const handleAddComment = async (postId, content) => {
+    try {
+      const createdComment = await createComment(postId, content);
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: [createdComment, ...(prev[postId] || [])]
+      }));
+      setPosts((prev) => prev.map((post) =>
+        post.id === postId
+          ? { ...post, commentsCount: (post.commentsCount ?? 0) + 1 }
+          : post
+      ));
+    } catch (err) {
+      console.error('Error creating comment:', err);
+    }
+  };
 
-    setCommentsByPost((prev) => ({
-      ...prev,
-      [postId]: [newComment, ...(prev[postId] || [])]
-    }));
+  const handleDeleteComment = async (postId, commentId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+      return;
+    }
+
+    try {
+      await deleteComment(commentId);
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).filter(comment => comment.id !== commentId)
+      }));
+      setPosts((prev) => prev.map((post) =>
+        post.id === postId
+          ? { ...post, commentsCount: Math.max(0, (post.commentsCount ?? 1) - 1) }
+          : post
+      ));
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+    }
+  };
+
+  const handleEditComment = async (postId, commentId, newContent) => {
+    try {
+      await updateComment(commentId, newContent);
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).map(comment =>
+          comment.id === commentId
+            ? { ...comment, content: newContent }
+            : comment
+        )
+      }));
+    } catch (err) {
+      console.error('Error updating comment:', err);
+    }
   };
 
   if (loading) {
@@ -463,6 +539,9 @@ export default function GroupDetailPage() {
                       comments={commentsByPost[post.id] || []}
                       onClose={() => setActiveCommentPostId(null)}
                       onAddComment={handleAddComment}
+                      onDeleteComment={handleDeleteComment}
+                      onEditComment={handleEditComment}
+                      currentUser={currentUser}
                     />
                   )}
                 </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUserPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture, deletePost } from '../api';
+import { getUserPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture, deletePost, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -10,7 +10,7 @@ export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
-  const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
+  const [commentsByPost, setCommentsByPost] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -37,11 +37,9 @@ export default function ProfilePage() {
       const postsData = await getUserPosts(userId);
       console.log('Posts data received for userId:', userId, postsData);
       
-      // Get commentsByPost from localStorage to ensure we have latest data
-      const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
       setPosts((postsData || []).map((post) => ({
         ...post,
-        commentsCount: commentsByPostData[post.Id]?.length ?? 0
+        commentsCount: 0
       })));
       
       // Initialize liked posts from response data
@@ -125,23 +123,24 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('postComments', JSON.stringify(commentsByPost));
-  }, [commentsByPost]);
+    if (!activeCommentPostId) {
+      return;
+    }
 
-  // Listen for comment updates from CommentSection
-  useEffect(() => {
-    const handleCommentUpdated = () => {
-      console.log('commentUpdated event received');
-      const updatedComments = JSON.parse(localStorage.getItem('postComments') || '{}');
-      console.log('Updated comments from localStorage:', updatedComments);
-      setCommentsByPost(updatedComments);
+    const loadComments = async () => {
+      try {
+        const comments = await getCommentsByPost(activeCommentPostId);
+        setCommentsByPost((prev) => ({
+          ...prev,
+          [activeCommentPostId]: comments
+        }));
+      } catch (err) {
+        console.error('Error loading comments for post:', activeCommentPostId, err);
+      }
     };
 
-    window.addEventListener('commentUpdated', handleCommentUpdated);
-    return () => {
-      window.removeEventListener('commentUpdated', handleCommentUpdated);
-    };
-  }, []);
+    loadComments();
+  }, [activeCommentPostId]);
 
   // Listen for user updates from other tabs/windows to reload posts with updated user name
   useEffect(() => {
@@ -340,10 +339,9 @@ export default function ProfilePage() {
       const postsData = await getUserPosts(userId);
       if (postsData) {
         console.log('Posts reloaded:', postsData);
-        const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
         setPosts((postsData || []).map((post) => ({
           ...post,
-          commentsCount: commentsByPostData[post.Id]?.length ?? 0
+          commentsCount: commentsByPost[post.Id]?.length ?? 0
         })));
         
         // Update likedPosts Set based on fresh data from backend
@@ -362,60 +360,58 @@ export default function ProfilePage() {
     setActiveCommentPostId((current) => (current === post.Id ? null : post.Id));
   };
 
-  const handleAddComment = (postId, content) => {
-    console.log('ProfilePage - handleAddComment - currentUser:', currentUser);
-    
-    const newComment = {
-      id: `${postId}-${Date.now()}`,
-      userId: currentUser?.Id || currentUser?.id,
-      userName: currentUser?.FullName || currentUser?.fullName || currentUser?.UserName || currentUser?.userName || 'User',
-      userProfilePictureUrl: currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl || null,
-      content,
-      createdAt: new Date().toISOString(),
-      replies: [],
-      likes: []
-    };
-
-    console.log('New comment created:', newComment);
-
-    setCommentsByPost((prev) => {
-      const updated = {
+  const handleAddComment = async (postId, content) => {
+    try {
+      const createdComment = await createComment(postId, content);
+      setCommentsByPost((prev) => ({
         ...prev,
-        [postId]: [newComment, ...(prev[postId] || [])]
-      };
-      localStorage.setItem('postComments', JSON.stringify(updated));
-      return updated;
-    });
+        [postId]: [createdComment, ...(prev[postId] || [])]
+      }));
+      setPosts((prev) => prev.map((post) =>
+        post.Id === postId
+          ? { ...post, commentsCount: (post.commentsCount ?? 0) + 1 }
+          : post
+      ));
+    } catch (err) {
+      console.error('Error creating comment:', err);
+    }
   };
 
-  const handleDeleteComment = (postId, commentId) => {
+  const handleDeleteComment = async (postId, commentId) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
       return;
     }
 
-    setCommentsByPost((prev) => {
-      const updated = {
+    try {
+      await deleteComment(commentId);
+      setCommentsByPost((prev) => ({
         ...prev,
         [postId]: (prev[postId] || []).filter(comment => comment.id !== commentId)
-      };
-      localStorage.setItem('postComments', JSON.stringify(updated));
-      return updated;
-    });
+      }));
+      setPosts((prev) => prev.map((post) =>
+        post.Id === postId
+          ? { ...post, commentsCount: Math.max(0, (post.commentsCount ?? 1) - 1) }
+          : post
+      ));
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+    }
   };
 
-  const handleEditComment = (postId, commentId, newContent) => {
-    setCommentsByPost((prev) => {
-      const updated = {
+  const handleEditComment = async (postId, commentId, newContent) => {
+    try {
+      await updateComment(commentId, newContent);
+      setCommentsByPost((prev) => ({
         ...prev,
         [postId]: (prev[postId] || []).map(comment =>
           comment.id === commentId
             ? { ...comment, content: newContent }
             : comment
         )
-      };
-      localStorage.setItem('postComments', JSON.stringify(updated));
-      return updated;
-    });
+      }));
+    } catch (err) {
+      console.error('Error updating comment:', err);
+    }
   };
 
   const handleDeletePost = async (post) => {

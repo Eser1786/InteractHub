@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getAcceptedFriends } from '../api';
+import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getAcceptedFriends, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -14,7 +14,7 @@ export default function UserProfilePage() {
   const [posts, setPosts] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
-  const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
+  const [commentsByPost, setCommentsByPost] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [likedPosts, setLikedPosts] = useState(new Set());
@@ -36,10 +36,9 @@ export default function UserProfilePage() {
 
       // Load user's posts
       const postsData = await getUserPosts(userId);
-      const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
       setPosts((postsData || []).map((post) => ({
         ...post,
-        commentsCount: commentsByPostData[post.Id]?.length ?? 0
+        commentsCount: 0
       })));
 
       // Get current user for like tracking
@@ -74,8 +73,24 @@ export default function UserProfilePage() {
   }, [userId]);
 
   useEffect(() => {
-    localStorage.setItem('postComments', JSON.stringify(commentsByPost));
-  }, [commentsByPost]);
+    if (!activeCommentPostId) {
+      return;
+    }
+
+    const loadComments = async () => {
+      try {
+        const comments = await getCommentsByPost(activeCommentPostId);
+        setCommentsByPost((prev) => ({
+          ...prev,
+          [activeCommentPostId]: comments
+        }));
+      } catch (err) {
+        console.error('Error loading comments for post:', activeCommentPostId, err);
+      }
+    };
+
+    loadComments();
+  }, [activeCommentPostId]);
 
   const handleAddFriend = async () => {
     if (!currentUser || !user || isFriend) return;
@@ -123,10 +138,9 @@ export default function UserProfilePage() {
       // Reload posts to get updated like count
       const postsData = await getUserPosts(user.Id);
       if (postsData) {
-        const commentsByPostData = JSON.parse(localStorage.getItem('postComments') || '{}');
         setPosts((postsData || []).map((post) => ({
           ...post,
-          commentsCount: commentsByPostData[post.Id]?.length ?? 0
+          commentsCount: commentsByPost[post.Id]?.length ?? 0
         })));
 
         const userLikedPostIds = postsData
@@ -143,56 +157,58 @@ export default function UserProfilePage() {
     setActiveCommentPostId((current) => (current === post.Id ? null : post.Id));
   };
 
-  const handleAddComment = (postId, content) => {
-    const newComment = {
-      id: `${postId}-${Date.now()}`,
-      userId: currentUser?.Id || currentUser?.id,
-      userName: currentUser?.FullName || currentUser?.fullName || currentUser?.UserName || currentUser?.userName || 'User',
-      userProfilePictureUrl: currentUser?.ProfilePictureUrl || currentUser?.profilePictureUrl || null,
-      content,
-      createdAt: new Date().toISOString(),
-      replies: [],
-      likes: []
-    };
-
-    setCommentsByPost((prev) => {
-      const updated = {
+  const handleAddComment = async (postId, content) => {
+    try {
+      const createdComment = await createComment(postId, content);
+      setCommentsByPost((prev) => ({
         ...prev,
-        [postId]: [newComment, ...(prev[postId] || [])]
-      };
-      localStorage.setItem('postComments', JSON.stringify(updated));
-      return updated;
-    });
+        [postId]: [createdComment, ...(prev[postId] || [])]
+      }));
+      setPosts((prev) => prev.map((post) =>
+        post.Id === postId
+          ? { ...post, commentsCount: (post.commentsCount ?? 0) + 1 }
+          : post
+      ));
+    } catch (err) {
+      console.error('Error creating comment:', err);
+    }
   };
 
-  const handleDeleteComment = (postId, commentId) => {
+  const handleDeleteComment = async (postId, commentId) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
       return;
     }
 
-    setCommentsByPost((prev) => {
-      const updated = {
+    try {
+      await deleteComment(commentId);
+      setCommentsByPost((prev) => ({
         ...prev,
         [postId]: (prev[postId] || []).filter(comment => comment.id !== commentId)
-      };
-      localStorage.setItem('postComments', JSON.stringify(updated));
-      return updated;
-    });
+      }));
+      setPosts((prev) => prev.map((post) =>
+        post.Id === postId
+          ? { ...post, commentsCount: Math.max(0, (post.commentsCount ?? 1) - 1) }
+          : post
+      ));
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+    }
   };
 
-  const handleEditComment = (postId, commentId, newContent) => {
-    setCommentsByPost((prev) => {
-      const updated = {
+  const handleEditComment = async (postId, commentId, newContent) => {
+    try {
+      await updateComment(commentId, newContent);
+      setCommentsByPost((prev) => ({
         ...prev,
         [postId]: (prev[postId] || []).map(comment =>
           comment.id === commentId
             ? { ...comment, content: newContent }
             : comment
         )
-      };
-      localStorage.setItem('postComments', JSON.stringify(updated));
-      return updated;
-    });
+      }));
+    } catch (err) {
+      console.error('Error updating comment:', err);
+    }
   };
 
   const handleHashtagClick = (hashtag) => {

@@ -9,7 +9,6 @@ import '../styles/ProfilePage.css';
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [posts, setPosts] = useState([]);
-  const [selectedTab, setSelectedTab] = useState('all');
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState(() => JSON.parse(localStorage.getItem('postComments') || '{}'));
   const [loading, setLoading] = useState(true);
@@ -445,10 +444,6 @@ export default function ProfilePage() {
     navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
   };
 
-  const filteredPosts = selectedTab === 'all' 
-    ? posts 
-    : posts;
-
   if (loading) {
     return <div className="profile-wrapper"><p style={{padding: '20px', textAlign: 'center'}}>Đang tải...</p></div>;
   }
@@ -508,21 +503,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Profile Tabs */}
-          <div className="profile-tabs">
-            <button 
-              className={`profile-tab ${selectedTab === 'all' ? 'active' : ''}`}
-              onClick={() => setSelectedTab('all')}
-            >
-              Tất cả
-            </button>
-            <button 
-              className={`profile-tab ${selectedTab === 'friends' ? 'active' : ''}`}
-              onClick={() => setSelectedTab('friends')}
-            >
-              Bạn bè
-            </button>
-          </div>
+
         </div>
 
         {/* Edit Profile Modal */}
@@ -612,10 +593,10 @@ export default function ProfilePage() {
         {/* Profile Posts */}
         <main className="profile-main-content">
           <div className="profile-posts">
-            {filteredPosts.length === 0 ? (
+            {posts.length === 0 ? (
               <p className="no-posts">Chưa có bài viết nào</p>
             ) : (
-              filteredPosts.map((post) => (
+              posts.map((post) => (
                 <div key={post.Id} className="profile-post-card">
                   <div className="post-header-profile">
                     <div className="post-user-info-profile">

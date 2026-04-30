@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
-import { getStoryById, getStories, deleteStory } from '../api';
+import { getStoryById, getStories, deleteStory, createStory } from '../api';
 import '../styles/StoryPage.css';
 
 export default function StoryPage() {
@@ -10,6 +10,11 @@ export default function StoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [messageInput, setMessageInput] = useState('');
+  const [newStoryContent, setNewStoryContent] = useState('');
+  const [newStoryFile, setNewStoryFile] = useState(null);
+  const [storyImagePreview, setStoryImagePreview] = useState('');
+  const [creatingStory, setCreatingStory] = useState(false);
+  const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showStoryOptions, setShowStoryOptions] = useState(false);
   const { storyId } = useParams();
@@ -85,6 +90,76 @@ export default function StoryPage() {
     }
   };
 
+  const handleStoryFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      setError('Kích thước hình ảnh không được vượt quá 5MB');
+      return;
+    }
+
+    if (!validTypes.includes(file.type)) {
+      setError('Chỉ hỗ trợ các định dạng: JPEG, PNG, GIF, WebP');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setNewStoryFile(file);
+      setStoryImagePreview(event.target?.result || '');
+      setError('');
+    };
+    reader.onerror = () => {
+      setError('Lỗi đọc tệp hình ảnh');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreateStory = async (e) => {
+    e.preventDefault();
+    if (!newStoryContent.trim() && !newStoryFile) {
+      setError('Vui lòng nhập nội dung hoặc chọn hình ảnh cho tin');
+      return;
+    }
+
+    setCreatingStory(true);
+    try {
+      let imageBase64 = null;
+      if (newStoryFile) {
+        imageBase64 = storyImagePreview;
+      }
+
+      const expireAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const createdStory = await createStory({
+        content: newStoryContent,
+        imageUrl: imageBase64,
+        expireAt
+      });
+
+      if (!createdStory) {
+        throw new Error('Tạo tin thất bại');
+      }
+
+      setStoriesList((prev) => [createdStory, ...prev]);
+      setStory(createdStory);
+      setNewStoryContent('');
+      setNewStoryFile(null);
+      setStoryImagePreview('');
+      setShowCreateStoryModal(false);
+      setError('');
+      navigate(`/story/${createdStory.Id}`);
+    } catch (err) {
+      console.error('Error creating story:', err);
+      setError(err.message || 'Lỗi khi tạo tin');
+    } finally {
+      setCreatingStory(false);
+    }
+  };
+
   return (
     <div className="story-page-wrapper">
       <Header onLogout={handleLogout} />
@@ -96,7 +171,7 @@ export default function StoryPage() {
               <h3>Tin</h3>
               <span className="sidebar-subtitle">Kho lưu trữ</span>
             </div>
-            <div className="story-card-mini create-story-card-mini" onClick={() => navigate('/home')}>
+            <div className="story-card-mini create-story-card-mini" onClick={() => setShowCreateStoryModal(true)}>
               <div className="story-icon-btn">+</div>
               <div>
                 <p className="story-mini-title">Tạo tin</p>
@@ -213,7 +288,66 @@ export default function StoryPage() {
             </div>
           )}
         </main>
+      </div>
+
+      {showCreateStoryModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateStoryModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Tạo tin</h2>
+              <button className="modal-close-btn" onClick={() => setShowCreateStoryModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateStory} className="create-story-form">
+              <div className="create-story-container">
+                <div className="story-preview">
+                  {storyImagePreview && (
+                    <img src={storyImagePreview} alt="Preview" className="story-preview-image" />
+                  )}
+                  <div className="story-content-display">
+                    <p className="story-text">{newStoryContent}</p>
+                  </div>
+                </div>
+
+                <div className="story-form-inputs">
+                  <textarea
+                    value={newStoryContent}
+                    onChange={(e) => setNewStoryContent(e.target.value)}
+                    placeholder="Chia sẻ tin của bạn..."
+                    className="story-textarea"
+                    rows="4"
+                  />
+
+                  <div className="story-form-bottom">
+                    <div className="file-input-wrapper">
+                      <label htmlFor="story-image-input" className="file-input-label">
+                        <i className="fa-solid fa-image"></i>
+                        <span>Thêm hình ảnh</span>
+                      </label>
+                      <input
+                        id="story-image-input"
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={handleStoryFileChange}
+                        className="post-file-input"
+                      />
+                      {newStoryFile && (
+                        <span className="file-selected">✓ {newStoryFile.name}</span>
+                      )}
+                    </div>
+
+                    <button type="submit" className="btn-post" disabled={creatingStory}>
+                      {creatingStory ? 'Đang đăng...' : 'Đăng tin'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
           </div>
+        </div>
+      )}
     </div>
   );
 }

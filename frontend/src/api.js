@@ -208,6 +208,61 @@ export async function getUser(userId) {
   return data?.Data || null;
 }
 
+const normalizeGroup = (group) => ({
+  id: group.Id,
+  name: group.Name,
+  slug: group.Slug,
+  description: group.Description || '',
+  creatorId: group.CreatorId,
+  isJoined: group.IsJoined ?? false,
+  memberCount: group.MemberCount ?? 0,
+  createdAt: group.CreatedAt,
+  images: group.Images || ['img1', 'img2', 'img3'],
+  likes: group.Likes ?? 0,
+  comments: group.Comments ?? 0
+});
+
+export async function getGroups() {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/groups`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return (data?.Data || []).map(normalizeGroup);
+}
+
+export async function createGroup({ name, description }) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/groups`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ name, description })
+  });
+  const data = await handleResponse(response);
+  return normalizeGroup(data?.Data);
+}
+
+export async function joinGroupApi(groupId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/groups/${groupId}/join`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  await handleResponse(response);
+}
+
+export async function leaveGroupApi(groupId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/groups/${groupId}/leave`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  await handleResponse(response);
+}
+
 export async function getAllUsers() {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/users`, {

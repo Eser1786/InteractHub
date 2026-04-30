@@ -18,8 +18,8 @@ public class AppDbContext : IdentityDbContext<User>
     public DbSet<Notification> Notifications {get; set;}
     public DbSet<Hashtag> Hashtags {get; set;}
     public DbSet<PostReport> PostReports {get; set;}  
-    public DbSet<PostHashtag> PostHashtags {get; set;}  
-
+    public DbSet<PostHashtag> PostHashtags {get; set;}      public DbSet<Group> Groups { get; set; }
+    public DbSet<GroupMembership> GroupMemberships { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

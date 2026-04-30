@@ -15,4 +15,6 @@ public class User : IdentityUser
     public ICollection<Story> Stories {get; set;}
     public ICollection<Notification> Notifications {get; set;}
     public ICollection<PostReport> Reports {get; set;}
+    public ICollection<GroupMembership> GroupMemberships { get; set; }
+    public ICollection<Group> CreatedGroups { get; set; }
 }

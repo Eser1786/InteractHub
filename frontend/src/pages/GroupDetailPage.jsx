@@ -188,11 +188,10 @@ export default function GroupDetailPage() {
     }
 
     setNewPostFile(file);
-    setNewPostImage('');
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setPostImagePreview(event.target?.result || '');
+    reader.onload = () => {
+      setPostImagePreview(reader.result || '');
     };
     reader.onerror = () => {
       setError('Lỗi đọc tệp hình ảnh');
@@ -212,14 +211,14 @@ export default function GroupDetailPage() {
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
-    if (!newPostContent.trim() && !newPostImage.trim() && !postImagePreview) {
+    if (!newPostContent.trim() && !postImagePreview) {
       setError('Vui lòng nhập nội dung hoặc chọn hình ảnh');
       return;
     }
 
     setPosting(true);
     try {
-      const imageUrl = postImagePreview || newPostImage || null;
+      const imageUrl = postImagePreview || null;
 
       // Create new post for the group
       const newPost = {
@@ -236,10 +235,8 @@ export default function GroupDetailPage() {
       };
 
       setNewPostContent('');
-      setNewPostImage('');
       setNewPostFile(null);
       setPostImagePreview('');
-      setPostType('text');
       setError('');
       
       // Add new post to the beginning of the list

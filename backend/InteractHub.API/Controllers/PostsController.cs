@@ -23,6 +23,36 @@ public class PostsController : ControllerBase
         _postService = postService;
     }
 
+    [HttpGet("user/{userId}")]
+    [ProducesResponseType(typeof(ApiResponse<List<PostResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetByUserId(string userId)
+    {
+        var posts = await _postService.GetAllAsync();
+        var userPosts = posts.Where(p => p.UserId == userId)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToList();
+        
+        var postDtos = userPosts.Select(p => new PostResponseDto
+        {
+            Id = p.Id,
+            GroupId = p.GroupId,
+            Content = p.Content,
+            ImageUrl = p.ImageUrl,
+            CreatedAt = p.CreatedAt,
+            UpdatedAt = p.UpdatedAt,
+            UserId = p.UserId,
+            UserName = p.User?.UserName,
+            UserFullName = p.User?.FullName,
+            UserProfilePictureUrl = p.User?.ProfilePictureUrl,
+            LikesCount = p.Likes?.Count ?? 0,
+            CommentsCount = p.Comments?.Count ?? 0,
+            LikedByUserIds = p.Likes?.Select(l => l.UserId).ToList() ?? new()
+        }).ToList();
+        
+        return this.SuccessResponse(postDtos, "User posts retrieved successfully", 200);
+    }
+
     [HttpGet("group/{groupId}")]
     [ProducesResponseType(typeof(ApiResponse<List<PostResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]

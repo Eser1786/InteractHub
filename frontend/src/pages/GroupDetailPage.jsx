@@ -424,6 +424,18 @@ export default function GroupDetailPage() {
                 </div>
                   </div>
 
+                  {/* Post Content */}
+                  <div className="post-content">
+                    <p>{post.content}</p>
+                  </div>
+
+                  {/* Post Image */}
+                  {post.imageUrl && (
+                    <div className="post-image-container">
+                      <img src={post.imageUrl} alt="Post" className="post-image" />
+                    </div>
+                  )}
+
                   <div className="post-stats">
                     <span>❤️ {post.likesCount} lượt thích</span>
                     <span><i className="fa-solid fa-comments"></i> {(commentsByPost[post.id]?.length ?? 0)} bình luận</span>

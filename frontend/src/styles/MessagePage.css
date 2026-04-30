@@ -261,12 +261,17 @@
 
 .message-item {
   display: flex;
+  width: 100%;
   gap: 8px;
   align-items: flex-end;
 }
 
 .message-item.sent {
   justify-content: flex-end;
+}
+
+.message-item.sent .message-bubble {
+  margin-left: auto;
 }
 
 .message-avatar-small {

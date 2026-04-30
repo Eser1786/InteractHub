@@ -19,9 +19,14 @@ export default function MessagePage() {
     const loadData = async () => {
       try {
         const userData = JSON.parse(localStorage.getItem('user'));
-        setCurrentUser(userData);
+        const normalizedUser = {
+          ...userData,
+          id: userData.Id ?? userData.id,
+          Id: userData.Id ?? userData.id
+        };
+        setCurrentUser(normalizedUser);
 
-        const friendsData = await getAcceptedFriends(userData.Id, 1, 100);
+        const friendsData = await getAcceptedFriends(normalizedUser.Id, 1, 100);
         const friends = friendsData || [];
 
         const conversationList = friends.map((friend) => ({
@@ -219,26 +224,30 @@ export default function MessagePage() {
 
               {/* Messages Area */}
               <div className="messages-area">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`message-item ${message.senderId === currentUser?.id ? 'sent' : 'received'}`}
-                  >
-                    {message.senderId !== currentUser?.id && (
-                      <div className="message-avatar-small">
-                        {selectedConversation?.avatarUrl ? (
-                          <img src={selectedConversation.avatarUrl} alt={selectedConversation.name} />
-                        ) : (
-                          <span className="conversation-avatar-fallback">{selectedConversation?.name?.charAt(0)?.toUpperCase() || 'U'}</span>
-                        )}
+                {messages.map((message) => {
+                  const isSentByCurrentUser = String(message.senderId) === String(currentUser?.Id ?? currentUser?.id);
+                  return (
+                    <div
+                      key={message.id}
+                      className={`message-item ${isSentByCurrentUser ? 'sent' : 'received'}`}>
+                      {!isSentByCurrentUser && (
+                        <div className="message-avatar-small">
+                          {selectedConversation?.avatarUrl ? (
+                            <img src={selectedConversation.avatarUrl} alt={selectedConversation.name} />
+                          ) : (
+                            <span className="conversation-avatar-fallback">
+                              {selectedConversation?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className={`message-bubble ${isSentByCurrentUser ? 'sent-bubble' : 'received-bubble'}`}>
+                        <p>{message.text}</p>
+                        <span className="message-time">{message.timestamp}</span>
                       </div>
-                    )}
-                    <div className={`message-bubble ${message.senderId === currentUser?.id ? 'sent-bubble' : 'received-bubble'}`}>
-                      <p>{message.text}</p>
-                      <span className="message-time">{message.timestamp}</span>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Message Input */}

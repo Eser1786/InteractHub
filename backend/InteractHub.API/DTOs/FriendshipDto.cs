@@ -21,3 +21,16 @@ public class FriendshipResponseDto
     public DateTime CreatedAt {get; set;}
     public DateTime? UpdatedAt {get; set;}
 }
+
+/// <summary>
+/// DTO for conversation with latest message info
+/// </summary>
+public class ConversationDto
+{
+    public string FriendId { get; set; } = string.Empty;
+    public string FriendName { get; set; } = string.Empty;
+    public string? FriendProfilePictureUrl { get; set; }
+    public string? LastMessage { get; set; }
+    public DateTime? LastMessageTime { get; set; }
+    public string? LastMessageSenderId { get; set; }
+}

@@ -62,4 +62,15 @@ public class MessageService : IMessageService
             .Include(m => m.Sender)
             .ToListAsync();
     }
+
+    public async Task<Message?> GetLatestMessageAsync(string userId1, string userId2)
+    {
+        return await _context.Messages
+            .Where(m => (m.SenderId == userId1 && m.ReceiverId == userId2) ||
+                        (m.SenderId == userId2 && m.ReceiverId == userId1))
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .OrderByDescending(m => m.CreatedAt)
+            .FirstOrDefaultAsync();
+    }
 }

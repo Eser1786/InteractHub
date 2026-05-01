@@ -11,11 +11,19 @@ module.exports = {
         changeOrigin: true,
         rewrite: (path) => path
       },
+      '/messageHub': {
+        target: 'http://localhost:5142',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path,
+        logLevel: 'debug'
+      },
       '/notificationHub': {
         target: 'http://localhost:5142',
         changeOrigin: true,
         ws: true,
-        rewrite: (path) => path
+        rewrite: (path) => path,
+        logLevel: 'debug'
       },
     },
   },

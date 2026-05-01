@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAcceptedFriends, getConversationMessages, sendMessage } from '../api';
+import { getConversationsSorted, getConversationMessages, sendMessage } from '../api';
+import { messageHubConnection } from '../utils/messageHubConnection';
 import Header from '../components/Header';
 import '../styles/MessagePage.css';
 
@@ -14,11 +15,15 @@ export default function MessagePage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const unsubscribeRef = useRef(null);
+  const previousConversationRef = useRef(null);
 
+  // Initialize SignalR connection and load friends
   useEffect(() => {
     const loadData = async () => {
       try {
         const userData = JSON.parse(localStorage.getItem('user'));
+        const token = localStorage.getItem('token');
         const normalizedUser = {
           ...userData,
           id: userData.Id ?? userData.id,
@@ -26,32 +31,81 @@ export default function MessagePage() {
         };
         setCurrentUser(normalizedUser);
 
-        const friendsData = await getAcceptedFriends(normalizedUser.Id, 1, 100);
-        const friends = friendsData || [];
+        // 🔄 Connect to SignalR MessageHub
+        if (token && !messageHubConnection.isActive()) {
+          try {
+            console.log('[MessagePage] 📡 Attempting SignalR connection...');
+            await messageHubConnection.connect(token);
+            console.log('[MessagePage] ✅ SignalR connected successfully');
+            
+            // CRITICAL: Wait a moment to ensure connection is truly established
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (err) {
+            console.warn('[MessagePage] ⚠️ SignalR connection failed, but REST API will still work:', err);
+            // Continue with REST API even if SignalR fails
+          }
+        }
 
-        const conversationList = friends.map((friend) => ({
-          id: friend.FriendId || friend.friendId || friend.Id,
-          name: friend.FriendName || friend.friendName || friend.FriendId || 'Bạn',
-          avatarUrl: friend.FriendProfilePictureUrl || '',
+        // 🔄 Get conversations sorted by latest message
+        const conversationsData = await getConversationsSorted(normalizedUser.Id);
+        console.log('[MessagePage] 💬 Conversations loaded:', conversationsData?.length || 0);
+        
+        const conversationList = (conversationsData || []).map((convo) => ({
+          id: convo.FriendId || convo.friendId,
+          name: convo.FriendName || convo.friendName || 'Bạn',
+          avatarUrl: convo.FriendProfilePictureUrl || convo.friendProfilePictureUrl || '',
           isUnread: false,
           isActive: true,
-          lastMessage: '',
-          lastTime: ''
+          lastMessage: convo.LastMessage || convo.lastMessage || '',
+          lastTime: convo.LastMessageTime 
+            ? new Date(convo.LastMessageTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+            : convo.lastTime || ''
         }));
 
         setConversations(conversationList);
+        
         if (conversationList.length > 0) {
-          setSelectedConversation(conversationList[0]);
-          await loadMessages(conversationList[0]);
+          const firstConversation = conversationList[0];
+          setSelectedConversation(firstConversation);
+          
+          // 🔄 Join SignalR group for first conversation (if connected)
+          if (messageHubConnection.isActive()) {
+            try {
+              console.log('[MessagePage] 👥 Joining conversation group:', firstConversation.id);
+              await messageHubConnection.joinConversation(firstConversation.id);
+              previousConversationRef.current = firstConversation.id;
+              console.log('[MessagePage] ✅ Joined conversation group');
+            } catch (err) {
+              console.warn('[MessagePage] ⚠️ Failed to join group:', err);
+            }
+          } else {
+            console.warn('[MessagePage] ⚠️ messageHubConnection.isActive() returned false!');
+          }
+          
+          await loadMessages(firstConversation);
         }
       } catch (err) {
-        console.error('Error loading messages:', err);
+        console.error('[MessagePage] ❌ Error loading data:', err);
+        setError(`Lỗi tải dữ liệu: ${err.message}`);
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
+
+    // Cleanup on unmount
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+      if (previousConversationRef.current && messageHubConnection.isActive()) {
+        messageHubConnection.leaveConversation(previousConversationRef.current).catch(err => 
+          console.warn('[MessagePage] ⚠️ Error leaving conversation:', err)
+        );
+      }
+      // Don't disconnect on unmount - keep connection alive for other pages
+    };
   }, []);
 
   const loadMessages = async (conversation) => {
@@ -86,6 +140,28 @@ export default function MessagePage() {
 
   const handleSelectConversation = async (conversation) => {
     setSelectedConversation(conversation);
+    
+    // 🔄 Leave previous conversation group and join new one
+    if (previousConversationRef.current && messageHubConnection.isActive()) {
+      try {
+        console.log('[MessagePage] 👋 Leaving previous group:', previousConversationRef.current);
+        await messageHubConnection.leaveConversation(previousConversationRef.current);
+      } catch (err) {
+        console.warn('[MessagePage] ⚠️ Error leaving previous group:', err);
+      }
+    }
+
+    if (messageHubConnection.isActive()) {
+      try {
+        console.log('[MessagePage] 👥 Joining new group:', conversation.id);
+        await messageHubConnection.joinConversation(conversation.id);
+        previousConversationRef.current = conversation.id;
+        console.log('[MessagePage] ✅ Joined new group');
+      } catch (err) {
+        console.warn('[MessagePage] ⚠️ Error joining new group:', err);
+      }
+    }
+
     await loadMessages(conversation);
   };
 
@@ -101,16 +177,104 @@ export default function MessagePage() {
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, nextMessage]);
-      setConversations((prev) => prev.map((item) =>
-        item.id === selectedConversation.id
-          ? { ...item, lastMessage: nextMessage.text, lastTime: nextMessage.timestamp, isUnread: false }
-          : item
-      ));
+      
+      // Update conversations and re-sort by latest message
+      setConversations((prev) => {
+        const updated = prev.map((item) =>
+          item.id === selectedConversation.id
+            ? { ...item, lastMessage: nextMessage.text, lastTime: nextMessage.timestamp, isUnread: false }
+            : item
+        );
+        
+        // Re-sort by last message time (newest first), then by name
+        return updated.sort((a, b) => {
+          const timeA = a.lastTime ? new Date(a.lastTime) : new Date(0);
+          const timeB = b.lastTime ? new Date(b.lastTime) : new Date(0);
+          
+          if (timeA.getTime() !== timeB.getTime()) {
+            return timeB.getTime() - timeA.getTime(); // Newest first
+          }
+          return a.name.localeCompare(b.name); // Then by name
+        });
+      });
+      
       setNewMessage('');
     } catch (err) {
       console.error('Error sending message:', err);
     }
   };
+
+  // 🔄 Effect to listen for incoming messages via SignalR
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    console.log('[MessagePage] 🎧 Registering message listener for conversation:', selectedConversation.id);
+
+    // Subscribe to incoming messages
+    const unsubscribe = messageHubConnection.onMessage((incomingMessage) => {
+      console.log('[MessagePage] 📨 Incoming message from SignalR:', incomingMessage);
+      
+      // Check if this message belongs to current conversation
+      const isForCurrentConversation = 
+        (String(incomingMessage.SenderId) === String(selectedConversation.id) ||
+         String(incomingMessage.ReceiverId) === String(selectedConversation.id)) &&
+        (String(incomingMessage.SenderId) === String(currentUser?.Id ?? currentUser?.id) ||
+         String(incomingMessage.ReceiverId) === String(currentUser?.Id ?? currentUser?.id));
+
+      console.log('[MessagePage] 🔍 Is for current conversation?', { isForCurrentConversation, senderId: incomingMessage.SenderId, receiverId: incomingMessage.ReceiverId });
+
+      if (isForCurrentConversation) {
+        console.log('[MessagePage] ✅ Adding message to current conversation:', incomingMessage);
+        const formattedMessage = {
+          id: incomingMessage.Id || incomingMessage.id,
+          senderId: incomingMessage.SenderId || incomingMessage.senderId,
+          text: incomingMessage.Content || incomingMessage.content,
+          timestamp: new Date(incomingMessage.CreatedAt || incomingMessage.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        // Add message only if not already in list (to avoid duplicates)
+        setMessages((prev) => {
+          const exists = prev.some(m => m.id === formattedMessage.id);
+          if (!exists) {
+            console.log('[MessagePage] 💾 Message added to state');
+          }
+          return exists ? prev : [...prev, formattedMessage];
+        });
+
+        // Update last message in conversation list and re-sort
+        setConversations((prev) => {
+          const updated = prev.map((item) =>
+            item.id === selectedConversation.id
+              ? { ...item, lastMessage: formattedMessage.text, lastTime: formattedMessage.timestamp }
+              : item
+          );
+          
+          // Re-sort by last message time (newest first), then by name
+          return updated.sort((a, b) => {
+            const timeA = a.lastTime ? new Date(a.lastTime) : new Date(0);
+            const timeB = b.lastTime ? new Date(b.lastTime) : new Date(0);
+            
+            if (timeA.getTime() !== timeB.getTime()) {
+              return timeB.getTime() - timeA.getTime(); // Newest first
+            }
+            return a.name.localeCompare(b.name); // Then by name
+          });
+        });
+      } else {
+        console.log('[MessagePage] ⏭️ Message is for different conversation, skipping');
+      }
+    });
+
+    unsubscribeRef.current = unsubscribe;
+    console.log('[MessagePage] ✅ Message listener registered');
+
+    return () => {
+      if (unsubscribe) {
+        console.log('[MessagePage] 🧹 Unregistering message listener');
+        unsubscribe();
+      }
+    };
+  }, [selectedConversation, currentUser]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -145,7 +309,7 @@ export default function MessagePage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="message-search-input"
             />
-            <span className="message-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <span className="message-search-icon"><i className="fa-solid fa-magnifying-glass"></i></span>
           </div>
 
           <div className="message-tabs">

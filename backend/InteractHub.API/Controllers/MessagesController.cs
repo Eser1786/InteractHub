@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using InteractHub.Application.Interfaces;
 using InteractHub.Application.Entities;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
 using System.Security.Claims;
+using InteractHub.Infrastructure.Hubs;
 
 namespace InteractHub.API.Controllers;
 
@@ -17,11 +19,16 @@ public class MessagesController : ControllerBase
 {
     private readonly IMessageService _messageService;
     private readonly INotificationService _notificationService;
+    private readonly IHubContext<MessageHub> _messageHubContext;
 
-    public MessagesController(IMessageService messageService, INotificationService notificationService)
+    public MessagesController(
+        IMessageService messageService, 
+        INotificationService notificationService,
+        IHubContext<MessageHub> messageHubContext)
     {
         _messageService = messageService;
         _notificationService = notificationService;
+        _messageHubContext = messageHubContext;
     }
 
     [HttpGet("conversation/{userId}")]
@@ -75,6 +82,13 @@ public class MessagesController : ControllerBase
             IsRead = message.IsRead
         };
 
+        // 🔄 Send message to both users via SignalR for real-time update
+        var conversationGroup = GetConversationGroupName(senderId, dto.ReceiverId);
+        Console.WriteLine($"[MessagesController] 📡 Broadcasting message to group: {conversationGroup}");
+        Console.WriteLine($"[MessagesController] 📨 Message content: {messageDto.Content}");
+        await _messageHubContext.Clients.Group(conversationGroup).SendAsync("ReceiveMessage", messageDto);
+        Console.WriteLine($"[MessagesController] ✅ Message broadcasted successfully");
+
         return this.CreatedResponse(messageDto);
     }
 
@@ -112,5 +126,14 @@ public class MessagesController : ControllerBase
         }).ToList();
 
         return this.SuccessResponse(messageDtos);
+    }
+
+    /// <summary>
+    /// Helper: Generate conversation group name (sorted to ensure consistency with MessageHub)
+    /// </summary>
+    private static string GetConversationGroupName(string userId1, string userId2)
+    {
+        var ids = new[] { userId1, userId2 }.OrderBy(x => x).ToArray();
+        return $"conversation_{ids[0]}_{ids[1]}";
     }
 }

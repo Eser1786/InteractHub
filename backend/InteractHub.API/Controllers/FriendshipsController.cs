@@ -18,10 +18,12 @@ namespace InteractHub.API.Controllers;
 public class FriendshipsController : ControllerBase
 {
     private readonly IFriendshipService _friendshipService;
+    private readonly IMessageService _messageService;
 
-    public FriendshipsController(IFriendshipService friendshipService)
+    public FriendshipsController(IFriendshipService friendshipService, IMessageService messageService)
     {
         _friendshipService = friendshipService;
+        _messageService = messageService;
     }
 
     /// <summary>
@@ -218,6 +220,59 @@ public class FriendshipsController : ControllerBase
         var friendshipDto = MapToFriendshipResponseDto(friendship);
 
         return this.SuccessResponse(friendshipDto);
+    }
+
+    /// <summary>
+    /// Get conversations sorted by latest message (newest first), then by name
+    /// </summary>
+    [HttpGet("user/{userId}/conversations")]
+    [ProducesResponseType(typeof(ApiResponse<List<ConversationDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetConversationsSorted(string userId)
+    {
+        try
+        {
+            // Get accepted friends
+            var friends = await _friendshipService.GetAcceptedFriendsAsync(userId);
+            
+            var conversations = new List<ConversationDto>();
+
+            foreach (var friendship in friends)
+            {
+                // Get the friend object (handle both directions of friendship)
+                var friendObj = friendship.UserId == userId ? friendship.Friend : friendship.User;
+                
+                if (friendObj == null)
+                    continue;
+
+                // Get latest message between users
+                var latestMessage = await _messageService.GetLatestMessageAsync(userId, friendObj.Id);
+
+                conversations.Add(new ConversationDto
+                {
+                    FriendId = friendObj.Id,
+                    FriendName = friendObj.FullName ?? friendObj.UserName ?? "Unknown",
+                    FriendProfilePictureUrl = friendObj.ProfilePictureUrl,
+                    LastMessage = latestMessage?.Content,
+                    LastMessageTime = latestMessage?.CreatedAt,
+                    LastMessageSenderId = latestMessage?.SenderId
+                });
+            }
+
+            // Sort by latest message time (newest first), then by name
+            var sorted = conversations
+                .OrderByDescending(c => c.LastMessageTime ?? DateTime.MinValue)
+                .ThenBy(c => c.FriendName)
+                .ToList();
+
+            return this.SuccessResponse(sorted);
+        }
+        catch (Exception ex)
+        {
+            return this.BadRequestResponse(new List<ApiError>
+            {
+                ErrorHelper.CreateValidationError("conversations", ex.Message)
+            });
+        }
     }
 
     /// <summary>

@@ -97,10 +97,23 @@ builder.Services
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationHub"))
+                
+                // Check query string first (for backward compatibility)
+                if (!string.IsNullOrEmpty(accessToken) && 
+                    (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub")))
                 {
                     context.Token = accessToken;
                 }
+                // Check Authorization header for WebSocket connections
+                else if (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub"))
+                {
+                    var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                    if (authHeader?.StartsWith("Bearer ") == true)
+                    {
+                        context.Token = authHeader.Substring("Bearer ".Length);
+                    }
+                }
+                
                 return Task.CompletedTask;
             }
         };
@@ -124,7 +137,14 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    // Enable detailed error messages for debugging
+    options.EnableDetailedErrors = true;
+    // Reduce timeout to detect connection issues faster
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+});
 
 // ✅ Add Authorization Policies
 builder.Services.AddAuthorization(options =>
@@ -188,6 +208,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<MessageHub>("/messageHub");
 
 // ✅ Chuyển hướng các đường dẫn (Router) của React về trang chủ index.html
 app.MapFallbackToFile("index.html");

@@ -363,6 +363,25 @@ export async function getAcceptedFriends(userId, pageNumber = 1, pageSize = 20) 
   return data?.Data || [];
 }
 
+export async function getConversationsSorted(userId) {
+  const token = localStorage.getItem('token');
+  try {
+    const response = await fetch(`${API_BASE}/friendships/user/${userId}/conversations`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    console.log('🔄 API Response status:', response.status);
+    console.log('🔄 API Response ok:', response.ok);
+    
+    const data = await handleResponse(response);
+    console.log('🔄 API Response data:', data);
+    return data?.Data || [];
+  } catch (err) {
+    console.error('🔄 Error calling getConversationsSorted:', err);
+    throw err;
+  }
+}
+
 export async function getConversationMessages(friendId) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/messages/conversation/${friendId}`, {

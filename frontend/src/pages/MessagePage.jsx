@@ -199,7 +199,7 @@ export default function MessagePage() {
         text: sentMessage?.Content || sentMessage?.content || newMessage.trim(),
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages((prev) => [...prev, nextMessage]);
+      
       
       // Update conversations and re-sort by latest message
       setConversations((prev) => {

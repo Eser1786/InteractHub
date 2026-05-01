@@ -34,6 +34,7 @@ export default function HomePage() {
   const [hashtagSearch, setHashtagSearch] = useState(null);
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [searchKeyword, setSearchKeyword] = useState(''); // For keyword search
   const [newStoryContent, setNewStoryContent] = useState('');
   const [newStoryFile, setNewStoryFile] = useState(null);
   const [storyImagePreview, setStoryImagePreview] = useState('');
@@ -508,21 +509,37 @@ export default function HomePage() {
   };
 
   const handleHomeSearch = (query) => {
-    const hashtag = extractHashtag(query);
-    setHashtagSearch(hashtag);
-    if (hashtag && location.pathname === '/home') {
-      navigate(`/home?hashtag=${encodeURIComponent(hashtag.slice(1))}`, { replace: true });
+    if (!query.trim()) {
+      // Clear search
+      setSearchKeyword('');
+      setHashtagSearch(null);
+      navigate('/home');
+      return;
     }
-    if (!hashtag && location.pathname === '/home') {
-      navigate('/home', { replace: true });
+
+    const hashtag = extractHashtag(query);
+    if (hashtag && query.startsWith('#')) {
+      // Hashtag search
+      setSearchKeyword('');
+      setHashtagSearch(hashtag);
+      navigate(`/home?hashtag=${encodeURIComponent(hashtag.slice(1))}`);
+    } else {
+      // Keyword search
+      setHashtagSearch(null);
+      setSearchKeyword(query);
     }
   };
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const hashtagParam = queryParams.get('hashtag');
-    const hashtag = extractHashtag(hashtagParam);
-    setHashtagSearch(hashtag);
+    if (hashtagParam) {
+      const hashtag = extractHashtag(hashtagParam);
+      setHashtagSearch(hashtag);
+      setSearchKeyword('');
+    } else {
+      setHashtagSearch(null);
+    }
   }, [location.search]);
 
   const handleLike = async (post) => {
@@ -707,6 +724,8 @@ export default function HomePage() {
 
   const handleHashtagClick = (hashtag) => {
     const slug = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
+    // Clear keyword search and navigate to hashtag
+    setSearchKeyword('');
     navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
   };
 
@@ -717,7 +736,13 @@ export default function HomePage() {
     return regex.test(content);
   };
 
-  const displayedPosts = hashtagSearch
+  // Filter posts based on search type
+  const displayedPosts = searchKeyword
+    ? posts.filter(post => 
+        (post.Content || '').toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        (post.UserFullName || '').toLowerCase().includes(searchKeyword.toLowerCase())
+      )
+    : hashtagSearch
     ? posts.filter(post => hasHashtag(post.Content || '', hashtagSearch))
     : posts;
 
@@ -750,38 +775,70 @@ export default function HomePage() {
 
   return (
     <div className="home-wrapper">
-      <Header onLogout={handleLogout} onSearch={handleHomeSearch} searchValue={hashtagSearch || ''} unreadMessageCount={unreadMessageCount} />
+      <Header onLogout={handleLogout} onSearch={handleHomeSearch} searchValue={searchKeyword || hashtagSearch || ''} unreadMessageCount={unreadMessageCount} />
       <div className="home-container">
-        {/* Left Sidebar */}
-        <aside className="sidebar-left">
-          <nav className="sidebar-nav">
-            <div className={`sidebar-notification ${selectedNav === 'notifications' ? 'active' : ''}`} onClick={() => handleSelectNav('notifications')}>
-              <span className="nav-icon"><i className="fa-solid fa-bell"></i></span>
-              <div className="notification-text">
-                <strong>Thông báo</strong>
-                <p>{notifications.length} cập nhật mới</p>
+        {/* Left Sidebar - Show back button during search (keyword or hashtag) */}
+        {searchKeyword || hashtagSearch ? (
+          <aside className="sidebar-left">
+            <button 
+              className="back-to-home-btn"
+              onClick={() => {
+                setSearchKeyword('');
+                setHashtagSearch(null);
+                navigate('/home');
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <i className="fa-solid fa-arrow-left"></i>
+              <span>Quay về trang chủ</span>
+            </button>
+          </aside>
+        ) : (
+          <aside className="sidebar-left">
+            <nav className="sidebar-nav">
+              <div className={`sidebar-notification ${selectedNav === 'notifications' ? 'active' : ''}`} onClick={() => handleSelectNav('notifications')}>
+                <span className="nav-icon"><i className="fa-solid fa-bell"></i></span>
+                <div className="notification-text">
+                  <strong>Thông báo</strong>
+                  <p>{notifications.length} cập nhật mới</p>
+                </div>
               </div>
-            </div>
-            <div className={`nav-item ${selectedNav === 'friends' ? 'active' : ''}`} onClick={() => handleSelectNav('friends')}>
-              <span className="nav-icon"><i className="fa-solid fa-people-pulling"></i></span>
-              <span>Tất cả bạn bè</span>
-            </div>
-            <div className={`nav-item ${selectedNav === 'requests' ? 'active' : ''}`} onClick={() => handleSelectNav('requests')}>
-              <span className="nav-icon"><i className="fa-solid fa-address-book"></i></span>
-              <span>Lời mời kết bạn</span>
-            </div>
-            <div className={`nav-item ${selectedNav === 'add-friends' ? 'active' : ''}`} onClick={() => handleSelectNav('add-friends')}>
-              <span className="nav-icon">➕</span>
-              <span>Thêm bạn bè</span>
-            </div>
-          </nav>
-        </aside>
+              <div className={`nav-item ${selectedNav === 'friends' ? 'active' : ''}`} onClick={() => handleSelectNav('friends')}>
+                <span className="nav-icon"><i className="fa-solid fa-people-pulling"></i></span>
+                <span>Tất cả bạn bè</span>
+              </div>
+              <div className={`nav-item ${selectedNav === 'requests' ? 'active' : ''}`} onClick={() => handleSelectNav('requests')}>
+                <span className="nav-icon"><i className="fa-solid fa-address-book"></i></span>
+                <span>Lời mời kết bạn</span>
+              </div>
+              <div className={`nav-item ${selectedNav === 'add-friends' ? 'active' : ''}`} onClick={() => handleSelectNav('add-friends')}>
+                <span className="nav-icon">➕</span>
+                <span>Thêm bạn bè</span>
+              </div>
+            </nav>
+          </aside>
+        )}
 
         {/* Main Content */}
         <main className="main-content">
           {error && <div className="error-message">{error}</div>}
 
-          <section className="create-post-section">
+          {!searchKeyword && !hashtagSearch && (
+            <section className="create-post-section">
             <div className="create-post-header">
               <div className="user-avatar">
                 {currentUser?.ProfilePictureUrl ? (
@@ -861,10 +918,12 @@ export default function HomePage() {
               )}
             </form>
           </section>
+          )}
 
 
           {/* Stories Section - Always show */}
-          <section className="stories-section">
+          {!searchKeyword && !hashtagSearch && (
+            <section className="stories-section">
             <div className="stories-carousel">
               {/* Create Story Card */}
               <div 
@@ -897,6 +956,7 @@ export default function HomePage() {
               ))}
             </div>
           </section>
+          )}
 
           <section className="posts-feed">
             {displayedPosts.length === 0 ? (
@@ -995,8 +1055,9 @@ export default function HomePage() {
           </section>
         </main>
 
-        {/* Right Sidebar */}
-        <aside className="sidebar-right">
+        {/* Right Sidebar - Hidden during keyword search */}
+        {!searchKeyword && (
+          <aside className="sidebar-right">
           {selectedNav === 'add-friends' && hashtagSearch ? (
             <>
               <h3 className="sidebar-title">
@@ -1199,6 +1260,7 @@ export default function HomePage() {
             </>
           )}
         </aside>
+)}
       </div>
 
       {/* Create Story Modal */}

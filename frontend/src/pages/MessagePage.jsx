@@ -199,7 +199,6 @@ export default function MessagePage() {
         text: sentMessage?.Content || sentMessage?.content || newMessage.trim(),
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages((prev) => [...prev, nextMessage]);
       
       // Update conversations and re-sort by latest message
       setConversations((prev) => {
@@ -238,11 +237,9 @@ export default function MessagePage() {
       console.log('[MessagePage] 📨 Incoming message from SignalR:', incomingMessage);
       
       // Check if this message belongs to current conversation
-      const isForCurrentConversation = 
-        (String(incomingMessage.SenderId) === String(selectedConversation.id) ||
-         String(incomingMessage.ReceiverId) === String(selectedConversation.id)) &&
-        (String(incomingMessage.SenderId) === String(currentUser?.Id ?? currentUser?.id) ||
-         String(incomingMessage.ReceiverId) === String(currentUser?.Id ?? currentUser?.id));
+      const isForCurrentConversation =
+        String(incomingMessage.SenderId) === String(selectedConversation.id) ||
+        String(incomingMessage.ReceiverId) === String(selectedConversation.id);
 
       console.log('[MessagePage] 🔍 Is for current conversation?', { isForCurrentConversation, senderId: incomingMessage.SenderId, receiverId: incomingMessage.ReceiverId });
 

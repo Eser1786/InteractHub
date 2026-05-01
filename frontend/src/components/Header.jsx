@@ -112,8 +112,8 @@ export default function Header({ onLogout, showControls = true, onSearch, search
                   onChange={(e) => {
                     const value = e.target.value;
                     setSearchQuery(value);
-                    if (typeof onSearch === 'function' && value.trim() === '') {
-                      onSearch('');
+                    if (typeof onSearch === 'function') {
+                      onSearch(value);
                     }
                   }}
                   className="search-input"

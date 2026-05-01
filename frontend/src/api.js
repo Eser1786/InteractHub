@@ -123,13 +123,16 @@ export async function getUserPosts(userId) {
   return data?.Data || [];
 }
 
-export async function getPosts() {
+export async function getPosts(page = 1, pageSize = 20) {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE}/posts`, {
+  const response = await fetch(`${API_BASE}/posts?page=${page}&pageSize=${pageSize}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const data = await handleResponse(response);
-  return data?.Data || [];
+  return {
+    posts: data?.Data || data?.data || [],
+    pagination: data?.Pagination || data?.pagination || { page, pageSize, totalCount: 0, totalPages: 0, hasMore: false }
+  };
 }
 
 export async function createPost({ content, imageUrl, groupId }) {
@@ -382,13 +385,16 @@ export async function getConversationsSorted(userId) {
   }
 }
 
-export async function getConversationMessages(friendId) {
+export async function getConversationMessages(friendId, page = 1, pageSize = 50) {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE}/messages/conversation/${friendId}`, {
+  const response = await fetch(`${API_BASE}/messages/conversation/${friendId}?page=${page}&pageSize=${pageSize}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const data = await handleResponse(response);
-  return data?.Data || [];
+  return {
+    messages: data?.Data || data?.data || [],
+    pagination: data?.Pagination || data?.pagination || { page, pageSize, totalCount: 0, totalPages: 0, hasMore: false }
+  };
 }
 
 export async function sendMessage(receiverId, content) {

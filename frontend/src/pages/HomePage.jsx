@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
  import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment, getNotifications } from '../api';
@@ -20,6 +20,7 @@ export default function HomePage() {
   const [newPostFile, setNewPostFile] = useState(null);
   const [postImagePreview, setPostImagePreview] = useState('');
   const [loading, setLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(false);
   const [error, setError] = useState('');
   const [posting, setPosting] = useState(false);
   const [likedPosts, setLikedPosts] = useState(new Set());
@@ -39,8 +40,12 @@ export default function HomePage() {
   const [newStoryFile, setNewStoryFile] = useState(null);
   const [storyImagePreview, setStoryImagePreview] = useState('');
   const [creatingStory, setCreatingStory] = useState(false);
+  const [postPage, setPostPage] = useState(1);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  const [postPageSize] = useState(20);
   const navigate = useNavigate();
   const location = useLocation();
+  const postsEndRef = useRef(null);
 
   const formatTimeAgo = (createdAt) => {
     if (!createdAt) return '';
@@ -83,9 +88,15 @@ export default function HomePage() {
     }
   };
 
-  const loadPosts = async (userData) => {
+  const loadPosts = async (userData, pageNum = 1) => {
     try {
-      const postsData = await getPosts();
+      if (pageNum === 1) {
+        setPostsLoading(true);
+      }
+      const response = await getPosts(pageNum, postPageSize);
+      const postsData = response.posts || [];
+      const paginationData = response.pagination || {};
+
       // Sort posts by CreatedAt descending (newest first)
       const sortedPosts = (postsData || [])
         .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt))
@@ -93,15 +104,32 @@ export default function HomePage() {
           ...post,
           commentsCount: 0
         }));
-      setPosts(sortedPosts);
+
+      if (pageNum === 1) {
+        // First page: replace posts
+        setPosts(sortedPosts);
+      } else {
+        // Subsequent pages: append new posts
+        setPosts((prev) => [...prev, ...sortedPosts]);
+      }
+
+      setPostPage(pageNum);
+      setHasMorePosts(paginationData.hasMore || false);
 
       // Initialize liked posts from response data
       const userLikedPostIds = (postsData || [])
         .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(userData.Id))
         .map(post => post.Id);
-      setLikedPosts(new Set(userLikedPostIds));
+      
+      if (pageNum === 1) {
+        setLikedPosts(new Set(userLikedPostIds));
+      } else {
+        setLikedPosts((prev) => new Set([...prev, ...userLikedPostIds]));
+      }
     } catch (err) {
       console.error('Error loading posts:', err);
+    } finally {
+      setPostsLoading(false);
     }
   };
 
@@ -729,6 +757,17 @@ export default function HomePage() {
     navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
   };
 
+  const handlePostsScroll = (e) => {
+    const element = e.target;
+    const distanceToBottom = element.scrollHeight - (element.scrollTop + element.clientHeight);
+    
+    // Load more when user scrolls near the bottom (500px from bottom)
+    if (distanceToBottom < 500 && hasMorePosts && !postsLoading && !searchKeyword && !hashtagSearch) {
+      console.log('[HomePage] 📜 Loading more posts...');
+      loadPosts(currentUser, postPage + 1);
+    }
+  };
+
   const hasHashtag = (content = '', tag) => {
     if (!tag) return false;
     const escaped = tag.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
@@ -958,13 +997,14 @@ export default function HomePage() {
           </section>
           )}
 
-          <section className="posts-feed">
+          <section className="posts-feed" onScroll={handlePostsScroll}>
             {displayedPosts.length === 0 ? (
               <p className="no-posts">
                 {hashtagSearch ? `Không có bài viết nào với ${hashtagSearch}.` : 'Chưa có bài viết nào. Hãy tạo bài viết đầu tiên!'}
               </p>
             ) : (
-              displayedPosts.map((post) => (
+              <>
+                {displayedPosts.map((post) => (
                 <div key={post.Id} className="post-card">
                   <div className="post-header">
                     <div className="post-user-info">
@@ -1050,7 +1090,10 @@ export default function HomePage() {
                     />
                   )}
                 </div>
-              ))
+              ))}
+                <div ref={postsEndRef} />
+                {postsLoading && <div className="loading-indicator">Đang tải bài viết...</div>}
+              </>
             )}
           </section>
         </main>

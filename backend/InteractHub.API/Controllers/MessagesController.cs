@@ -33,14 +33,31 @@ public class MessagesController : ControllerBase
 
     [HttpGet("conversation/{userId}")]
     [ProducesResponseType(typeof(ApiResponse<List<MessageResponseDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetConversation(string userId)
+    public async Task<IActionResult> GetConversation(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(currentUserId))
             return Unauthorized();
 
+        // Ensure valid pagination
+        page = Math.Max(1, page);
+        pageSize = Math.Max(1, Math.Min(pageSize, 100)); // Cap pageSize at 100
+
         var messages = await _messageService.GetMessagesBetweenUsersAsync(currentUserId, userId);
-        var messageDtos = messages.Select(m => new MessageResponseDto
+        
+        // Sort by CreatedAt ascending (oldest first) to support pagination from top
+        var sortedMessages = messages
+            .OrderBy(m => m.CreatedAt)
+            .ToList();
+
+        // Apply pagination
+        var totalCount = sortedMessages.Count;
+        var pagedMessages = sortedMessages
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var messageDtos = pagedMessages.Select(m => new MessageResponseDto
         {
             Id = m.Id,
             Content = m.Content,
@@ -52,7 +69,21 @@ public class MessagesController : ControllerBase
             IsRead = m.IsRead
         }).ToList();
 
-        return this.SuccessResponse(messageDtos);
+        // Add pagination metadata to response
+        var response = new 
+        {
+            data = messageDtos,
+            pagination = new 
+            {
+                page,
+                pageSize,
+                totalCount,
+                totalPages = (totalCount + pageSize - 1) / pageSize,
+                hasMore = page * pageSize < totalCount
+            }
+        };
+
+        return Ok(new { success = true, message = "Messages retrieved successfully", data = messageDtos, pagination = response.pagination });
     }
 
     [HttpPost]

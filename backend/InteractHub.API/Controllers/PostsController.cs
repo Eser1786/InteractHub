@@ -86,10 +86,27 @@ public class PostsController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<PostResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
+        // Ensure valid pagination
+        page = Math.Max(1, page);
+        pageSize = Math.Max(1, Math.Min(pageSize, 100)); // Cap pageSize at 100
+
         var posts = await _postService.GetAllAsync();
-        var postDtos = posts.Select(p => new PostResponseDto
+        
+        // Sort by CreatedAt descending (newest first)
+        var sortedPosts = posts
+            .OrderByDescending(p => p.CreatedAt)
+            .ToList();
+
+        // Apply pagination
+        var totalCount = sortedPosts.Count;
+        var pagedPosts = sortedPosts
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var postDtos = pagedPosts.Select(p => new PostResponseDto
         {
             Id = p.Id,
             GroupId = p.GroupId,
@@ -105,8 +122,21 @@ public class PostsController : ControllerBase
             CommentsCount = p.Comments?.Count ?? 0,
             LikedByUserIds = p.Likes?.Select(l => l.UserId).ToList() ?? new()
         }).ToList();
+
+        var response = new 
+        {
+            data = postDtos,
+            pagination = new 
+            {
+                page,
+                pageSize,
+                totalCount,
+                totalPages = (totalCount + pageSize - 1) / pageSize,
+                hasMore = page * pageSize < totalCount
+            }
+        };
         
-        return this.SuccessResponse(postDtos, "Posts retrieved successfully", 200);
+        return Ok(new { success = true, message = "Posts retrieved successfully", data = postDtos, pagination = response.pagination });
     }
 
     [HttpGet("{id}")]

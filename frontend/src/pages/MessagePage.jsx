@@ -14,10 +14,16 @@ export default function MessagePage() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const unsubscribeRef = useRef(null);
   const presenceUnsubscribeRef = useRef(null);
   const previousConversationRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const messagesAreaRef = useRef(null);
 
   // Initialize SignalR connection and load friends
   useEffect(() => {
@@ -131,23 +137,46 @@ export default function MessagePage() {
     };
   }, []);
 
-  const loadMessages = async (conversation) => {
+  // 📜 Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 0);
+    }
+  }, [messages]);
+
+  const loadMessages = async (conversation, pageNum = 1) => {
     if (!conversation) {
       setMessages([]);
       return;
     }
 
     try {
-      const messageData = await getConversationMessages(conversation.id);
+      setMessagesLoading(true);
+      const response = await getConversationMessages(conversation.id, pageNum, 50);
+      const messageData = response.messages || [];
+      const paginationData = response.pagination || {};
+
       const normalized = (messageData || []).map((message) => ({
         id: message.Id || message.id,
         senderId: message.SenderId || message.senderId,
         text: message.Content || message.content,
         timestamp: new Date(message.CreatedAt || message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       }));
-      setMessages(normalized);
 
-      if (normalized.length > 0) {
+      if (pageNum === 1) {
+        // First page: replace messages
+        setMessages(normalized);
+      } else {
+        // Subsequent pages: prepend older messages
+        setMessages((prev) => [...normalized, ...prev]);
+      }
+
+      setPage(pageNum);
+      setHasMoreMessages(paginationData.hasMore || false);
+
+      if (pageNum === 1 && normalized.length > 0) {
         const last = normalized[normalized.length - 1];
         setConversations((prev) => prev.map((item) =>
           item.id === conversation.id
@@ -158,6 +187,8 @@ export default function MessagePage() {
     } catch (err) {
       console.error('Không thể tải cuộc trò chuyện:', err);
       setMessages([]);
+    } finally {
+      setMessagesLoading(false);
     }
   };
 
@@ -185,7 +216,7 @@ export default function MessagePage() {
       }
     }
 
-    await loadMessages(conversation);
+    await loadMessages(conversation, 1);
   };
 
   const handleSendMessage = async () => {
@@ -200,6 +231,11 @@ export default function MessagePage() {
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       };
       
+      // Add message to display
+      setMessages((prev) => {
+        const exists = prev.some(m => m.id === nextMessage.id);
+        return exists ? prev : [...prev, nextMessage];
+      });
       
       // Update conversations and re-sort by latest message
       setConversations((prev) => {
@@ -222,6 +258,11 @@ export default function MessagePage() {
       });
       
       setNewMessage('');
+      
+      // Auto-scroll to bottom
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 0);
     } catch (err) {
       console.error('Error sending message:', err);
     }
@@ -297,11 +338,27 @@ export default function MessagePage() {
     };
   }, [selectedConversation, currentUser]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.dispatchEvent(new Event('tokenUpdated'));
-    navigate('/login');
+  // 📜 Handle scroll for lazy loading older messages
+  const handleMessagesScroll = async (e) => {
+    const element = e.target;
+    if (element.scrollTop === 0 && hasMoreMessages && !messagesLoading && selectedConversation) {
+      console.log('[MessagePage] 📜 Loading more older messages...');
+      const nextPage = page + 1;
+      const response = await getConversationMessages(selectedConversation.id, nextPage, 50);
+      const messageData = response.messages || [];
+      
+      const normalized = (messageData || []).map((message) => ({
+        id: message.Id || message.id,
+        senderId: message.SenderId || message.senderId,
+        text: message.Content || message.content,
+        timestamp: new Date(message.CreatedAt || message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      }));
+
+      // Prepend older messages
+      setMessages((prev) => [...normalized, ...prev]);
+      setPage(nextPage);
+      setHasMoreMessages(response.pagination?.hasMore || false);
+    }
   };
 
   const filteredConversations = searchQuery.trim()
@@ -311,6 +368,13 @@ export default function MessagePage() {
       : selectedTab === 'unread'
         ? conversations.filter(c => c.isUnread)
         : conversations.filter(c => true); // 'group' for future use
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.dispatchEvent(new Event('tokenUpdated'));
+    navigate('/login');
+  };
 
   if (loading) {
     return <div className="message-wrapper"><p>Đang tải...</p></div>;
@@ -408,7 +472,8 @@ export default function MessagePage() {
               </div>
 
               {/* Messages Area */}
-              <div className="messages-area">
+              <div className="messages-area" ref={messagesAreaRef} onScroll={handleMessagesScroll}>
+                {messagesLoading && <div className="loading-indicator">Đang tải tin nhắn cũ...</div>}
                 {messages.map((message) => {
                   const isSentByCurrentUser = String(message.senderId) === String(currentUser?.Id ?? currentUser?.id);
                   return (
@@ -433,6 +498,7 @@ export default function MessagePage() {
                     </div>
                   );
                 })}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Message Input */}

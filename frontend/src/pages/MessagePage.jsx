@@ -22,6 +22,7 @@ export default function MessagePage() {
   const [page, setPage] = useState(1);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [error, setError] = useState('');
+  const [onlineFriends, setOnlineFriends] = useState([]);
   
   const navigate = useNavigate();
   const unsubscribeRef = useRef(null);
@@ -78,6 +79,10 @@ export default function MessagePage() {
 
         setConversations(conversationList);
         
+        // Extract online friends
+        const online = conversationList.filter(c => c.isActive);
+        setOnlineFriends(online);
+        
         if (conversationList.length > 0) {
           const firstConversation = conversationList[0];
           setSelectedConversation(firstConversation);
@@ -103,8 +108,8 @@ export default function MessagePage() {
         const unsubscribePresence = messageHubConnection.onPresence((presenceData) => {
           console.log('[MessagePage] 👥 Presence update received:', presenceData);
           
-          setConversations((prev) => 
-            prev.map((conv) => {
+          setConversations((prev) => {
+            const updated = prev.map((conv) => {
               if (conv.id === presenceData.userId) {
                 console.log(`[MessagePage] Updating ${conv.name} to ${presenceData.status}`);
                 return {
@@ -113,8 +118,14 @@ export default function MessagePage() {
                 };
               }
               return conv;
-            })
-          );
+            });
+            
+            // Update online friends list
+            const online = updated.filter(c => c.isActive);
+            setOnlineFriends(online);
+            
+            return updated;
+          });
         });
         presenceUnsubscribeRef.current = unsubscribePresence;
       } catch (err) {
@@ -521,7 +532,7 @@ export default function MessagePage() {
                   <div>
                     <h3 className="message-header-name">{selectedConversation.name}</h3>
                     <p className="message-header-status">
-                      {selectedConversation.isActive ? 'Đang hoạt động' : 'Offline'}
+                      {selectedConversation.isActive ? '🟢 Đang hoạt động' : '⚫ Offline'}
                     </p>
                   </div>
                 </div>
@@ -577,10 +588,46 @@ export default function MessagePage() {
             </>
           ) : (
             <div className="no-conversation-selected">
-              <p>Chọn một cuộc trò chuyện để bắt đầu</p>
+              <div className="empty-state">
+                <div className="empty-icon">💬</div>
+                <h2>Chọn cuộc trò chuyện để bắt đầu</h2>
+                <p>Chọn một người bạn từ danh sách bên trái để nhắn tin</p>
+              </div>
             </div>
           )}
         </main>
+
+        {/* Right Sidebar - Online Friends */}
+        <aside className="message-sidebar-right">
+          <div className="friends-header">
+            <h3>Bạn bè online</h3>
+            <span className="friends-count">{onlineFriends.length}</span>
+          </div>
+          
+          <div className="online-friends-list">
+            {onlineFriends.length === 0 ? (
+              <p className="no-friends">Không có bạn đang online</p>
+            ) : (
+              onlineFriends.map((friend) => (
+                <div
+                  key={friend.id}
+                  className="online-friend-item"
+                  onClick={() => handleSelectConversation(friend)}
+                >
+                  <div className="friend-avatar">
+                    {friend.avatarUrl ? (
+                      <img src={friend.avatarUrl} alt={friend.name} className="friend-avatar-img" />
+                    ) : (
+                      <span className="friend-avatar-fallback">{friend.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                    )}
+                    <span className="online-dot"></span>
+                  </div>
+                  <span className="friend-name">{friend.name}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   );

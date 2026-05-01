@@ -314,6 +314,24 @@
   color: #333;
 }
 
+/* Loading Indicator */
+.loading-indicator {
+  text-align: center;
+  padding: 15px;
+  color: #999;
+  font-size: 12px;
+  animation: fade-in 0.3s ease-in;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .message-input-wrapper {
   display: flex;
   gap: 10px;

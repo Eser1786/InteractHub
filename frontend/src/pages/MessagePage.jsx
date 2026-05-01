@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getConversationsSorted, getConversationMessages, sendMessage } from '../api';
 import { messageHubConnection } from '../utils/messageHubConnection';
 import Header from '../components/Header';
 import '../styles/MessagePage.css';
+
+// ⚙️ Configuration
+const SCROLL_THRESHOLD = 100; // pixels from top to trigger lazy load
+const DEBOUNCE_DELAY = 300; // ms for scroll event debouncing
 
 export default function MessagePage() {
   const [conversations, setConversations] = useState([]);
@@ -18,12 +22,15 @@ export default function MessagePage() {
   const [page, setPage] = useState(1);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [error, setError] = useState('');
+  
   const navigate = useNavigate();
   const unsubscribeRef = useRef(null);
   const presenceUnsubscribeRef = useRef(null);
   const previousConversationRef = useRef(null);
-  const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
+  const isNearBottomRef = useRef(true); // Track if user is at bottom
+  const scrollTimeoutRef = useRef(null); // Debounce scroll
+  const lastScrollHeightRef = useRef(0); // Preserve scroll position
 
   // Initialize SignalR connection and load friends
   useEffect(() => {
@@ -137,14 +144,33 @@ export default function MessagePage() {
     };
   }, []);
 
-  // 📜 Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
+  // 📜 Detect if user is near bottom
+  const checkIfNearBottom = useCallback(() => {
+    if (!messagesAreaRef.current) return false;
+    const { scrollTop, scrollHeight, clientHeight } = messagesAreaRef.current;
+    return scrollHeight - (scrollTop + clientHeight) < SCROLL_THRESHOLD;
+  }, []);
+
+  // 📜 Auto-scroll to bottom (only if user is near bottom)
+  const scrollToBottom = useCallback(() => {
+    if (messagesAreaRef.current) {
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesAreaRef.current.scrollTop = messagesAreaRef.current.scrollHeight;
+        isNearBottomRef.current = true;
       }, 0);
     }
-  }, [messages]);
+  }, []);
+
+  // 📜 Scroll with position preservation (for lazy loading)
+  const scrollToPosition = useCallback((scrollHeight) => {
+    if (messagesAreaRef.current) {
+      setTimeout(() => {
+        const newScrollHeight = messagesAreaRef.current.scrollHeight;
+        const heightDifference = newScrollHeight - scrollHeight;
+        messagesAreaRef.current.scrollTop = heightDifference;
+      }, 0);
+    }
+  }, []);
 
   const loadMessages = async (conversation, pageNum = 1) => {
     if (!conversation) {
@@ -166,23 +192,39 @@ export default function MessagePage() {
       }));
 
       if (pageNum === 1) {
-        // First page: replace messages
-        setMessages(normalized);
+        // 🎯 First load: Set messages and scroll to bottom
+        // Reverse to show oldest at top, newest at bottom
+        setMessages(normalized.reverse());
+        setPage(1);
+        setHasMoreMessages(paginationData.hasMore || false);
+        
+        // Scroll to bottom after first load
+        setTimeout(() => scrollToBottom(), 100);
+
+        if (normalized.length > 0) {
+          const last = normalized[0]; // After reverse, first element is newest
+          setConversations((prev) => prev.map((item) =>
+            item.id === conversation.id
+              ? { ...item, lastMessage: last.text, lastTime: last.timestamp, isUnread: false }
+              : item
+          ));
+        }
       } else {
-        // Subsequent pages: prepend older messages
-        setMessages((prev) => [...normalized, ...prev]);
-      }
+        // 📜 Lazy load: Prepend older messages and preserve scroll position
+        const currentScrollHeight = messagesAreaRef.current?.scrollHeight || 0;
+        
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map(m => m.id));
+          const newMessages = normalized.filter(m => !existingIds.has(m.id));
+          // Older messages come in reverse order, prepend at beginning
+          return [...newMessages.reverse(), ...prev];
+        });
 
-      setPage(pageNum);
-      setHasMoreMessages(paginationData.hasMore || false);
-
-      if (pageNum === 1 && normalized.length > 0) {
-        const last = normalized[normalized.length - 1];
-        setConversations((prev) => prev.map((item) =>
-          item.id === conversation.id
-            ? { ...item, lastMessage: last.text, lastTime: last.timestamp, isUnread: false }
-            : item
-        ));
+        setPage(pageNum);
+        setHasMoreMessages(paginationData.hasMore || false);
+        
+        // Preserve scroll position
+        scrollToPosition(currentScrollHeight);
       }
     } catch (err) {
       console.error('Không thể tải cuộc trò chuyện:', err);
@@ -251,18 +293,16 @@ export default function MessagePage() {
           const timeB = b.lastTime ? new Date(b.lastTime) : new Date(0);
           
           if (timeA.getTime() !== timeB.getTime()) {
-            return timeB.getTime() - timeA.getTime(); // Newest first
+            return timeB.getTime() - timeA.getTime();
           }
-          return a.name.localeCompare(b.name); // Then by name
+          return a.name.localeCompare(b.name);
         });
       });
       
       setNewMessage('');
       
-      // Auto-scroll to bottom
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 0);
+      // Always scroll to bottom after sending
+      scrollToBottom();
     } catch (err) {
       console.error('Error sending message:', err);
     }
@@ -283,7 +323,7 @@ export default function MessagePage() {
         String(incomingMessage.senderId) === String(selectedConversation.id) ||
         String(incomingMessage.receiverId) === String(selectedConversation.id);
 
-      console.log('[MessagePage] 🔍 Is for current conversation?', { isForCurrentConversation, senderId: incomingMessage.senderId, receiverId: incomingMessage.receiverId });
+      console.log('[MessagePage] 🔍 Is for current conversation?', { isForCurrentConversation });
 
       if (isForCurrentConversation) {
         console.log('[MessagePage] ✅ Adding message to current conversation:', incomingMessage);
@@ -322,6 +362,14 @@ export default function MessagePage() {
             return a.name.localeCompare(b.name); // Then by name
           });
         });
+        
+        // 🎯 Smart scroll: Only scroll if user is already at bottom
+        if (isNearBottomRef.current) {
+          console.log('[MessagePage] 📍 User at bottom, scrolling...');
+          scrollToBottom();
+        } else {
+          console.log('[MessagePage] 📖 User reading old messages, NOT scrolling');
+        }
       } else {
         console.log('[MessagePage] ⏭️ Message is for different conversation, skipping');
       }
@@ -336,30 +384,29 @@ export default function MessagePage() {
         unsubscribe();
       }
     };
-  }, [selectedConversation, currentUser]);
+  }, [selectedConversation, currentUser, scrollToBottom]);
 
-  // 📜 Handle scroll for lazy loading older messages
-  const handleMessagesScroll = async (e) => {
+  // 📜 Debounced scroll handler for lazy loading
+  const handleMessagesScroll = useCallback((e) => {
     const element = e.target;
-    if (element.scrollTop === 0 && hasMoreMessages && !messagesLoading && selectedConversation) {
-      console.log('[MessagePage] 📜 Loading more older messages...');
-      const nextPage = page + 1;
-      const response = await getConversationMessages(selectedConversation.id, nextPage, 50);
-      const messageData = response.messages || [];
-      
-      const normalized = (messageData || []).map((message) => ({
-        id: message.Id || message.id,
-        senderId: message.SenderId || message.senderId,
-        text: message.Content || message.content,
-        timestamp: new Date(message.CreatedAt || message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-      }));
+    
+    // Update "near bottom" status
+    const isNearBottom = element.scrollHeight - (element.scrollTop + element.clientHeight) < SCROLL_THRESHOLD;
+    isNearBottomRef.current = isNearBottom;
 
-      // Prepend older messages
-      setMessages((prev) => [...normalized, ...prev]);
-      setPage(nextPage);
-      setHasMoreMessages(response.pagination?.hasMore || false);
+    // Debounce lazy loading trigger
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
     }
-  };
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      // Trigger lazy load only when at top
+      if (element.scrollTop < SCROLL_THRESHOLD && hasMoreMessages && !messagesLoading && selectedConversation) {
+        console.log('[MessagePage] 📜 Lazy loading older messages...');
+        loadMessages(selectedConversation, page + 1);
+      }
+    }, DEBOUNCE_DELAY);
+  }, [hasMoreMessages, messagesLoading, selectedConversation, page, loadMessages]);
 
   const filteredConversations = searchQuery.trim()
     ? conversations.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -368,6 +415,15 @@ export default function MessagePage() {
       : selectedTab === 'unread'
         ? conversations.filter(c => c.isUnread)
         : conversations.filter(c => true); // 'group' for future use
+
+  // 🧹 Cleanup scroll timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -473,7 +529,11 @@ export default function MessagePage() {
 
               {/* Messages Area */}
               <div className="messages-area" ref={messagesAreaRef} onScroll={handleMessagesScroll}>
-                {messagesLoading && <div className="loading-indicator">Đang tải tin nhắn cũ...</div>}
+                {messagesLoading && (
+                  <div className="loading-indicator">
+                    <span>⏳ Đang tải tin nhắn cũ...</span>
+                  </div>
+                )}
                 {messages.map((message) => {
                   const isSentByCurrentUser = String(message.senderId) === String(currentUser?.Id ?? currentUser?.id);
                   return (
@@ -498,7 +558,6 @@ export default function MessagePage() {
                     </div>
                   );
                 })}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Message Input */}

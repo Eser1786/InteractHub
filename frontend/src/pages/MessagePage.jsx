@@ -199,6 +199,7 @@ export default function MessagePage() {
         text: sentMessage?.Content || sentMessage?.content || newMessage.trim(),
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
       };
+      setMessages((prev) => [...prev, nextMessage]);
       
       // Update conversations and re-sort by latest message
       setConversations((prev) => {
@@ -238,17 +239,17 @@ export default function MessagePage() {
       
       // Check if this message belongs to current conversation
       const isForCurrentConversation =
-        String(incomingMessage.SenderId) === String(selectedConversation.id) ||
-        String(incomingMessage.ReceiverId) === String(selectedConversation.id);
+        String(incomingMessage.senderId) === String(selectedConversation.id) ||
+        String(incomingMessage.receiverId) === String(selectedConversation.id);
 
-      console.log('[MessagePage] 🔍 Is for current conversation?', { isForCurrentConversation, senderId: incomingMessage.SenderId, receiverId: incomingMessage.ReceiverId });
+      console.log('[MessagePage] 🔍 Is for current conversation?', { isForCurrentConversation, senderId: incomingMessage.senderId, receiverId: incomingMessage.receiverId });
 
       if (isForCurrentConversation) {
         console.log('[MessagePage] ✅ Adding message to current conversation:', incomingMessage);
         const formattedMessage = {
-          id: incomingMessage.Id || incomingMessage.id,
-          senderId: incomingMessage.SenderId || incomingMessage.senderId,
-          text: incomingMessage.Content || incomingMessage.content,
+          id: incomingMessage.id || incomingMessage.id,
+          senderId: incomingMessage.senderId || incomingMessage.senderId,
+          text: incomingMessage.content || incomingMessage.content,
           timestamp: new Date(incomingMessage.CreatedAt || incomingMessage.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
         };
         

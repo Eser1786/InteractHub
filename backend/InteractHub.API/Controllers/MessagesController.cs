@@ -86,7 +86,14 @@ public class MessagesController : ControllerBase
         var conversationGroup = GetConversationGroupName(senderId, dto.ReceiverId);
         Console.WriteLine($"[MessagesController] 📡 Broadcasting message to group: {conversationGroup}");
         Console.WriteLine($"[MessagesController] 📨 Message content: {messageDto.Content}");
+
         await _messageHubContext.Clients.Group(conversationGroup).SendAsync("ReceiveMessage", messageDto);
+
+        await _messageHubContext.Clients.Group($"user_{dto.ReceiverId}")
+            .SendAsync("ReceiveMessage", messageDto);
+
+        await _messageHubContext.Clients.Group($"user_{senderId}")
+            .SendAsync("ReceiveMessage", messageDto);
         Console.WriteLine($"[MessagesController] ✅ Message broadcasted successfully");
 
         return this.CreatedResponse(messageDto);

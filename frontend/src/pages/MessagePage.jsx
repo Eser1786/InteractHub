@@ -16,6 +16,7 @@ export default function MessagePage() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const unsubscribeRef = useRef(null);
+  const presenceUnsubscribeRef = useRef(null);
   const previousConversationRef = useRef(null);
 
   // Initialize SignalR connection and load friends
@@ -84,6 +85,25 @@ export default function MessagePage() {
           
           await loadMessages(firstConversation);
         }
+
+        // 👥 Subscribe to presence updates (online/offline)
+        const unsubscribePresence = messageHubConnection.onPresence((presenceData) => {
+          console.log('[MessagePage] 👥 Presence update received:', presenceData);
+          
+          setConversations((prev) => 
+            prev.map((conv) => {
+              if (conv.id === presenceData.userId) {
+                console.log(`[MessagePage] Updating ${conv.name} to ${presenceData.status}`);
+                return {
+                  ...conv,
+                  isActive: presenceData.status === 'online'
+                };
+              }
+              return conv;
+            })
+          );
+        });
+        presenceUnsubscribeRef.current = unsubscribePresence;
       } catch (err) {
         console.error('[MessagePage] ❌ Error loading data:', err);
         setError(`Lỗi tải dữ liệu: ${err.message}`);
@@ -98,6 +118,9 @@ export default function MessagePage() {
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
+      }
+      if (presenceUnsubscribeRef.current) {
+        presenceUnsubscribeRef.current();
       }
       if (previousConversationRef.current && messageHubConnection.isActive()) {
         messageHubConnection.leaveConversation(previousConversationRef.current).catch(err => 

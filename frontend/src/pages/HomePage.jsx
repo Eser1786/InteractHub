@@ -33,6 +33,7 @@ export default function HomePage() {
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [hashtagSearch, setHashtagSearch] = useState(null);
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [newStoryContent, setNewStoryContent] = useState('');
   const [newStoryFile, setNewStoryFile] = useState(null);
   const [storyImagePreview, setStoryImagePreview] = useState('');
@@ -58,9 +59,17 @@ export default function HomePage() {
     if (!userData?.Id) return;
     try {
       const notificationData = await getNotifications(userData.Id);
-      const sortedNotifications = (notificationData || [])
+      // Filter out message notifications - only show friend requests, likes, comments, and shares
+      const filteredNotifications = (notificationData || [])
+        .filter(n => n.Type !== 'Message')
         .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
-      setNotifications(sortedNotifications);
+      setNotifications(filteredNotifications);
+      
+      // Count unread messages separately
+      const unreadMessages = (notificationData || [])
+        .filter(n => n.Type === 'Message' && !n.IsRead)
+        .length;
+      setUnreadMessageCount(unreadMessages);
     } catch (err) {
       console.error('Error loading notifications:', err);
     }
@@ -270,10 +279,16 @@ export default function HomePage() {
 
     connection.on('ReceiveNotification', (notification) => {
       if (!notification) return;
-      setNotifications((prevNotifications) => [
-        notification,
-        ...prevNotifications.filter((item) => item.Id !== notification.Id)
-      ]);
+      
+      // Filter out message notifications - only show in message badge
+      if (notification.Type === 'Message') {
+        setUnreadMessageCount(prev => prev + 1);
+      } else {
+        setNotifications((prevNotifications) => [
+          notification,
+          ...prevNotifications.filter((item) => item.Id !== notification.Id)
+        ]);
+      }
     });
 
     connection.start()
@@ -735,7 +750,7 @@ export default function HomePage() {
 
   return (
     <div className="home-wrapper">
-      <Header onLogout={handleLogout} onSearch={handleHomeSearch} searchValue={hashtagSearch || ''} />
+      <Header onLogout={handleLogout} onSearch={handleHomeSearch} searchValue={hashtagSearch || ''} unreadMessageCount={unreadMessageCount} />
       <div className="home-container">
         {/* Left Sidebar */}
         <aside className="sidebar-left">

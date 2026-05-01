@@ -4,7 +4,7 @@ import logoImage from '../assets/logo.png';
 import logoTextImage from '../assets/chữ logo 2.png';
 import '../styles/Header.css';
 
-export default function Header({ onLogout, showControls = true, onSearch, searchValue = '' }) {
+export default function Header({ onLogout, showControls = true, onSearch, searchValue = '', unreadMessageCount = 0 }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
@@ -142,7 +142,29 @@ export default function Header({ onLogout, showControls = true, onSearch, search
                 onClick={() => navigate('/message')}
                 title="Messages"
               >
-                <span className="icon-messages"><i class="fa-regular fa-envelope"></i></span>
+                <span className="icon-messages" style={{ position: 'relative' }}>
+                  <i className="fa-regular fa-envelope"></i>
+                  {unreadMessageCount > 0 && (
+                    <span className="message-badge" style={{
+                      position: 'absolute',
+                      top: '-5px',
+                      right: '-5px',
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      border: '2px solid white'
+                    }}>
+                      {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                    </span>
+                  )}
+                </span>
               </button>
               <button 
                 className="header-icon-btn logout-btn" 

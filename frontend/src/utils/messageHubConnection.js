@@ -5,6 +5,7 @@ class MessageHubConnection {
     this.connection = null;
     this.isConnected = false;
     this.messageListeners = [];
+    this.presenceListeners = [];
     this.currentConversationUserId = null;
   }
 
@@ -53,6 +54,18 @@ class MessageHubConnection {
       this.connection.on('ReceiveMessage', (message) => {
         console.log('[MessageHub] ✉️ Incoming message received:', message);
         this.messageListeners.forEach(listener => listener(message));
+      });
+
+      // Handle user online status
+      this.connection.on('UserOnline', (data) => {
+        console.log('[MessageHub] 🟢 User online:', data.UserId);
+        this.presenceListeners.forEach(listener => listener({ userId: data.UserId, status: 'online' }));
+      });
+
+      // Handle user offline status
+      this.connection.on('UserOffline', (data) => {
+        console.log('[MessageHub] 🔴 User offline:', data.UserId);
+        this.presenceListeners.forEach(listener => listener({ userId: data.UserId, status: 'offline' }));
       });
 
       // Handle connection state changes
@@ -167,6 +180,22 @@ class MessageHubConnection {
     return () => {
       console.log('[MessageHub] 📌 Unregistering message listener');
       this.messageListeners = this.messageListeners.filter(l => l !== listener);
+    };
+  }
+
+  /**
+   * Subscribe to presence updates (online/offline)
+   * @param {Function} listener - Callback function to handle presence changes
+   * @returns {Function} - Function to unsubscribe
+   */
+  onPresence(listener) {
+    console.log('[MessageHub] 👥 Registering presence listener');
+    this.presenceListeners.push(listener);
+    
+    // Return unsubscribe function
+    return () => {
+      console.log('[MessageHub] 👥 Unregistering presence listener');
+      this.presenceListeners = this.presenceListeners.filter(l => l !== listener);
     };
   }
 

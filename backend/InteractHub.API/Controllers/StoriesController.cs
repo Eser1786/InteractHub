@@ -16,10 +16,12 @@ namespace InteractHub.API.Controllers;
 public class StoriesController : ControllerBase
 {
     private readonly IStoryService _storyService;
+    private readonly IFriendshipService _friendshipService;
 
-    public StoriesController(IStoryService storyService)
+    public StoriesController(IStoryService storyService, IFriendshipService friendshipService)
     {
         _storyService = storyService;
+        _friendshipService = friendshipService;
     }
 
     [HttpGet]
@@ -27,7 +29,19 @@ public class StoriesController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll()
     {
-        var stories = await _storyService.GetAllAsync();
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        var friends = await _friendshipService.GetAcceptedFriendsAsync(userId);
+        var friendIds = friends
+            .Select(f => f.UserId == userId ? f.Friend?.Id : f.User?.Id)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToList();
+
+        var allStories = await _storyService.GetAllAsync();
+        var stories = allStories.Where(s => friendIds.Contains(s.UserId)).ToList();
+
         var storyDtos = stories.Select(s => new StoryResponseDto
         {
             Id = s.Id,
@@ -53,6 +67,18 @@ public class StoriesController : ControllerBase
         if (story == null)
             return this.NotFoundResponse("Story not found");
 
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        // Allow if viewing own story
+        if (currentUserId != story.UserId)
+        {
+            var status = await _friendshipService.CheckFriendshipStatusAsync(currentUserId, story.UserId);
+            if (status != InteractHub.Application.Entities.Enums.FriendshipStatus.Accepted)
+                return this.ForbiddenResponse("You can only view stories from friends");
+        }
+
         var storyDto = new StoryResponseDto
         {
             Id = story.Id,
@@ -73,6 +99,18 @@ public class StoriesController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetByUserId(string userId)
     {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        // Allow if viewing own stories
+        if (currentUserId != userId)
+        {
+            var status = await _friendshipService.CheckFriendshipStatusAsync(currentUserId, userId);
+            if (status != InteractHub.Application.Entities.Enums.FriendshipStatus.Accepted)
+                return this.ForbiddenResponse("You can only view stories from friends");
+        }
+
         var stories = await _storyService.GetByUserIdAsync(userId);
         var storyDtos = stories.Select(s => new StoryResponseDto
         {

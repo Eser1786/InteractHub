@@ -66,15 +66,17 @@ export default function MessagePage() {
         console.log('[MessagePage] 💬 Conversations loaded:', conversationsData?.length || 0);
         
         const conversationList = (conversationsData || []).map((convo) => ({
-          id: convo.FriendId || convo.friendId,
-          name: convo.FriendName || convo.friendName || 'Bạn',
-          avatarUrl: convo.FriendProfilePictureUrl || convo.friendProfilePictureUrl || '',
+          id: convo.id || convo.FriendId || convo.friendId,
+          name: convo.conversationName || convo.ConversationName || convo.FriendName || convo.friendName || 'Bạn',
+          avatarUrl: convo.conversationAvatarUrl || convo.ConversationAvatarUrl || convo.FriendProfilePictureUrl || convo.friendProfilePictureUrl || '',
           isUnread: false,
           isActive: true,
-          lastMessage: convo.LastMessage || convo.lastMessage || '',
-          lastTime: convo.LastMessageTime 
-            ? new Date(convo.LastMessageTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-            : convo.lastTime || ''
+          lastMessage: convo.lastMessage || convo.LastMessage || '',
+          lastTime: (convo.lastMessageTime || convo.LastMessageTime)
+            ? new Date(convo.lastMessageTime || convo.LastMessageTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+            : convo.lastTime || '',
+          isGroup: convo.isGroup ?? convo.IsGroup ?? false, // Extract group flag
+          participantCount: convo.participantCount ?? convo.ParticipantCount ?? 2 // Extract participant count
         }));
 
         setConversations(conversationList);
@@ -199,21 +201,39 @@ export default function MessagePage() {
         id: message.Id || message.id,
         senderId: message.SenderId || message.senderId,
         text: message.Content || message.content,
-        timestamp: new Date(message.CreatedAt || message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date(message.CreatedAt || message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        createdAt: new Date(message.CreatedAt || message.createdAt) // Store for sorting
       }));
 
+      const safeSorted = [...normalized].sort(
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+      );
+
+      console.log('PAGE:', pageNum);
+      console.log('RAW:', normalized.map(m => m.createdAt.toISOString()));
+
+      console.log("PAGE:", pageNum);
+      console.log(
+        "MIN:",
+        safeSorted[0]?.createdAt,
+        "MAX:",
+        safeSorted[safeSorted.length - 1]?.createdAt
+      );
+
+      // CRITICAL: Ensure messages are sorted by CreatedAt ASCENDING (oldest first)
+  
+
       if (pageNum === 1) {
-        // 🎯 First load: Set messages and scroll to bottom
-        // Reverse to show oldest at top, newest at bottom
-        setMessages(normalized.reverse());
+        // 🎯 First load: Set messages in ascending order (oldest first)
+        setMessages(safeSorted);
         setPage(1);
         setHasMoreMessages(paginationData.hasMore || false);
         
         // Scroll to bottom after first load
         setTimeout(() => scrollToBottom(), 100);
 
-        if (normalized.length > 0) {
-          const last = normalized[0]; // After reverse, first element is newest
+        if (safeSorted.length > 0) {
+          const last = safeSorted[safeSorted.length - 1]; // Get the last (newest) message
           setConversations((prev) => prev.map((item) =>
             item.id === conversation.id
               ? { ...item, lastMessage: last.text, lastTime: last.timestamp, isUnread: false }
@@ -221,14 +241,16 @@ export default function MessagePage() {
           ));
         }
       } else {
-        // 📜 Lazy load: Prepend older messages and preserve scroll position
+        // 📜 Lazy load: Prepend older messages (sorted ascending) and preserve scroll position
         const currentScrollHeight = messagesAreaRef.current?.scrollHeight || 0;
         
         setMessages((prev) => {
           const existingIds = new Set(prev.map(m => m.id));
-          const newMessages = normalized.filter(m => !existingIds.has(m.id));
-          // Older messages come in reverse order, prepend at beginning
-          return [...newMessages.reverse(), ...prev];
+          const newMessages = safeSorted.filter(m => !existingIds.has(m.id));
+
+          return [...prev, ...newMessages].sort((a,b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+         
         });
 
         setPage(pageNum);
@@ -281,13 +303,18 @@ export default function MessagePage() {
         id: sentMessage?.Id || sentMessage?.id || messages.length + 1,
         senderId: sentMessage?.SenderId || sentMessage?.senderId || currentUser?.Id || currentUser?.id,
         text: sentMessage?.Content || sentMessage?.content || newMessage.trim(),
-        timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        createdAt: new Date(sentMessage?.CreatedAt || Date.now()) // ✅ THÊM DÒNG NÀY
       };
       
       // Add message to display
       setMessages((prev) => {
         const exists = prev.some(m => m.id === nextMessage.id);
-        return exists ? prev : [...prev, nextMessage];
+        if (exists) return prev;
+
+        const updated = [...prev, nextMessage];
+
+        return updated.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       });
       
       // Update conversations and re-sort by latest message
@@ -330,28 +357,38 @@ export default function MessagePage() {
       console.log('[MessagePage] 📨 Incoming message from SignalR:', incomingMessage);
       
       // Check if this message belongs to current conversation
+      const currentUserId = String(currentUser?.Id ?? currentUser?.id);
+
+      const senderId = String(incomingMessage.senderId ?? incomingMessage.SenderId);
+      const receiverId = String(incomingMessage.receiverId ?? incomingMessage.ReceiverId);
+      const conversationId = String(selectedConversation.id);
+
       const isForCurrentConversation =
-        String(incomingMessage.senderId) === String(selectedConversation.id) ||
-        String(incomingMessage.receiverId) === String(selectedConversation.id);
+        (senderId === conversationId && receiverId === currentUserId) ||
+        (receiverId === conversationId && senderId === currentUserId);
 
       console.log('[MessagePage] 🔍 Is for current conversation?', { isForCurrentConversation });
 
       if (isForCurrentConversation) {
         console.log('[MessagePage] ✅ Adding message to current conversation:', incomingMessage);
+
         const formattedMessage = {
-          id: incomingMessage.id || incomingMessage.id,
-          senderId: incomingMessage.senderId || incomingMessage.senderId,
-          text: incomingMessage.content || incomingMessage.content,
-          timestamp: new Date(incomingMessage.CreatedAt || incomingMessage.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+          id: incomingMessage.id ?? incomingMessage.Id,
+          senderId: incomingMessage.senderId ?? incomingMessage.SenderId,
+          text: incomingMessage.content ?? incomingMessage.Content,
+          timestamp: new Date(incomingMessage.createdAt ?? incomingMessage.CreatedAt)
+            .toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          createdAt: new Date(incomingMessage.createdAt ?? incomingMessage.CreatedAt) // ✅ QUAN TRỌNG
         };
         
         // Add message only if not already in list (to avoid duplicates)
         setMessages((prev) => {
-          const exists = prev.some(m => m.id === formattedMessage.id);
-          if (!exists) {
-            console.log('[MessagePage] 💾 Message added to state');
-          }
-          return exists ? prev : [...prev, formattedMessage];
+          const exists = prev.some(m => String(m.id) === String(formattedMessage.id));
+          if (exists) return prev;
+
+          const updated = [...prev, formattedMessage];
+
+          return updated.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
         });
 
         // Update last message in conversation list and re-sort
@@ -423,7 +460,9 @@ export default function MessagePage() {
     ? conversations.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : selectedTab === 'all'
       ? conversations
-      : conversations.filter(c => true); // 'group' for future use
+      : selectedTab === 'group'
+        ? conversations.filter(c => c.isGroup === true)
+        : conversations;
 
   // 🧹 Cleanup scroll timeout on unmount
   useEffect(() => {
@@ -439,6 +478,11 @@ export default function MessagePage() {
     localStorage.removeItem('user');
     window.dispatchEvent(new Event('tokenUpdated'));
     navigate('/login');
+  };
+
+  const handleOpenUserProfile = (userId, userName) => {
+    console.log(`[MessagePage] 👤 Navigating to profile: ${userName}`);
+    navigate(`/user-profile/${userId}`);
   };
 
   if (loading) {
@@ -604,7 +648,8 @@ export default function MessagePage() {
                 <div
                   key={friend.id}
                   className="online-friend-item"
-                  onClick={() => handleSelectConversation(friend)}
+                  title={`Xem profile của ${friend.name}`}
+                  onClick={() => handleOpenUserProfile(friend.id, friend.name)}
                 >
                   <div className="friend-avatar">
                     {friend.avatarUrl ? (

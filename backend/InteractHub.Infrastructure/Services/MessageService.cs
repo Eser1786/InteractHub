@@ -32,7 +32,7 @@ public class MessageService : IMessageService
             SenderId = senderId,
             ReceiverId = receiverId,
             Content = content,
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
             IsRead = false
         };
 

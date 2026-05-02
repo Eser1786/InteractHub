@@ -46,15 +46,19 @@ public class MessagesController : ControllerBase
         var messages = await _messageService.GetMessagesBetweenUsersAsync(currentUserId, userId);
         
         // Sort by CreatedAt ASCENDING (oldest first for display top to bottom)
-        var sortedMessages = messages
-            .OrderBy(m => m.CreatedAt)
+        var sortedMessagesDesc = messages
+            .OrderByDescending(m => m.CreatedAt)
             .ToList();
 
         // Apply pagination
-        var totalCount = sortedMessages.Count;
-        var pagedMessages = sortedMessages
+        var totalCount = sortedMessagesDesc.Count;
+        var pagedMessagesDesc = sortedMessagesDesc
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .ToList();
+
+        var pagedMessages = pagedMessagesDesc
+            .OrderBy(m => m.CreatedAt)
             .ToList();
 
         var messageDtos = pagedMessages.Select(m => new MessageResponseDto

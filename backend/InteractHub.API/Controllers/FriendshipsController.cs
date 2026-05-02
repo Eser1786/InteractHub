@@ -249,19 +249,22 @@ public class FriendshipsController : ControllerBase
 
                 conversations.Add(new ConversationDto
                 {
+                    Id = friendObj.Id,
                     FriendId = friendObj.Id,
-                    FriendName = friendObj.FullName ?? friendObj.UserName ?? "Unknown",
-                    FriendProfilePictureUrl = friendObj.ProfilePictureUrl,
+                    ConversationName = friendObj.FullName ?? friendObj.UserName ?? "Unknown",
+                    ConversationAvatarUrl = friendObj.ProfilePictureUrl,
                     LastMessage = latestMessage?.Content,
                     LastMessageTime = latestMessage?.CreatedAt,
-                    LastMessageSenderId = latestMessage?.SenderId
+                    LastMessageSenderId = latestMessage?.SenderId,
+                    IsGroup = false, // Private 1-1 conversation
+                    ParticipantCount = 2 // Current user + friend
                 });
             }
 
             // Sort by latest message time (newest first), then by name
             var sorted = conversations
                 .OrderByDescending(c => c.LastMessageTime ?? DateTime.MinValue)
-                .ThenBy(c => c.FriendName)
+                .ThenBy(c => c.ConversationName)
                 .ToList();
 
             return this.SuccessResponse(sorted);

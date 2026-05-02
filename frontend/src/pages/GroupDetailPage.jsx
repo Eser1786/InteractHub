@@ -31,6 +31,7 @@ export default function GroupDetailPage() {
     userId: post.userId || post.UserId,
     UserId: post.userId || post.UserId,
     username: post.username || post.UserFullName || post.UserName || 'Người dùng',
+    userProfilePictureUrl: post.userProfilePictureUrl || post.UserProfilePictureUrl,
     content: post.content || post.Content,
     imageUrl: post.imageUrl || post.ImageUrl,
     createdAt: post.createdAt || post.CreatedAt,
@@ -416,7 +417,23 @@ export default function GroupDetailPage() {
           <section className="create-post-section">
             <div className="create-post-header">
               <div className="user-avatar">
-                <div className="avatar-placeholder"><i className="fa-solid fa-user"></i></div>
+                {currentUser?.ProfilePictureUrl ? (
+                  <img 
+                    src={currentUser.ProfilePictureUrl} 
+                    alt="Avatar"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      console.warn('Failed to load avatar image:', currentUser.ProfilePictureUrl);
+                      e.target.style.display = 'none';
+                      if (e.target.nextElementSibling) {
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <div className="avatar-placeholder" style={{ display: currentUser?.ProfilePictureUrl ? 'none' : 'flex' }}>
+                  <i className="fa-solid fa-user"></i>
+                </div>
               </div>
               <p className="create-post-prompt">
                 Bạn đang nghĩ gì? Hãy chia sẻ cảm nghĩ của bạn đến thành viên nhóm...
@@ -475,7 +492,17 @@ export default function GroupDetailPage() {
                 <div key={post.id} className="post-card">
                   <div className="post-header">
                     <div className="post-user-info">
-                      <div className="post-avatar"><i className="fa-solid fa-user"></i></div>
+                      <div className="post-avatar">
+                        {post.userProfilePictureUrl ? (
+                          <img 
+                            src={post.userProfilePictureUrl} 
+                            alt="User Avatar"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <i className="fa-solid fa-user"></i>
+                        )}
+                      </div>
                       <div className="post-user-details">
                         <p className="post-username">{post.username}</p>
                         <p className="post-time">

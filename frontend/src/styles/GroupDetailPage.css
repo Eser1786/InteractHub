@@ -260,6 +260,14 @@
   align-items: center;
 }
 
+.post-user-clickable {
+  cursor: pointer;
+}
+
+.post-user-clickable:hover .post-username {
+  text-decoration: underline;
+}
+
 .post-avatar {
   width: 40px;
   height: 40px;

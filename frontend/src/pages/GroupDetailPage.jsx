@@ -193,6 +193,11 @@ export default function GroupDetailPage() {
     setActiveCommentPostId((current) => (current === post.id ? null : post.id));
   };
 
+  const handleOpenUserProfile = (userId) => {
+    if (!userId) return;
+    navigate(`/user-profile/${userId}`);
+  };
+
   useEffect(() => {
     if (!activeCommentPostId) {
       return;
@@ -491,7 +496,7 @@ export default function GroupDetailPage() {
               posts.map((post) => (
                 <div key={post.id} className="post-card">
                   <div className="post-header">
-                    <div className="post-user-info">
+                    <div className="post-user-info post-user-clickable" onClick={() => handleOpenUserProfile(post.userId || post.UserId)}>
                       <div className="post-avatar">
                         {post.userProfilePictureUrl ? (
                           <img 

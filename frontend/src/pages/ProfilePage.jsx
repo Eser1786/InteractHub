@@ -43,9 +43,15 @@ export default function ProfilePage() {
       const userDataJson = localStorage.getItem('user');
       if (userDataJson) {
         const userData = JSON.parse(userDataJson);
-        const userLikedPostIds = (postsData || [])
-          .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(userData.Id))
-          .map(post => post.Id);
+        const userLikedPostIds = new Set();
+        (postsData || []).forEach((post) => {
+          if (post.LikedByUserIds?.includes(userData.Id)) {
+            userLikedPostIds.add(post.Id);
+          }
+          if (post.SharedPost?.LikedByUserIds?.includes(userData.Id)) {
+            userLikedPostIds.add(post.SharedPost.Id);
+          }
+        });
         setLikedPosts(new Set(userLikedPostIds));
       }
     } catch (postsErr) {
@@ -371,6 +377,11 @@ export default function ProfilePage() {
 
   const handleToggleComments = (post) => {
     setActiveCommentPostId((current) => (current === post.Id ? null : post.Id));
+  };
+
+  const handleToggleSharedComments = (sharedPost) => {
+    if (!sharedPost) return;
+    setActiveCommentPostId((current) => (current === sharedPost.Id ? null : sharedPost.Id));
   };
 
   const handleAddComment = async (postId, content) => {
@@ -713,12 +724,17 @@ export default function ProfilePage() {
                         <span>{post.UserFullName || post.UserName} đã chia sẻ</span>
                       </div>
                       
-                      <div className="original-post" style={{
-                        backgroundColor: '#fff',
-                        padding: '10px',
-                        borderRadius: '6px',
-                        border: '1px solid #ddd'
-                      }}>
+                      <div
+                        className="original-post"
+                        style={{
+                          backgroundColor: '#fff',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          border: '1px solid #ddd',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleToggleSharedComments(post.SharedPost)}
+                      >
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -795,6 +811,34 @@ export default function ProfilePage() {
 
                         <div style={{
                           display: 'flex',
+                          gap: '10px',
+                          marginTop: '8px'
+                        }}>
+                          <button
+                            type="button"
+                            className={`post-action-btn shared-post-action ${likedPosts.has(post.SharedPost.Id) ? 'liked' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLike(post.SharedPost);
+                            }}
+                          >
+                            <span>{likedPosts.has(post.SharedPost.Id) ? '❤️' : '🤍'}</span>
+                            {likedPosts.has(post.SharedPost.Id) ? 'Bỏ thích bài gốc' : 'Thích bài gốc'}
+                          </button>
+                          <button
+                            type="button"
+                            className="post-action-btn shared-post-action"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSharedComments(post.SharedPost);
+                            }}
+                          >
+                            <span><i className="fa-solid fa-comments"></i></span> Bình luận bài gốc
+                          </button>
+                        </div>
+
+                        <div style={{
+                          display: 'flex',
                           gap: '16px',
                           marginTop: '8px',
                           paddingTop: '8px',
@@ -805,6 +849,20 @@ export default function ProfilePage() {
                           <span>❤️ {post.SharedPost.LikesCount} lượt thích</span>
                           <span><i className="fa-solid fa-comments"></i> {post.SharedPost.CommentsCount} bình luận</span>
                         </div>
+
+                        {activeCommentPostId === post.SharedPost.Id && (
+                          <div style={{ marginTop: '12px' }}>
+                            <CommentSection
+                              post={post.SharedPost}
+                              comments={commentsByPost[post.SharedPost.Id] || []}
+                              onClose={() => setActiveCommentPostId(null)}
+                              onAddComment={handleAddComment}
+                              onDeleteComment={handleDeleteComment}
+                              onEditComment={handleEditComment}
+                              currentUser={currentUser}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

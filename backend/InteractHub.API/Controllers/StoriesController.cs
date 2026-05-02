@@ -40,7 +40,7 @@ public class StoriesController : ControllerBase
             .ToList();
 
         var allStories = await _storyService.GetAllAsync();
-        var stories = allStories.Where(s => friendIds.Contains(s.UserId)).ToList();
+        var stories = allStories.Where(s => friendIds.Contains(s.UserId) || s.UserId == userId).ToList();
 
         var storyDtos = stories.Select(s => new StoryResponseDto
         {
@@ -146,15 +146,18 @@ public class StoriesController : ControllerBase
         };
 
         var created = await _storyService.CreateAsync(story);
+        var createdWithUser = await _storyService.GetByIdAsync(created.Id);
 
         var storyDto = new StoryResponseDto
         {
-            Id = created.Id,
-            ImageUrl = created.ImageUrl,
-            Content = created.Content,
-            CreatedAt = created.CreatedAt,
-            ExpireAt = created.ExpireAt,
-            UserId = created.UserId
+            Id = createdWithUser!.Id,
+            ImageUrl = createdWithUser.ImageUrl,
+            Content = createdWithUser.Content,
+            CreatedAt = createdWithUser.CreatedAt,
+            ExpireAt = createdWithUser.ExpireAt,
+            UserId = createdWithUser.UserId,
+            UserName = createdWithUser.User?.FullName ?? createdWithUser.User?.UserName,
+            UserProfilePictureUrl = createdWithUser.User?.ProfilePictureUrl
         };
 
         return this.CreatedResponse(storyDto);

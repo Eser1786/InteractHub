@@ -98,6 +98,7 @@ function App() {
           <Route path="/group" element={token ? <GroupPage /> : <Navigate to="/login" replace />} />
           <Route path="/group/:groupSlug" element={token ? <GroupDetailPage /> : <Navigate to="/login" replace />} />
           <Route path="/story/:storyId" element={token ? <StoryPage /> : <Navigate to="/login" replace />} />
+          <Route path="/story/user/:userId" element={token ? <StoryPage /> : <Navigate to="/login" replace />} />
           <Route path="/creategroup" element={token ? <CreateGroupPage /> : <Navigate to="/login" replace />} />
           <Route path="/message" element={token ? <MessagePage /> : <Navigate to="/login" replace />} />
           <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/login" replace />} />

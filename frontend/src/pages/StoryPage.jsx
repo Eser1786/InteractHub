@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
-import { getStoryById, getStories, deleteStory, createStory } from '../api';
+import { getStoryById, getStories, deleteStory, createStory, getStoriesByUserId } from '../api';
 import '../styles/StoryPage.css';
 
 export default function StoryPage() {
@@ -17,7 +17,7 @@ export default function StoryPage() {
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showStoryOptions, setShowStoryOptions] = useState(false);
-  const { storyId } = useParams();
+  const { storyId, userId } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,18 +28,29 @@ export default function StoryPage() {
   useEffect(() => {
     const loadStories = async () => {
       try {
-        const allStories = await getStories();
-        const activeStories = (allStories || []).filter(story => {
+        let storiesData;
+        if (userId) {
+          // Load stories by user
+          storiesData = await getStoriesByUserId(userId);
+        } else {
+          // Load all stories
+          storiesData = await getStories();
+        }
+        const activeStories = (storiesData || []).filter(story => {
           return !story.ExpireAt || new Date(story.ExpireAt) > new Date();
         });
         setStoriesList(activeStories);
+
+        if (userId && activeStories.length > 0) {
+          setStory(activeStories[0]);
+        }
       } catch (err) {
         console.error('Error loading story list:', err);
       }
     };
 
     loadStories();
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     const loadStory = async () => {
@@ -47,8 +58,7 @@ export default function StoryPage() {
       setError('');
 
       try {
-        if (!storyId) {
-          setError('Story ID không hợp lệ');
+        if (!storyId || userId) {
           setLoading(false);
           return;
         }
@@ -68,7 +78,7 @@ export default function StoryPage() {
     };
 
     loadStory();
-  }, [storyId]);
+  }, [storyId, userId]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -180,7 +190,9 @@ export default function StoryPage() {
           </div>
 
           <div className="stories-list-section">
-            <p className="stories-list-heading">Tất cả tin</p>
+            <p className="stories-list-heading">
+              {userId ? `Tin của ${storiesList[0]?.UserName || 'người dùng'}` : 'Tất cả tin'}
+            </p>
             <div className="stories-list">
               {storiesList.map((item) => (
                 <div

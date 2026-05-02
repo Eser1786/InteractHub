@@ -186,6 +186,15 @@ export async function getStoryById(storyId) {
   return data?.Data || null;
 }
 
+export async function getStoriesByUserId(userId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/stories/user/${userId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
 export async function deleteStory(storyId) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/stories/${storyId}`, {

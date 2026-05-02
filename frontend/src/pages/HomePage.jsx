@@ -525,13 +525,19 @@ export default function HomePage() {
         throw new Error('Tạo tin thất bại');
       }
 
-      setStories([createdStory, ...stories]);
+      const storyWithUser = {
+        ...createdStory,
+        UserName: currentUser?.FullName || currentUser?.UserName || 'Bạn',
+        UserProfilePictureUrl: currentUser?.ProfilePictureUrl || ''
+      };
+
+      setStories([storyWithUser, ...stories]);
       setNewStoryContent('');
       setNewStoryFile(null);
       setStoryImagePreview('');
       setShowCreateStoryModal(false);
       setError('');
-      navigate(`/story/${createdStory.Id}`);
+      navigate(`/story/user/${createdStory.UserId}`);
     } catch (err) {
       setError(err.message);
       console.error('Error creating story:', err);
@@ -1077,22 +1083,35 @@ const filteredUsers = searchQuery.trim() ?
               </div>
 
               {/* Friend Stories */}
-              {stories.map((story) => (
+              {Object.values(
+                stories.reduce((acc, story) => {
+                  if (!acc[story.UserId]) {
+                    acc[story.UserId] = {
+                      UserId: story.UserId,
+                      UserName: story.UserName,
+                      UserProfilePictureUrl: story.UserProfilePictureUrl,
+                      stories: []
+                    };
+                  }
+                  acc[story.UserId].stories.push(story);
+                  return acc;
+                }, {})
+              ).map((userStories) => (
                 <div
-                  key={story.Id}
+                  key={userStories.UserId}
                   className="story-card story-card-clickable"
-                  onClick={() => navigate(`/story/${story.Id}`)}
+                  onClick={() => navigate(`/story/user/${userStories.UserId}`)}
                 >
                   <div className="story-background"></div>
 
                   <div className="story-avatar">
-                    {story.UserProfilePictureUrl ? (
-                      <img src={story.UserProfilePictureUrl} alt="Avatar" />
+                    {userStories.UserProfilePictureUrl ? (
+                      <img src={userStories.UserProfilePictureUrl} alt="Avatar" />
                     ) : (
                       <i className="fa-solid fa-user"></i>
                     )}
                   </div>
-                  <p className="story-label">{story.UserName || 'Tin mới'}</p>
+                  <p className="story-label">{userStories.UserName || 'Tin mới'}</p>
                 </div>
               ))}
             </div>

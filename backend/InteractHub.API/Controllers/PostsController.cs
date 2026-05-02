@@ -29,7 +29,7 @@ public class PostsController : ControllerBase
     public async Task<IActionResult> GetByUserId(string userId)
     {
         var posts = await _postService.GetAllAsync();
-        var userPosts = posts.Where(p => p.UserId == userId)
+        var userPosts = posts.Where(p => p.UserId == userId && p.GroupId == null)
             .OrderByDescending(p => p.CreatedAt)
             .ToList();
         
@@ -95,7 +95,7 @@ public class PostsController : ControllerBase
         var posts = await _postService.GetAllAsync();
         
         // Sort by CreatedAt descending (newest first)
-        var sortedPosts = posts
+        var sortedPosts = posts.Where(p => p.GroupId == null)
             .OrderByDescending(p => p.CreatedAt)
             .ToList();
 

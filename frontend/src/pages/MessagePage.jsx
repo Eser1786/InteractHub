@@ -423,9 +423,7 @@ export default function MessagePage() {
     ? conversations.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : selectedTab === 'all'
       ? conversations
-      : selectedTab === 'unread'
-        ? conversations.filter(c => c.isUnread)
-        : conversations.filter(c => true); // 'group' for future use
+      : conversations.filter(c => true); // 'group' for future use
 
   // 🧹 Cleanup scroll timeout on unmount
   useEffect(() => {
@@ -470,12 +468,6 @@ export default function MessagePage() {
               onClick={() => setSelectedTab('all')}
             >
               Tất cả
-            </button>
-            <button 
-              className={`message-tab ${selectedTab === 'unread' ? 'active' : ''}`}
-              onClick={() => setSelectedTab('unread')}
-            >
-              Chưa đọc
             </button>
             <button 
               className={`message-tab ${selectedTab === 'group' ? 'active' : ''}`}

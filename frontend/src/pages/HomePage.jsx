@@ -854,6 +854,11 @@ export default function HomePage() {
     navigate(`/home?hashtag=${encodeURIComponent(slug)}`);
   };
 
+  const handleOpenUserProfile = (userId) => {
+    if (!userId) return;
+    navigate(`/user-profile/${userId}`);
+  };
+
   const handlePostsScroll = (e) => {
     const element = e.target;
     const distanceToBottom = element.scrollHeight - (element.scrollTop + element.clientHeight);
@@ -1104,7 +1109,7 @@ const filteredUsers = searchQuery.trim() ?
                 {displayedPosts.map((post) => (
                 <div key={post.Id} className="post-card">
                   <div className="post-header">
-                    <div className="post-user-info">
+                    <div className="post-user-info post-user-clickable" onClick={() => handleOpenUserProfile(post.UserId || post.userId)}>
                       <div className="post-avatar">
                         {post.UserProfilePictureUrl ? (
                           <img 

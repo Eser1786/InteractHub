@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getAcceptedFriends, getCommentsByPost, createComment, updateComment, deleteComment, getPostById } from '../api';
+import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getAcceptedFriends, getCommentsByPost, createComment, updateComment, deleteComment, getPostById, removeFriend } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -22,6 +22,8 @@ export default function UserProfilePage() {
   const [friendRequestSent, setFriendRequestSent] = useState(false);
   const [isAddingFriend, setIsAddingFriend] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
+  const [showUnfriendConfirm, setShowUnfriendConfirm] = useState(false);
+  const [isUnfriending, setIsUnfriending] = useState(false);
 
   const loadUserData = async () => {
     try {
@@ -110,6 +112,31 @@ export default function UserProfilePage() {
       setError(`Lỗi gửi lời mời: ${err.message}`);
     } finally {
       setIsAddingFriend(false);
+    }
+  };
+
+  const handleUnfriend = async () => {
+    if (!currentUser || !user) return;
+
+    setIsUnfriending(true);
+    try {
+      await removeFriend(user.Id || userId);
+      setIsFriend(false);
+      setShowUnfriendConfirm(false);
+      setError('');
+      
+      // Emit event to notify HomePage about friend removal
+      window.dispatchEvent(new Event('friendRemoved'));
+      
+      // Show success notification
+      setTimeout(() => {
+        setError('');
+      }, 3000);
+    } catch (err) {
+      console.error('Error unfriending:', err);
+      setError(`Lỗi hủy kết bạn: ${err.message}`);
+    } finally {
+      setIsUnfriending(false);
     }
   };
 
@@ -281,8 +308,17 @@ export default function UserProfilePage() {
               </div>
 
               {isFriend ? (
-                <div style={{ padding: '10px 20px', background: '#6b4fc7', color: 'white', borderRadius: '6px', fontWeight: '600', textAlign: 'center' }}>
-                  ✓ Bạn bè
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div style={{ padding: '10px 20px', background: '#6b4fc7', color: 'white', borderRadius: '6px', fontWeight: '600', textAlign: 'center', flex: 1 }}>
+                    ✓ Bạn bè
+                  </div>
+                  <button
+                    onClick={() => setShowUnfriendConfirm(true)}
+                    style={{ padding: '10px 20px', background: '#f44336', color: 'white', borderRadius: '6px', fontWeight: '600', border: 'none', cursor: 'pointer' }}
+                    title="Hủy kết bạn"
+                  >
+                    <i className="fa-solid fa-user-minus"></i>
+                  </button>
                 </div>
               ) : friendRequestSent ? (
                 <div style={{ padding: '10px 20px', background: '#4caf50', color: 'white', borderRadius: '6px', fontWeight: '600', textAlign: 'center' }}>
@@ -380,6 +416,73 @@ export default function UserProfilePage() {
             )}
           </div>
         </main>
+
+        {/* Unfriend Confirmation Dialog */}
+        {showUnfriendConfirm && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: 'white',
+              padding: '30px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              maxWidth: '400px',
+              textAlign: 'center'
+            }}>
+              <h3 style={{ margin: '0 0 15px 0', color: '#333', fontSize: '18px' }}>
+                Hủy kết bạn?
+              </h3>
+              <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '14px' }}>
+                Bạn có chắc chắn muốn hủy kết bạn với <strong>{user?.FullName || user?.fullName || user?.UserName || user?.userName}</strong> không?
+              </p>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setShowUnfriendConfirm(false)}
+                  disabled={isUnfriending}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#ccc',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleUnfriend}
+                  disabled={isUnfriending}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: isUnfriending ? 'not-allowed' : 'pointer',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    opacity: isUnfriending ? 0.6 : 1
+                  }}
+                >
+                  {isUnfriending ? 'Đang xử lý...' : 'Hủy kết bạn'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

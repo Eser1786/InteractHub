@@ -499,3 +499,14 @@ export async function declineFriendRequest(friendshipId) {
   const data = await handleResponse(response);
   return data?.Data || null;
 }
+
+export async function removeFriend(friendId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/friendships/remove/${friendId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+  });
+  
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}

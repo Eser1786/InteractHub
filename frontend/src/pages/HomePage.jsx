@@ -670,25 +670,28 @@ export default function HomePage() {
         [postId]: [createdComment, ...(prev[postId] || [])]
       }));
       
-      // Update comments count and fetch updated post to sync shared post data
-      const updatedPost = await getPostById(postId);
-      if (updatedPost) {
-        setPosts((prev) => 
-          prev.map((post) => {
-            if (post.Id === postId) {
-              return updatedPost;
-            }
-            // If this post has a shared post that matches postId, update it too
-            if (post.SharedPost?.Id === postId) {
-              return {
-                ...post,
-                SharedPost: updatedPost
-              };
-            }
-            return post;
-          })
-        );
-      }
+      // Update comments count locally for immediate UI update
+      setPosts((prev) => 
+        prev.map((post) => {
+          if (post.Id === postId) {
+            return {
+              ...post,
+              CommentsCount: (post.CommentsCount || 0) + 1
+            };
+          }
+          // If this post has a shared post that matches postId, update it too
+          if (post.SharedPost?.Id === postId) {
+            return {
+              ...post,
+              SharedPost: {
+                ...post.SharedPost,
+                CommentsCount: (post.SharedPost.CommentsCount || 0) + 1
+              }
+            };
+          }
+          return post;
+        })
+      );
     } catch (err) {
       console.error('Error creating comment:', err);
     }
@@ -706,25 +709,28 @@ export default function HomePage() {
         [postId]: (prev[postId] || []).filter(comment => comment.id !== commentId)
       }));
       
-      // Fetch updated post to sync shared post data
-      const updatedPost = await getPostById(postId);
-      if (updatedPost) {
-        setPosts((prev) => 
-          prev.map((post) => {
-            if (post.Id === postId) {
-              return updatedPost;
-            }
-            // If this post has a shared post that matches postId, update it too
-            if (post.SharedPost?.Id === postId) {
-              return {
-                ...post,
-                SharedPost: updatedPost
-              };
-            }
-            return post;
-          })
-        );
-      }
+      // Update comments count locally for immediate UI update
+      setPosts((prev) => 
+        prev.map((post) => {
+          if (post.Id === postId) {
+            return {
+              ...post,
+              CommentsCount: Math.max(0, (post.CommentsCount || 0) - 1)
+            };
+          }
+          // If this post has a shared post that matches postId, update it too
+          if (post.SharedPost?.Id === postId) {
+            return {
+              ...post,
+              SharedPost: {
+                ...post.SharedPost,
+                CommentsCount: Math.max(0, (post.SharedPost.CommentsCount || 0) - 1)
+              }
+            };
+          }
+          return post;
+        })
+      );
     } catch (err) {
       console.error('Error deleting comment:', err);
     }

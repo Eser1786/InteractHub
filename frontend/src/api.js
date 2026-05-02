@@ -135,6 +135,15 @@ export async function getPosts(page = 1, pageSize = 20) {
   };
 }
 
+export async function getPostById(postId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/posts/${postId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
 export async function createPost({ content, imageUrl, groupId }) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/posts`, {

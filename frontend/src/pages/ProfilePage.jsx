@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUserPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture, deletePost, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
+import { getUserPosts, likePost, unlikePost, getUser, updateUser, uploadProfilePicture, deletePost, getCommentsByPost, createComment, updateComment, deleteComment, getPostById } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -37,10 +37,7 @@ export default function ProfilePage() {
       const postsData = await getUserPosts(userId);
       console.log('Posts data received for userId:', userId, postsData);
       
-      setPosts((postsData || []).map((post) => ({
-        ...post,
-        commentsCount: 0
-      })));
+      setPosts(postsData || []);
       
       // Initialize liked posts from response data
       const userDataJson = localStorage.getItem('user');
@@ -153,9 +150,20 @@ export default function ProfilePage() {
       }
     };
 
+    const handlePostShared = async () => {
+      console.log('Post shared - reloading ProfilePage posts');
+      const userDataJson = localStorage.getItem('user');
+      if (userDataJson) {
+        const userData = JSON.parse(userDataJson);
+        await loadPosts(userData.Id || userData.id);
+      }
+    };
+
     window.addEventListener('userUpdated', handleUserUpdate);
+    window.addEventListener('postShared', handlePostShared);
     return () => {
       window.removeEventListener('userUpdated', handleUserUpdate);
+      window.removeEventListener('postShared', handlePostShared);
     };
   }, []);
 
@@ -334,23 +342,28 @@ export default function ProfilePage() {
         setLikedPosts(prev => new Set(prev).add(post.Id));
       }
       
-      // Reload only this user's posts to get updated like count
-      console.log('Reloading posts for userId:', userId);
-      const postsData = await getUserPosts(userId);
-      if (postsData) {
-        console.log('Posts reloaded:', postsData);
-        setPosts((postsData || []).map((post) => ({
-          ...post,
-          commentsCount: commentsByPost[post.Id]?.length ?? 0
-        })));
-        
-        // Update likedPosts Set based on fresh data from backend
-        const userLikedPostIds = postsData
-          .filter(p => p.LikedByUserIds && p.LikedByUserIds.includes(userId))
-          .map(p => p.Id);
-        setLikedPosts(new Set(userLikedPostIds));
+      // Fetch updated post to get new like count
+      const updatedPost = await getPostById(post.Id);
+      if (updatedPost) {
+        // Update this post AND any posts that share it
+        setPosts(prev => 
+          prev.map(p => {
+            // If this is the liked/unliked post
+            if (p.Id === post.Id) {
+              return updatedPost;
+            }
+            // If this post shares the liked/unliked post, update the shared post data
+            if (p.SharedPost?.Id === post.Id) {
+              return {
+                ...p,
+                SharedPost: updatedPost
+              };
+            }
+            return p;
+          })
+        );
       }
-      console.log('Posts updated after like/unlike');
+      console.log('Post like count updated');
     } catch (err) {
       console.error('Error liking post:', err);
     }
@@ -367,11 +380,26 @@ export default function ProfilePage() {
         ...prev,
         [postId]: [createdComment, ...(prev[postId] || [])]
       }));
-      setPosts((prev) => prev.map((post) =>
-        post.Id === postId
-          ? { ...post, commentsCount: (post.commentsCount ?? 0) + 1 }
-          : post
-      ));
+      
+      // Fetch updated post to sync shared post data
+      const updatedPost = await getPostById(postId);
+      if (updatedPost) {
+        setPosts((prev) => 
+          prev.map((post) => {
+            if (post.Id === postId) {
+              return updatedPost;
+            }
+            // If this post has a shared post that matches postId, update it too
+            if (post.SharedPost?.Id === postId) {
+              return {
+                ...post,
+                SharedPost: updatedPost
+              };
+            }
+            return post;
+          })
+        );
+      }
     } catch (err) {
       console.error('Error creating comment:', err);
     }
@@ -388,11 +416,26 @@ export default function ProfilePage() {
         ...prev,
         [postId]: (prev[postId] || []).filter(comment => comment.id !== commentId)
       }));
-      setPosts((prev) => prev.map((post) =>
-        post.Id === postId
-          ? { ...post, commentsCount: Math.max(0, (post.commentsCount ?? 1) - 1) }
-          : post
-      ));
+      
+      // Fetch updated post to sync shared post data
+      const updatedPost = await getPostById(postId);
+      if (updatedPost) {
+        setPosts((prev) => 
+          prev.map((post) => {
+            if (post.Id === postId) {
+              return updatedPost;
+            }
+            // If this post has a shared post that matches postId, update it too
+            if (post.SharedPost?.Id === postId) {
+              return {
+                ...post,
+                SharedPost: updatedPost
+              };
+            }
+            return post;
+          })
+        );
+      }
     } catch (err) {
       console.error('Error deleting comment:', err);
     }
@@ -649,9 +692,126 @@ export default function ProfilePage() {
                     </div>
                   )}
 
+                  {/* Shared Post Display */}
+                  {post.IsShared && post.SharedPost && (
+                    <div className="shared-post-container" style={{
+                      marginTop: '12px',
+                      padding: '12px',
+                      backgroundColor: '#f0f2f5',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '10px',
+                        color: '#65676b',
+                        fontSize: '13px'
+                      }}>
+                        <i className="fa-solid fa-share"></i>
+                        <span>{post.UserFullName || post.UserName} đã chia sẻ</span>
+                      </div>
+                      
+                      <div className="original-post" style={{
+                        backgroundColor: '#fff',
+                        padding: '10px',
+                        borderRadius: '6px',
+                        border: '1px solid #ddd'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginBottom: '8px'
+                        }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            backgroundColor: '#e5e7eb'
+                          }}>
+                            {post.SharedPost.UserProfilePictureUrl ? (
+                              <img 
+                                src={post.SharedPost.UserProfilePictureUrl} 
+                                alt="Author"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                <i className="fa-solid fa-user"></i>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p style={{
+                              margin: '0',
+                              fontWeight: '600',
+                              fontSize: '14px'
+                            }}>
+                              {post.SharedPost.UserFullName || post.SharedPost.UserName}
+                            </p>
+                            <p style={{
+                              margin: '0',
+                              fontSize: '12px',
+                              color: '#65676b'
+                            }}>
+                              {new Date(post.SharedPost.CreatedAt).toLocaleDateString('vi-VN')}
+                            </p>
+                          </div>
+                        </div>
+
+                        <p style={{
+                          margin: '8px 0',
+                          fontSize: '14px',
+                          color: '#050505'
+                        }}>
+                          <HashtagContent 
+                            content={post.SharedPost.Content} 
+                            onHashtagClick={handleHashtagClick}
+                          />
+                        </p>
+
+                        {post.SharedPost.ImageUrl && (
+                          <img 
+                            src={post.SharedPost.ImageUrl} 
+                            alt="Shared Post" 
+                            style={{
+                              marginTop: '8px',
+                              maxWidth: '100%',
+                              borderRadius: '6px',
+                              maxHeight: '300px',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        )}
+
+                        <div style={{
+                          display: 'flex',
+                          gap: '16px',
+                          marginTop: '8px',
+                          paddingTop: '8px',
+                          borderTop: '1px solid #e5e7eb',
+                          fontSize: '12px',
+                          color: '#65676b'
+                        }}>
+                          <span>❤️ {post.SharedPost.LikesCount} lượt thích</span>
+                          <span><i className="fa-solid fa-comments"></i> {post.SharedPost.CommentsCount} bình luận</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="post-stats-profile">
                     <span>❤️ {post.LikesCount}</span>
-                    <span><i className="fa-solid fa-comments"></i> {commentsByPost[post.Id]?.length ?? 0} Bình luận</span>
+                    <span><i className="fa-solid fa-comments"></i> {post.CommentsCount ?? (commentsByPost[post.Id]?.length ?? 0)} Bình luận</span>
                   </div>
 
                   <div className="post-actions-profile">

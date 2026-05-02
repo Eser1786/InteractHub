@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getAcceptedFriends, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
+import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getAcceptedFriends, getCommentsByPost, createComment, updateComment, deleteComment, getPostById } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -36,10 +36,7 @@ export default function UserProfilePage() {
 
       // Load user's posts
       const postsData = await getUserPosts(userId);
-      setPosts((postsData || []).map((post) => ({
-        ...post,
-        commentsCount: 0
-      })));
+      setPosts(postsData || []);
 
       // Get current user for like tracking
       const currentUserJson = localStorage.getItem('user');
@@ -135,19 +132,28 @@ export default function UserProfilePage() {
         setLikedPosts(prev => new Set(prev).add(post.Id));
       }
 
-      // Reload posts to get updated like count
-      const postsData = await getUserPosts(user.Id);
-      if (postsData) {
-        setPosts((postsData || []).map((post) => ({
-          ...post,
-          commentsCount: commentsByPost[post.Id]?.length ?? 0
-        })));
-
-        const userLikedPostIds = postsData
-          .filter(p => p.LikedByUserIds && p.LikedByUserIds.includes(currentUserId))
-          .map(p => p.Id);
-        setLikedPosts(new Set(userLikedPostIds));
+      // Fetch updated post to get new like count
+      const updatedPost = await getPostById(post.Id);
+      if (updatedPost) {
+        // Update this post AND any posts that share it
+        setPosts(prev => 
+          prev.map(p => {
+            // If this is the liked/unliked post
+            if (p.Id === post.Id) {
+              return updatedPost;
+            }
+            // If this post shares the liked/unliked post, update the shared post data
+            if (p.SharedPost?.Id === post.Id) {
+              return {
+                ...p,
+                SharedPost: updatedPost
+              };
+            }
+            return p;
+          })
+        );
       }
+      console.log('Post like count updated');
     } catch (err) {
       console.error('Error liking post:', err);
     }
@@ -343,7 +349,7 @@ export default function UserProfilePage() {
 
                   <div className="post-stats-profile">
                     <span>❤️ {post.LikesCount}</span>
-                    <span><i className="fa-solid fa-comments"></i> {commentsByPost[post.Id]?.length ?? 0} Bình luận</span>
+                    <span><i className="fa-solid fa-comments"></i> {post.CommentsCount ?? (commentsByPost[post.Id]?.length ?? 0)} Bình luận</span>
                   </div>
 
                   <div className="post-actions-profile">

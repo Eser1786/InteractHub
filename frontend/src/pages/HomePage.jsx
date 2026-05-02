@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
- import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment, getNotifications, sharePost } from '../api';
+ import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment, getNotifications, sharePost, getPostById } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -103,11 +103,7 @@ export default function HomePage() {
 
       // Sort posts by CreatedAt descending (newest first)
       const sortedPosts = (postsData || [])
-        .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt))
-        .map((post) => ({
-          ...post,
-          commentsCount: 0
-        }));
+        .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
 
       if (pageNum === 1) {
         // First page: replace posts
@@ -598,20 +594,28 @@ export default function HomePage() {
         setLikedPosts(prev => new Set(prev).add(post.Id));
       }
       
-      // Reload posts to get updated like count
-      const postsData = await getPosts();
-      if (postsData) {
-        // Sort posts by CreatedAt descending (newest first)
-        const sortedPosts = (postsData || [])
-          .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
-        setPosts(sortedPosts);
-        // Update likedPosts Set based on fresh data from backend
-        const userLikedPostIds = postsData
-          .filter(post => post.LikedByUserIds && post.LikedByUserIds.includes(currentUser.Id))
-          .map(post => post.Id);
-        setLikedPosts(new Set(userLikedPostIds));
+      // Fetch updated post to get new like count
+      const updatedPost = await getPostById(post.Id);
+      if (updatedPost) {
+        // Update this post AND any posts that share it
+        setPosts(prev => 
+          prev.map(p => {
+            // If this is the liked/unliked post
+            if (p.Id === post.Id) {
+              return updatedPost;
+            }
+            // If this post shares the liked/unliked post, update the shared post data
+            if (p.SharedPost?.Id === post.Id) {
+              return {
+                ...p,
+                SharedPost: updatedPost
+              };
+            }
+            return p;
+          })
+        );
       }
-      console.log('Posts updated after like/unlike');
+      console.log('Post like count updated');
     } catch (err) {
       console.error('Error liking post:', err);
     }
@@ -648,11 +652,26 @@ export default function HomePage() {
         ...prev,
         [postId]: [createdComment, ...(prev[postId] || [])]
       }));
-      setPosts((prev) => prev.map((post) =>
-        post.Id === postId
-          ? { ...post, commentsCount: (post.commentsCount ?? 0) + 1 }
-          : post
-      ));
+      
+      // Update comments count and fetch updated post to sync shared post data
+      const updatedPost = await getPostById(postId);
+      if (updatedPost) {
+        setPosts((prev) => 
+          prev.map((post) => {
+            if (post.Id === postId) {
+              return updatedPost;
+            }
+            // If this post has a shared post that matches postId, update it too
+            if (post.SharedPost?.Id === postId) {
+              return {
+                ...post,
+                SharedPost: updatedPost
+              };
+            }
+            return post;
+          })
+        );
+      }
     } catch (err) {
       console.error('Error creating comment:', err);
     }
@@ -669,11 +688,26 @@ export default function HomePage() {
         ...prev,
         [postId]: (prev[postId] || []).filter(comment => comment.id !== commentId)
       }));
-      setPosts((prev) => prev.map((post) =>
-        post.Id === postId
-          ? { ...post, commentsCount: Math.max(0, (post.commentsCount ?? 1) - 1) }
-          : post
-      ));
+      
+      // Fetch updated post to sync shared post data
+      const updatedPost = await getPostById(postId);
+      if (updatedPost) {
+        setPosts((prev) => 
+          prev.map((post) => {
+            if (post.Id === postId) {
+              return updatedPost;
+            }
+            // If this post has a shared post that matches postId, update it too
+            if (post.SharedPost?.Id === postId) {
+              return {
+                ...post,
+                SharedPost: updatedPost
+              };
+            }
+            return post;
+          })
+        );
+      }
     } catch (err) {
       console.error('Error deleting comment:', err);
     }
@@ -735,6 +769,9 @@ export default function HomePage() {
         // Add the new shared post to the top of the posts list
         setPosts([newSharedPost, ...posts]);
         setError('');
+        
+        // Trigger event to notify ProfilePage to reload posts
+        window.dispatchEvent(new Event('postShared'));
       }
       
       // Close modal
@@ -1214,7 +1251,7 @@ export default function HomePage() {
 
                   <div className="post-stats">
                     <span>❤️ {post.LikesCount} lượt thích</span>
-                    <span><i className="fa-solid fa-comments"></i> {(commentsByPost[post.Id]?.length ?? 0)} bình luận</span>
+                    <span><i className="fa-solid fa-comments"></i> {post.CommentsCount ?? (commentsByPost[post.Id]?.length ?? 0)} bình luận</span>
                   </div>
 
                   <div className="post-actions">

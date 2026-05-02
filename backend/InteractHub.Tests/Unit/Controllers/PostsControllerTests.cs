@@ -1,6 +1,8 @@
 using InteractHub.API.Controllers;
 using InteractHub.API.DTOs;
+using System.Linq;
 using InteractHub.Application.Entities;
+using InteractHub.Application.Entities.Enums;
 using InteractHub.Application.Interfaces;
 using InteractHub.Tests.Common;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +12,12 @@ namespace InteractHub.Tests.Unit.Controllers;
 
 public class PostsControllerTests
 {
+    private PostsController CreateController(Mock<IPostService> postServiceMock, Mock<IFriendshipService>? friendshipServiceMock = null)
+    {
+        var friendshipMock = friendshipServiceMock ?? new Mock<IFriendshipService>();
+        return new PostsController(postServiceMock.Object, friendshipMock.Object);
+    }
+
     // GetAll tests - trả về tất cả bài viết
     [Fact]
     public async Task GetAll_ShouldReturnAllPosts_WhenPostsExist()
@@ -22,7 +30,7 @@ public class PostsControllerTests
         };
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(posts);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -43,7 +51,7 @@ public class PostsControllerTests
         var posts = new List<Post>();
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(posts);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -55,6 +63,45 @@ public class PostsControllerTests
         Assert.NotNull(objectResult.Value);
     }
 
+    [Fact]
+    public async Task GetAll_ShouldReturnOnlyFriendAndOwnPosts_WhenUserHasAcceptedFriends()
+    {
+        // given
+        var posts = new List<Post>
+        {
+            new Post { Id = 1, UserId = "u1", Content = "self post", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Post { Id = 2, UserId = "u2", Content = "friend post", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Post { Id = 3, UserId = "u3", Content = "stranger post", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+        };
+
+        var postServiceMock = new Mock<IPostService>();
+        postServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(posts);
+
+        var friendshipServiceMock = new Mock<IFriendshipService>();
+        friendshipServiceMock.Setup(s => s.GetAcceptedFriendsAsync("u1")).ReturnsAsync(new List<Friendship>
+        {
+            new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted }
+        });
+
+        var controller = CreateController(postServiceMock, friendshipServiceMock);
+        ControllerTestHelper.SetUser(controller, "u1");
+
+        // when
+        var result = await controller.GetAll();
+
+        // then
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(200, objectResult.StatusCode);
+        Assert.NotNull(objectResult.Value);
+
+        var dataProperty = objectResult.Value?.GetType().GetProperty("data")?.GetValue(objectResult.Value) as System.Collections.IEnumerable;
+        Assert.NotNull(dataProperty);
+
+        var dataItems = dataProperty.Cast<object>().ToList();
+        Assert.Equal(2, dataItems.Count);
+        Assert.DoesNotContain(dataItems, item => item.GetType().GetProperty("UserId")?.GetValue(item)?.ToString() == "u3");
+    }
+
     // GetById tests - trả về bài viết khi tồn tại
     [Fact]
     public async Task GetById_ShouldReturnPost_WhenPostExists()
@@ -63,7 +110,7 @@ public class PostsControllerTests
         var post = new Post { Id = 1, UserId = "u1", Content = "test post", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(post);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -83,7 +130,7 @@ public class PostsControllerTests
         // given
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Post?)null);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -103,7 +150,7 @@ public class PostsControllerTests
         var post = new Post { Id = 1, UserId = "u1", Content = createDto.Content, ImageUrl = createDto.ImageUrl, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.CreateAsync(It.IsAny<Post>())).ReturnsAsync(post);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -121,7 +168,7 @@ public class PostsControllerTests
     {
         // given
         var postServiceMock = new Mock<IPostService>();
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -141,7 +188,7 @@ public class PostsControllerTests
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetByIdAsync(10)).ReturnsAsync(post);
         postServiceMock.Setup(s => s.DeleteAsync(10)).ReturnsAsync(true);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -161,7 +208,7 @@ public class PostsControllerTests
         var post = new Post { Id = 10, UserId = "owner", Content = "hello", CreatedAt = DateTime.UtcNow };
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetByIdAsync(10)).ReturnsAsync(post);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "other-user");
 
         // when
@@ -179,7 +226,7 @@ public class PostsControllerTests
         // given
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Post?)null);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -199,7 +246,7 @@ public class PostsControllerTests
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetByIdAsync(10)).ReturnsAsync(post);
         postServiceMock.Setup(s => s.DeleteAsync(10)).ReturnsAsync(false);
-        var controller = new PostsController(postServiceMock.Object);
+        var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when

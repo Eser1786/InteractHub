@@ -17,10 +17,12 @@ namespace InteractHub.API.Controllers;
 public class PostsController : ControllerBase
 {
     private readonly IPostService _postService;
+    private readonly IFriendshipService _friendshipService;
 
-    public PostsController(IPostService postService)
+    public PostsController(IPostService postService, IFriendshipService friendshipService)
     {
         _postService = postService;
+        _friendshipService = friendshipService;
     }
 
     /// <summary>
@@ -108,10 +110,21 @@ public class PostsController : ControllerBase
         page = Math.Max(1, page);
         pageSize = Math.Max(1, Math.Min(pageSize, 100)); // Cap pageSize at 100
 
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        var acceptedFriendships = await _friendshipService.GetAcceptedFriendsAsync(userId);
+        var visibleUserIds = new HashSet<string>(acceptedFriendships
+            .Select(f => f.UserId == userId ? f.FriendId : f.UserId)
+            .Where(id => !string.IsNullOrEmpty(id)));
+        visibleUserIds.Add(userId);
+
         var posts = await _postService.GetAllAsync();
-        
-        // Sort by CreatedAt descending (newest first)
-        var sortedPosts = posts.Where(p => p.GroupId == null)
+
+        // Filter posts so only the current user and accepted friends are visible
+        var sortedPosts = posts
+            .Where(p => p.GroupId == null && visibleUserIds.Contains(p.UserId))
             .OrderByDescending(p => p.CreatedAt)
             .ToList();
 

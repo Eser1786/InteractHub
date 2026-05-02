@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getConversationsSorted, getConversationMessages, sendMessage } from '../api';
+import { getConversationsSorted, getConversationMessages, sendMessage, getGroups, getAcceptedFriends, createGroup, getGroupMessages } from '../api';
 import { messageHubConnection } from '../utils/messageHubConnection';
 import Header from '../components/Header';
 import '../styles/MessagePage.css';
@@ -11,6 +11,7 @@ const DEBOUNCE_DELAY = 300; // ms for scroll event debouncing
 
 export default function MessagePage() {
   const [conversations, setConversations] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
@@ -23,6 +24,11 @@ export default function MessagePage() {
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [error, setError] = useState('');
   const [onlineFriends, setOnlineFriends] = useState([]);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [groupDescription, setGroupDescription] = useState('');
+  const [selectedFriends, setSelectedFriends] = useState([]);
+  const [friends, setFriends] = useState([]);
   
   const navigate = useNavigate();
   const unsubscribeRef = useRef(null);
@@ -66,20 +72,30 @@ export default function MessagePage() {
         console.log('[MessagePage] 💬 Conversations loaded:', conversationsData?.length || 0);
         
         const conversationList = (conversationsData || []).map((convo) => ({
-          id: convo.id || convo.FriendId || convo.friendId,
-          name: convo.conversationName || convo.ConversationName || convo.FriendName || convo.friendName || 'Bạn',
-          avatarUrl: convo.conversationAvatarUrl || convo.ConversationAvatarUrl || convo.FriendProfilePictureUrl || convo.friendProfilePictureUrl || '',
+          id: convo.Id || convo.id || convo.FriendId || convo.friendId,
+          name: convo.ConversationName || convo.conversationName || convo.FriendName || convo.friendName || 'Bạn',
+          avatarUrl: convo.ConversationAvatarUrl || convo.conversationAvatarUrl || convo.FriendProfilePictureUrl || convo.friendProfilePictureUrl || '',
           isUnread: false,
           isActive: true,
-          lastMessage: convo.lastMessage || convo.LastMessage || '',
-          lastTime: (convo.lastMessageTime || convo.LastMessageTime)
-            ? new Date(convo.lastMessageTime || convo.LastMessageTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+          lastMessage: convo.LastMessage || convo.lastMessage || '',
+          lastTime: (convo.LastMessageTime || convo.lastMessageTime)
+            ? new Date(convo.LastMessageTime || convo.lastMessageTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
             : convo.lastTime || '',
-          isGroup: convo.isGroup ?? convo.IsGroup ?? false, // Extract group flag
-          participantCount: convo.participantCount ?? convo.ParticipantCount ?? 2 // Extract participant count
+          isGroup: convo.IsGroup ?? convo.isGroup ?? false,
+          participantCount: convo.ParticipantCount ?? convo.participantCount ?? 2
         }));
 
         setConversations(conversationList);
+        
+        // 🔄 Get groups
+        const groupsData = await getGroups();
+        console.log('[MessagePage] 👥 Groups loaded:', groupsData?.length || 0);
+        setGroups(groupsData);
+        
+        // 🔄 Get friends for creating groups
+        const friendsData = await getAcceptedFriends(normalizedUser.Id);
+        console.log('[MessagePage] 👫 Friends loaded:', friendsData?.length || 0);
+        setFriends(friendsData);
         
         // Extract online friends
         const online = conversationList.filter(c => c.isActive);
@@ -92,9 +108,14 @@ export default function MessagePage() {
           // 🔄 Join SignalR group for first conversation (if connected)
           if (messageHubConnection.isActive()) {
             try {
-              console.log('[MessagePage] 👥 Joining conversation group:', firstConversation.id);
-              await messageHubConnection.joinConversation(firstConversation.id);
-              previousConversationRef.current = firstConversation.id;
+              if (firstConversation.isGroup) {
+                console.log('[MessagePage] 👥 Joining group conversation:', firstConversation.id);
+                await messageHubConnection.joinGroupConversation(firstConversation.id);
+              } else {
+                console.log('[MessagePage] 👥 Joining personal conversation:', firstConversation.id);
+                await messageHubConnection.joinConversation(firstConversation.id);
+              }
+              previousConversationRef.current = firstConversation;
               console.log('[MessagePage] ✅ Joined conversation group');
             } catch (err) {
               console.warn('[MessagePage] ⚠️ Failed to join group:', err);
@@ -149,9 +170,16 @@ export default function MessagePage() {
         presenceUnsubscribeRef.current();
       }
       if (previousConversationRef.current && messageHubConnection.isActive()) {
-        messageHubConnection.leaveConversation(previousConversationRef.current).catch(err => 
-          console.warn('[MessagePage] ⚠️ Error leaving conversation:', err)
-        );
+        const conv = previousConversationRef.current;
+        if (conv.isGroup) {
+          messageHubConnection.leaveGroupConversation(conv.id).catch(err => 
+            console.warn('[MessagePage] ⚠️ Error leaving group conversation:', err)
+          );
+        } else {
+          messageHubConnection.leaveConversation(conv.id).catch(err => 
+            console.warn('[MessagePage] ⚠️ Error leaving personal conversation:', err)
+          );
+        }
       }
       // Don't disconnect on unmount - keep connection alive for other pages
     };
@@ -193,7 +221,12 @@ export default function MessagePage() {
 
     try {
       setMessagesLoading(true);
-      const response = await getConversationMessages(conversation.id, pageNum, 50);
+      let response;
+      if (conversation.isGroup) {
+        response = await getGroupMessages(conversation.id, pageNum, 50);
+      } else {
+        response = await getConversationMessages(conversation.id, pageNum, 50);
+      }
       const messageData = response.messages || [];
       const paginationData = response.pagination || {};
 
@@ -270,24 +303,34 @@ export default function MessagePage() {
   const handleSelectConversation = async (conversation) => {
     setSelectedConversation(conversation);
     
-    // 🔄 Leave previous conversation group and join new one
+    // 🔄 Leave previous conversation group
     if (previousConversationRef.current && messageHubConnection.isActive()) {
       try {
         console.log('[MessagePage] 👋 Leaving previous group:', previousConversationRef.current);
-        await messageHubConnection.leaveConversation(previousConversationRef.current);
+        if (previousConversationRef.current.isGroup) {
+          await messageHubConnection.leaveGroupConversation(previousConversationRef.current.id);
+        } else {
+          await messageHubConnection.leaveConversation(previousConversationRef.current.id);
+        }
       } catch (err) {
         console.warn('[MessagePage] ⚠️ Error leaving previous group:', err);
       }
     }
 
+    // 🔄 Join new conversation group
     if (messageHubConnection.isActive()) {
       try {
-        console.log('[MessagePage] 👥 Joining new group:', conversation.id);
-        await messageHubConnection.joinConversation(conversation.id);
-        previousConversationRef.current = conversation.id;
-        console.log('[MessagePage] ✅ Joined new group');
+        if (conversation.isGroup) {
+          console.log('[MessagePage] 👥 Joining group conversation:', conversation.id);
+          await messageHubConnection.joinGroupConversation(conversation.id);
+        } else {
+          console.log('[MessagePage] 👥 Joining personal conversation:', conversation.id);
+          await messageHubConnection.joinConversation(conversation.id);
+        }
+        previousConversationRef.current = conversation;
+        console.log('[MessagePage] ✅ Joined new conversation');
       } catch (err) {
-        console.warn('[MessagePage] ⚠️ Error joining new group:', err);
+        console.warn('[MessagePage] ⚠️ Error joining new conversation:', err);
       }
     }
 
@@ -298,7 +341,12 @@ export default function MessagePage() {
     if (!newMessage.trim() || !selectedConversation) return;
 
     try {
-      const sentMessage = await sendMessage(selectedConversation.id, newMessage.trim());
+      let sentMessage;
+      if (selectedConversation.isGroup) {
+        sentMessage = await sendMessage(null, newMessage.trim(), selectedConversation.id);
+      } else {
+        sentMessage = await sendMessage(selectedConversation.id, newMessage.trim());
+      }
       const nextMessage = {
         id: sentMessage?.Id || sentMessage?.id || messages.length + 1,
         senderId: sentMessage?.SenderId || sentMessage?.senderId || currentUser?.Id || currentUser?.id,
@@ -456,14 +504,6 @@ export default function MessagePage() {
     }, DEBOUNCE_DELAY);
   }, [hasMoreMessages, messagesLoading, selectedConversation, page, loadMessages]);
 
-  const filteredConversations = searchQuery.trim()
-    ? conversations.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : selectedTab === 'all'
-      ? conversations
-      : selectedTab === 'group'
-        ? conversations.filter(c => c.isGroup === true)
-        : conversations;
-
   // 🧹 Cleanup scroll timeout on unmount
   useEffect(() => {
     return () => {
@@ -472,6 +512,56 @@ export default function MessagePage() {
       }
     };
   }, []);
+
+  const filteredConversations = conversations.filter((conv) => {
+    const matchesSearch = conv.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = selectedTab === 'all' || (selectedTab === 'group' && conv.isGroup);
+    return matchesSearch && matchesTab;
+  });
+
+  const handleCreateGroup = async () => {
+    if (!groupName.trim() || selectedFriends.length < 2) {
+      alert('Tên nhóm không được để trống và phải chọn ít nhất 2 người bạn');
+      return;
+    }
+
+    try {
+      const memberIds = selectedFriends.map(f => f.friendId || f.id);
+      const newGroup = await createGroup({
+        name: groupName.trim(),
+        description: groupDescription.trim(),
+        memberIds
+      });
+
+      // Add to groups list
+      setGroups(prev => [...prev, newGroup]);
+
+      // Add to conversations
+      const groupConversation = {
+        id: newGroup.id,
+        name: newGroup.name,
+        avatarUrl: '',
+        isUnread: false,
+        isActive: true,
+        lastMessage: '',
+        lastTime: '',
+        isGroup: true,
+        participantCount: newGroup.memberCount
+      };
+      setConversations(prev => [groupConversation, ...prev]);
+
+      // Reset modal
+      setGroupName('');
+      setGroupDescription('');
+      setSelectedFriends([]);
+      setShowCreateGroupModal(false);
+
+      alert('Tạo nhóm thành công!');
+    } catch (err) {
+      console.error('Error creating group:', err);
+      alert('Lỗi tạo nhóm: ' + err.message);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -487,6 +577,10 @@ export default function MessagePage() {
 
   if (loading) {
     return <div className="message-wrapper"><p>Đang tải...</p></div>;
+  }
+
+  if (error) {
+    return <div className="message-wrapper"><p style={{color: 'red'}}>{error}</p></div>;
   }
 
   return (
@@ -519,6 +613,12 @@ export default function MessagePage() {
             >
               Nhóm
             </button>
+            <button 
+              className="message-create-group-btn"
+              onClick={() => setShowCreateGroupModal(true)}
+            >
+              <i className="fa-solid fa-plus"></i> Tạo nhóm
+            </button>
           </div>
 
           <div className="conversations-list">
@@ -540,7 +640,12 @@ export default function MessagePage() {
                     {conversation.isActive && <span className="online-status"></span>}
                   </div>
                   <div className="conversation-info">
-                    <p className="conversation-name">{conversation.name}</p>
+                    <p className="conversation-name">
+                      {conversation.name}
+                      {conversation.isGroup && conversation.participantCount && (
+                        <span className="participant-count"> ({conversation.participantCount})</span>
+                      )}
+                    </p>
                     <p className="conversation-last">{conversation.lastMessage}</p>
                   </div>
                   <span className="conversation-time">{conversation.lastTime}</span>
@@ -568,7 +673,10 @@ export default function MessagePage() {
                   <div>
                     <h3 className="message-header-name">{selectedConversation.name}</h3>
                     <p className="message-header-status">
-                      {selectedConversation.isActive ? '🟢 Đang hoạt động' : '⚫ Offline'}
+                      {selectedConversation.isGroup 
+                        ? `${selectedConversation.participantCount || 2} thành viên`
+                        : (selectedConversation.isActive ? '🟢 Đang hoạt động' : '⚫ Offline')
+                      }
                     </p>
                   </div>
                 </div>
@@ -666,6 +774,90 @@ export default function MessagePage() {
           </div>
         </aside>
       </div>
+
+      {/* Create Group Modal */}
+      {showCreateGroupModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateGroupModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Tạo nhóm mới</h3>
+              <button className="modal-close" onClick={() => setShowCreateGroupModal(false)}>
+                <i className="fa-solid fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Tên nhóm *</label>
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Nhập tên nhóm"
+                  maxLength={100}
+                />
+              </div>
+              <div className="form-group">
+                <label>Mô tả (tùy chọn)</label>
+                <textarea
+                  value={groupDescription}
+                  onChange={(e) => setGroupDescription(e.target.value)}
+                  placeholder="Mô tả về nhóm"
+                  rows={3}
+                  maxLength={500}
+                />
+              </div>
+              <div className="form-group">
+                <label>Chọn thành viên (ít nhất 2 người) *</label>
+                <div className="friends-selection">
+                  {friends.map((friend) => (
+                    <div
+                      key={friend.id}
+                      className={`friend-select-item ${selectedFriends.some(f => f.id === friend.id) ? 'selected' : ''}`}
+                      onClick={() => {
+                        setSelectedFriends(prev => 
+                          prev.some(f => f.id === friend.id)
+                            ? prev.filter(f => f.id !== friend.id)
+                            : [...prev, friend]
+                        );
+                      }}
+                    >
+                      <div className="friend-select-avatar">
+                        {friend.friendProfilePictureUrl ? (
+                          <img src={friend.friendProfilePictureUrl} alt={friend.friendUserName} />
+                        ) : (
+                          <span>{friend.friendUserName?.charAt(0)?.toUpperCase() || 'U'}</span>
+                        )}
+                      </div>
+                      <span className="friend-select-name">{friend.friendUserName}</span>
+                      {selectedFriends.some(f => f.id === friend.id) && (
+                        <i className="fa-solid fa-check"></i>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="selection-count">
+                  Đã chọn: {selectedFriends.length} người (cần ít nhất 2)
+                </p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn-cancel" 
+                onClick={() => setShowCreateGroupModal(false)}
+              >
+                Hủy
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={handleCreateGroup}
+                disabled={!groupName.trim() || selectedFriends.length < 2}
+              >
+                Tạo nhóm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

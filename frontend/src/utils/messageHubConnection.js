@@ -168,6 +168,58 @@ class MessageHubConnection {
   }
 
   /**
+   * Join a group conversation
+   * @param {number} groupId - The group ID
+   * @returns {Promise<void>}
+   */
+  async joinGroupConversation(groupId) {
+    if (!this.connection) {
+      console.warn('[MessageHub] ⚠️ Connection not initialized, cannot join group conversation');
+      return;
+    }
+
+    if (!this.isConnected) {
+      console.warn('[MessageHub] ⚠️ Not connected, cannot join group conversation');
+      return;
+    }
+
+    try {
+      console.log('[MessageHub] 📞 Invoking JoinGroupConversation with groupId:', groupId);
+      await this.connection.invoke('JoinGroupConversation', groupId);
+      console.log('[MessageHub] ✅ Successfully joined group conversation for group:', groupId);
+    } catch (error) {
+      console.error('[MessageHub] ❌ Failed to join group conversation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Leave a group conversation
+   * @param {number} groupId - The group ID
+   * @returns {Promise<void>}
+   */
+  async leaveGroupConversation(groupId) {
+    if (!this.connection) {
+      console.warn('[MessageHub] ⚠️ Connection not initialized, cannot leave group conversation');
+      return;
+    }
+
+    if (!this.isConnected) {
+      console.warn('[MessageHub] ⚠️ Not connected, cannot leave group conversation');
+      return;
+    }
+
+    try {
+      console.log('[MessageHub] 📞 Invoking LeaveGroupConversation with groupId:', groupId);
+      await this.connection.invoke('LeaveGroupConversation', groupId);
+      console.log('[MessageHub] ✅ Successfully left group conversation for group:', groupId);
+    } catch (error) {
+      console.error('[MessageHub] ❌ Failed to leave group conversation:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Subscribe to incoming messages
    * @param {Function} listener - Callback function to handle incoming messages
    * @returns {Function} - Function to unsubscribe

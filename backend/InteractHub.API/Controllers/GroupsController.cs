@@ -56,6 +56,9 @@ public class GroupsController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Name))
             return this.BadRequestResponse(new List<ApiError> { new ApiError("Group name is required", "Name") });
 
+        if (dto.MemberIds == null || dto.MemberIds.Count < 2)
+            return this.BadRequestResponse(new List<ApiError> { new ApiError("Group must have at least 3 members including creator", "MemberIds") });
+
         var userId = GetCurrentUserId();
         if (string.IsNullOrEmpty(userId))
             return this.UnauthorizedResponse("Unable to determine current user");
@@ -66,7 +69,7 @@ public class GroupsController : ControllerBase
             Description = dto.Description?.Trim()
         };
 
-        var createdGroup = await _groupService.CreateAsync(newGroup, userId);
+        var createdGroup = await _groupService.CreateWithMembersAsync(newGroup, userId, dto.MemberIds);
 
         var groupDto = new GroupResponseDto
         {

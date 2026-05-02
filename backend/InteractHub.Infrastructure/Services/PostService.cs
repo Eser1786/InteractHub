@@ -40,12 +40,12 @@ public class PostService : IPostService
             .Include(p => p.User)
             .Include(p => p.Likes)
             .Include(p => p.Comments)
-            .Include(p => p.SharedPost)
-                .ThenInclude(sp => sp.User)
-            .Include(p => p.SharedPost)
-                .ThenInclude(sp => sp.Likes)
-            .Include(p => p.SharedPost)
-                .ThenInclude(sp => sp.Comments)
+            // .Include(p => p.SharedPost)
+            //     .ThenInclude(sp => sp.User)
+            // .Include(p => p.SharedPost)
+            //     .ThenInclude(sp => sp.Likes)
+            // .Include(p => p.SharedPost)
+            //     .ThenInclude(sp => sp.Comments)
             .ToListAsync();
     }
 
@@ -55,12 +55,12 @@ public class PostService : IPostService
             .Include(p => p.User)
             .Include(p => p.Likes)
             .Include(p => p.Comments)
-            .Include(p => p.SharedPost)
-                .ThenInclude(sp => sp.User)
-            .Include(p => p.SharedPost)
-                .ThenInclude(sp => sp.Likes)
-            .Include(p => p.SharedPost)
-                .ThenInclude(sp => sp.Comments)
+            // .Include(p => p.SharedPost)
+            //     .ThenInclude(sp => sp.User)
+            // .Include(p => p.SharedPost)
+            //     .ThenInclude(sp => sp.Likes)
+            // .Include(p => p.SharedPost)
+            //     .ThenInclude(sp => sp.Comments)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 }

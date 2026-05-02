@@ -44,6 +44,28 @@ public class MessageHub : Hub
     }
 
     /// <summary>
+    /// User joins a group conversation
+    /// Group format: "group_{groupId}"
+    /// </summary>
+    public async Task JoinGroupConversation(int groupId)
+    {
+        Console.WriteLine($"[MessageHub] 🔍 JoinGroupConversation called with groupId: {groupId}");
+        
+        var currentUserId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        Console.WriteLine($"[MessageHub] 🔐 Current user from token: {currentUserId}");
+        
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            Console.WriteLine($"[MessageHub] ⚠️ JoinGroupConversation: currentUserId is empty");
+            return;
+        }
+
+        var groupName = GetGroupConversationGroupName(groupId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+        Console.WriteLine($"[MessageHub] 📌 User {currentUserId} joined group conversation: {groupName}");
+    }
+
+    /// <summary>
     /// User leaves the conversation group
     /// </summary>
     public async Task LeaveConversation(string userId)
@@ -56,6 +78,19 @@ public class MessageHub : Hub
             return;
 
         var groupName = GetConversationGroupName(currentUserId, userId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+    }
+
+    /// <summary>
+    /// User leaves a group conversation
+    /// </summary>
+    public async Task LeaveGroupConversation(int groupId)
+    {
+        var currentUserId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return;
+
+        var groupName = GetGroupConversationGroupName(groupId);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
     }
 
@@ -148,6 +183,11 @@ public class MessageHub : Hub
         var ids = new[] { userId1, userId2 }.OrderBy(x => x).ToArray();
         return $"conversation_{ids[0]}_{ids[1]}";
     }
+
+    /// <summary>
+    /// Helper: Generate group conversation group name
+    /// </summary>
+    private static string GetGroupConversationGroupName(int groupId) => $"group_{groupId}";
 
     /// <summary>
     /// Helper: Generate user group name for direct messages

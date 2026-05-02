@@ -9,8 +9,11 @@ public class Message
     public string SenderId { get; set; }
     public User Sender { get; set; }
 
-    public string ReceiverId { get; set; }
-    public User Receiver { get; set; }
+    public string? ReceiverId { get; set; }
+    public User? Receiver { get; set; }
+
+    public int? GroupId { get; set; }
+    public Group? Group { get; set; }
 
     public bool IsRead { get; set; } = false;
 }

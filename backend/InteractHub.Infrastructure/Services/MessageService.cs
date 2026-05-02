@@ -40,7 +40,10 @@ public class MessageService : IMessageService
         await _context.SaveChangesAsync();
 
         await _context.Entry(message).Reference(m => m.Sender).LoadAsync();
-        await _context.Entry(message).Reference(m => m.Receiver).LoadAsync();
+        if (message.ReceiverId != null)
+        {
+            await _context.Entry(message).Reference(m => m.Receiver).LoadAsync();
+        }
 
         return message;
     }
@@ -60,6 +63,38 @@ public class MessageService : IMessageService
         return await _context.Messages
             .Where(m => m.ReceiverId == userId && !m.IsRead)
             .Include(m => m.Sender)
+            .ToListAsync();
+    }
+
+    public async Task<Message> SendGroupMessageAsync(string senderId, int groupId, string content)
+    {
+        var message = new Message
+        {
+            SenderId = senderId,
+            GroupId = groupId,
+            Content = content,
+            CreatedAt = DateTime.UtcNow,
+            IsRead = false
+        };
+
+        _context.Messages.Add(message);
+        await _context.SaveChangesAsync();
+
+        await _context.Entry(message).Reference(m => m.Sender).LoadAsync();
+        await _context.Entry(message).Reference(m => m.Group).LoadAsync();
+
+        return message;
+    }
+
+    public async Task<IEnumerable<Message>> GetGroupMessagesAsync(int groupId, int page = 1, int pageSize = 50)
+    {
+        return await _context.Messages
+            .Where(m => m.GroupId == groupId)
+            .Include(m => m.Sender)
+            .Include(m => m.Group)
+            .OrderBy(m => m.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
     }
 

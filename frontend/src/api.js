@@ -343,7 +343,7 @@ export async function getGroups() {
   return (data?.Data || []).map(normalizeGroup);
 }
 
-export async function createGroup({ name, description }) {
+export async function createGroup({ name, description, memberIds }) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/groups`, {
     method: 'POST',
@@ -351,7 +351,7 @@ export async function createGroup({ name, description }) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ name, description })
+    body: JSON.stringify({ name, description, memberIds })
   });
   const data = await handleResponse(response);
   return normalizeGroup(data?.Data);
@@ -427,15 +427,16 @@ export async function getConversationMessages(friendId, page = 1, pageSize = 50)
   };
 }
 
-export async function sendMessage(receiverId, content) {
+export async function getGroupMessages(groupId, page = 1, pageSize = 50) {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify({ receiverId, content })
+  const response = await fetch(`${API_BASE}/messages/group/${groupId}?page=${page}&pageSize=${pageSize}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
   });
   const data = await handleResponse(response);
-  return data?.Data || null;
+  return {
+    messages: data?.Data || data?.data || [],
+    pagination: data?.Pagination || data?.pagination || { page, pageSize, totalCount: 0, totalPages: 0, hasMore: false }
+  };
 }
 
 export async function getPendingRequests(userId, pageNumber = 1, pageSize = 20) {
@@ -505,6 +506,17 @@ export async function declineFriendRequest(friendshipId) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
   });
   
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function sendMessage(receiverId, content, groupId = null) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ receiverId, content, groupId })
+  });
   const data = await handleResponse(response);
   return data?.Data || null;
 }

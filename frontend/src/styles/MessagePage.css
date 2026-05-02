@@ -113,6 +113,28 @@
   background: rgba(107, 79, 199, 0.02);
 }
 
+.message-create-group-btn {
+  padding: 8px 12px;
+  border: none;
+  background: #6b4fc7;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  margin: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+}
+
+.message-create-group-btn:hover {
+  background: #5a3fb0;
+  transform: translateY(-1px);
+}
+
 /* Conversations List - Scrolls Independently */
 .conversations-list {
   flex: 1;
@@ -243,6 +265,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.participant-count {
+  color: #6b4fc7;
+  font-weight: 500;
+  font-size: 11px;
 }
 
 .conversation-last {
@@ -575,7 +603,229 @@
   transform: scale(0.95);
 }
 
-/* ===== RIGHT SIDEBAR - Online Friends Card ===== */
+/* ===== MODAL STYLES ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fade-in 0.3s ease;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: slide-up 0.3s ease;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0e6ff;
+  background: linear-gradient(135deg, #f9f7ff 0%, #f5f0ff 100%);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #6b4fc7;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+  background: #f0e6ff;
+  color: #6b4fc7;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: calc(80vh - 140px);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e0d5f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+  background: #f9f7ff;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #6b4fc7;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(107, 79, 199, 0.1);
+}
+
+.friends-selection {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e0d5f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f9f7ff;
+}
+
+.friend-select-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 4px;
+}
+
+.friend-select-item:hover {
+  background: rgba(107, 79, 199, 0.05);
+}
+
+.friend-select-item.selected {
+  background: rgba(107, 79, 199, 0.1);
+  border: 1px solid #6b4fc7;
+}
+
+.friend-select-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f0e6ff, #e8d7ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.friend-select-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friend-select-name {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+}
+
+.friend-select-item.selected .friend-select-name {
+  color: #6b4fc7;
+  font-weight: 500;
+}
+
+.friend-select-item i {
+  color: #6b4fc7;
+  font-size: 14px;
+}
+
+.selection-count {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px 24px;
+  border-top: 1px solid #f0e6ff;
+  background: #f9f7ff;
+}
+
+.btn-cancel,
+.btn-primary {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.btn-cancel {
+  background: #f0e6ff;
+  color: #6b4fc7;
+}
+
+.btn-cancel:hover {
+  background: #e0d5f0;
+}
+
+.btn-primary {
+  background: #6b4fc7;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #5a3fb0;
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
 .message-sidebar-right {
   background: white;
   border-radius: 16px;

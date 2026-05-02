@@ -19,32 +19,43 @@ public class MessagesController : ControllerBase
 {
     private readonly IMessageService _messageService;
     private readonly INotificationService _notificationService;
+    private readonly IGroupService _groupService;
     private readonly IHubContext<MessageHub> _messageHubContext;
 
     public MessagesController(
         IMessageService messageService, 
         INotificationService notificationService,
+        IGroupService groupService,
         IHubContext<MessageHub> messageHubContext)
     {
         _messageService = messageService;
         _notificationService = notificationService;
+        _groupService = groupService;
         _messageHubContext = messageHubContext;
     }
 
-    [HttpGet("conversation/{userId}")]
+    [HttpGet("group/{groupId}")]
     [ProducesResponseType(typeof(ApiResponse<List<MessageResponseDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetConversation(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetGroupMessages(int groupId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(currentUserId))
             return Unauthorized();
 
+        // Check if user is member of the group
+        var group = await _groupService.GetByIdAsync(groupId);
+        if (group == null)
+            return NotFound("Group not found");
+
+        if (!group.Memberships.Any(m => m.UserId == currentUserId))
+            return BadRequest("You are not a member of this group");
+
         // Ensure valid pagination
         page = Math.Max(1, page);
         pageSize = Math.Max(1, Math.Min(pageSize, 100)); // Cap pageSize at 100
 
-        var messages = await _messageService.GetMessagesBetweenUsersAsync(currentUserId, userId);
-        
+        var messages = await _messageService.GetGroupMessagesAsync(groupId, page, pageSize);
+
         // Sort by CreatedAt ASCENDING (oldest first for display top to bottom)
         var sortedMessagesDesc = messages
             .OrderByDescending(m => m.CreatedAt)
@@ -68,8 +79,8 @@ public class MessagesController : ControllerBase
             CreatedAt = m.CreatedAt,
             SenderId = m.SenderId,
             SenderName = m.Sender?.UserName ?? "Unknown",
-            ReceiverId = m.ReceiverId,
-            ReceiverName = m.Receiver?.UserName ?? "Unknown",
+            GroupId = m.GroupId,
+            GroupName = m.Group?.Name,
             IsRead = m.IsRead
         }).ToList();
 
@@ -87,7 +98,7 @@ public class MessagesController : ControllerBase
             }
         };
 
-        return Ok(new { success = true, message = "Messages retrieved successfully", data = messageDtos, pagination = response.pagination });
+        return Ok(new { success = true, message = "Group messages retrieved successfully", data = messageDtos, pagination = response.pagination });
     }
 
     [HttpPost]
@@ -98,9 +109,33 @@ public class MessagesController : ControllerBase
         if (string.IsNullOrEmpty(senderId))
             return Unauthorized();
 
-        var message = await _messageService.SendMessageAsync(senderId, dto.ReceiverId, dto.Content);
+        if (string.IsNullOrWhiteSpace(dto.Content))
+            return BadRequest("Message content is required");
 
-        if (message.ReceiverId != message.SenderId)
+        Message message;
+        if (dto.GroupId.HasValue)
+        {
+            // Group message
+            var group = await _groupService.GetByIdAsync(dto.GroupId.Value);
+            if (group == null)
+                return NotFound("Group not found");
+
+            // Check if sender is member of the group
+            if (!group.Memberships.Any(m => m.UserId == senderId))
+                return BadRequest("You are not a member of this group");
+
+            message = await _messageService.SendGroupMessageAsync(senderId, dto.GroupId.Value, dto.Content);
+        }
+        else
+        {
+            // Personal message
+            if (string.IsNullOrEmpty(dto.ReceiverId))
+                return BadRequest("ReceiverId is required for personal messages");
+
+            message = await _messageService.SendMessageAsync(senderId, dto.ReceiverId, dto.Content);
+        }
+
+        if (message.ReceiverId != null && message.ReceiverId != message.SenderId)
         {
             await _notificationService.NotifyMessageAsync(message.ReceiverId, message.SenderId, message.Id, message.Content);
         }
@@ -114,21 +149,37 @@ public class MessagesController : ControllerBase
             SenderName = message.Sender?.UserName ?? "Unknown",
             ReceiverId = message.ReceiverId,
             ReceiverName = message.Receiver?.UserName ?? "Unknown",
+            GroupId = message.GroupId,
+            GroupName = message.Group?.Name,
             IsRead = message.IsRead
         };
 
         // 🔄 Send message to both users via SignalR for real-time update
-        var conversationGroup = GetConversationGroupName(senderId, dto.ReceiverId);
-        Console.WriteLine($"[MessagesController] 📡 Broadcasting message to group: {conversationGroup}");
-        Console.WriteLine($"[MessagesController] 📨 Message content: {messageDto.Content}");
+        if (dto.GroupId.HasValue)
+        {
+            // Group message - broadcast to all group members
+            var groupMembers = message.Group?.Memberships.Select(m => m.UserId).ToList() ?? new List<string>();
+            foreach (var memberId in groupMembers)
+            {
+                await _messageHubContext.Clients.Group($"user_{memberId}")
+                    .SendAsync("ReceiveMessage", messageDto);
+            }
+        }
+        else
+        {
+            // Personal message
+            var conversationGroup = GetConversationGroupName(senderId, dto.ReceiverId);
+            Console.WriteLine($"[MessagesController] 📡 Broadcasting message to group: {conversationGroup}");
+            Console.WriteLine($"[MessagesController] 📨 Message content: {messageDto.Content}");
 
-        await _messageHubContext.Clients.Group(conversationGroup).SendAsync("ReceiveMessage", messageDto);
+            await _messageHubContext.Clients.Group(conversationGroup).SendAsync("ReceiveMessage", messageDto);
 
-        await _messageHubContext.Clients.Group($"user_{dto.ReceiverId}")
-            .SendAsync("ReceiveMessage", messageDto);
+            await _messageHubContext.Clients.Group($"user_{dto.ReceiverId}")
+                .SendAsync("ReceiveMessage", messageDto);
 
-        await _messageHubContext.Clients.Group($"user_{senderId}")
-            .SendAsync("ReceiveMessage", messageDto);
+            await _messageHubContext.Clients.Group($"user_{senderId}")
+                .SendAsync("ReceiveMessage", messageDto);
+        }
         Console.WriteLine($"[MessagesController] ✅ Message broadcasted successfully");
 
         return this.CreatedResponse(messageDto);

@@ -147,6 +147,18 @@ export async function createPost({ content, imageUrl, groupId }) {
   return data?.Data || null;
 }
 
+export async function sharePost(postId, { content, groupId } = {}) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/posts/${postId}/share`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ content: content || '', groupId })
+  });
+  
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
 export async function getStories() {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/stories`, {

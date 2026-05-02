@@ -23,6 +23,52 @@ public class PostsController : ControllerBase
         _postService = postService;
     }
 
+    /// <summary>
+    /// Helper method to map Post to PostResponseDto
+    /// </summary>
+    private PostResponseDto MapToPostResponseDto(Post post)
+    {
+        var dto = new PostResponseDto
+        {
+            Id = post.Id,
+            GroupId = post.GroupId,
+            Content = post.Content,
+            ImageUrl = post.ImageUrl,
+            CreatedAt = post.CreatedAt,
+            UpdatedAt = post.UpdatedAt,
+            UserId = post.UserId,
+            UserName = post.User?.UserName,
+            UserFullName = post.User?.FullName,
+            UserProfilePictureUrl = post.User?.ProfilePictureUrl,
+            LikesCount = post.Likes?.Count ?? 0,
+            CommentsCount = post.Comments?.Count ?? 0,
+            LikedByUserIds = post.Likes?.Select(l => l.UserId).ToList() ?? new(),
+            IsShared = post.SharedPostId.HasValue,
+            SharedPostId = post.SharedPostId
+        };
+
+        // Map shared post if exists
+        if (post.SharedPost != null)
+        {
+            dto.SharedPost = new SharedPostDto
+            {
+                Id = post.SharedPost.Id,
+                Content = post.SharedPost.Content,
+                ImageUrl = post.SharedPost.ImageUrl,
+                CreatedAt = post.SharedPost.CreatedAt,
+                UpdatedAt = post.SharedPost.UpdatedAt,
+                UserId = post.SharedPost.UserId,
+                UserName = post.SharedPost.User?.UserName,
+                UserFullName = post.SharedPost.User?.FullName,
+                UserProfilePictureUrl = post.SharedPost.User?.ProfilePictureUrl,
+                LikesCount = post.SharedPost.Likes?.Count ?? 0,
+                CommentsCount = post.SharedPost.Comments?.Count ?? 0
+            };
+        }
+
+        return dto;
+    }
+
     [HttpGet("user/{userId}")]
     [ProducesResponseType(typeof(ApiResponse<List<PostResponseDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -33,22 +79,7 @@ public class PostsController : ControllerBase
             .OrderByDescending(p => p.CreatedAt)
             .ToList();
         
-        var postDtos = userPosts.Select(p => new PostResponseDto
-        {
-            Id = p.Id,
-            GroupId = p.GroupId,
-            Content = p.Content,
-            ImageUrl = p.ImageUrl,
-            CreatedAt = p.CreatedAt,
-            UpdatedAt = p.UpdatedAt,
-            UserId = p.UserId,
-            UserName = p.User?.UserName,
-            UserFullName = p.User?.FullName,
-            UserProfilePictureUrl = p.User?.ProfilePictureUrl,
-            LikesCount = p.Likes?.Count ?? 0,
-            CommentsCount = p.Comments?.Count ?? 0,
-            LikedByUserIds = p.Likes?.Select(l => l.UserId).ToList() ?? new()
-        }).ToList();
+        var postDtos = userPosts.Select(p => MapToPostResponseDto(p)).ToList();
         
         return this.SuccessResponse(postDtos, "User posts retrieved successfully", 200);
     }
@@ -63,22 +94,7 @@ public class PostsController : ControllerBase
             .OrderByDescending(p => p.CreatedAt)
             .ToList();
         
-        var postDtos = groupPosts.Select(p => new PostResponseDto
-        {
-            Id = p.Id,
-            GroupId = p.GroupId,
-            Content = p.Content,
-            ImageUrl = p.ImageUrl,
-            CreatedAt = p.CreatedAt,
-            UpdatedAt = p.UpdatedAt,
-            UserId = p.UserId,
-            UserName = p.User?.UserName,
-            UserFullName = p.User?.FullName,
-            UserProfilePictureUrl = p.User?.ProfilePictureUrl,
-            LikesCount = p.Likes?.Count ?? 0,
-            CommentsCount = p.Comments?.Count ?? 0,
-            LikedByUserIds = p.Likes?.Select(l => l.UserId).ToList() ?? new()
-        }).ToList();
+        var postDtos = groupPosts.Select(p => MapToPostResponseDto(p)).ToList();
         
         return this.SuccessResponse(postDtos, "Group posts retrieved successfully", 200);
     }
@@ -106,22 +122,7 @@ public class PostsController : ControllerBase
             .Take(pageSize)
             .ToList();
 
-        var postDtos = pagedPosts.Select(p => new PostResponseDto
-        {
-            Id = p.Id,
-            GroupId = p.GroupId,
-            Content = p.Content,
-            ImageUrl = p.ImageUrl,
-            CreatedAt = p.CreatedAt,
-            UpdatedAt = p.UpdatedAt,
-            UserId = p.UserId,
-            UserName = p.User?.UserName,
-            UserFullName = p.User?.FullName,
-            UserProfilePictureUrl = p.User?.ProfilePictureUrl,
-            LikesCount = p.Likes?.Count ?? 0,
-            CommentsCount = p.Comments?.Count ?? 0,
-            LikedByUserIds = p.Likes?.Select(l => l.UserId).ToList() ?? new()
-        }).ToList();
+        var postDtos = pagedPosts.Select(p => MapToPostResponseDto(p)).ToList();
 
         var response = new 
         {
@@ -149,22 +150,7 @@ public class PostsController : ControllerBase
         if (post == null)
             return this.NotFoundResponse("Post not found");
 
-        var postDto = new PostResponseDto
-        {
-            Id = post.Id,
-            GroupId = post.GroupId,
-            Content = post.Content,
-            ImageUrl = post.ImageUrl,
-            CreatedAt = post.CreatedAt,
-            UpdatedAt = post.UpdatedAt,
-            UserId = post.UserId,
-            UserName = post.User?.UserName,
-            UserFullName = post.User?.FullName,
-            UserProfilePictureUrl = post.User?.ProfilePictureUrl,
-            LikesCount = post.Likes?.Count ?? 0,
-            CommentsCount = post.Comments?.Count ?? 0,
-            LikedByUserIds = post.Likes?.Select(l => l.UserId).ToList() ?? new()
-        };
+        var postDto = MapToPostResponseDto(post);
 
         return this.SuccessResponse(postDto, "Post retrieved successfully", 200);
     }
@@ -184,7 +170,8 @@ public class PostsController : ControllerBase
             Content = createPostDto.Content,
             ImageUrl = createPostDto.ImageUrl,
             UserId = userId,
-            GroupId = createPostDto.GroupId
+            GroupId = createPostDto.GroupId,
+            SharedPostId = createPostDto.SharedPostId
         };
 
         var created = await _postService.CreateAsync(post);
@@ -195,24 +182,48 @@ public class PostsController : ControllerBase
         if (createdWithUser == null)
             return this.ErrorResponse("Failed to retrieve created post", statusCode: 500);
 
-        var postDto = new PostResponseDto
-        {
-            Id = createdWithUser.Id,
-            GroupId = createdWithUser.GroupId,
-            Content = createdWithUser.Content,
-            ImageUrl = createdWithUser.ImageUrl,
-            CreatedAt = createdWithUser.CreatedAt,
-            UpdatedAt = createdWithUser.UpdatedAt,
-            UserId = createdWithUser.UserId,
-            UserName = createdWithUser.User?.UserName,
-            UserFullName = createdWithUser.User?.FullName,
-            UserProfilePictureUrl = createdWithUser.User?.ProfilePictureUrl,
-            LikesCount = 0,
-            CommentsCount = 0,
-            LikedByUserIds = new()
-        };
+        var postDto = MapToPostResponseDto(createdWithUser);
 
         return this.CreatedResponse(postDto, "Post created successfully");
+    }
+
+    [HttpPost("{postId}/share")]
+    [ProducesResponseType(typeof(ApiResponse<PostResponseDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> SharePost(int postId, [FromBody] CreatePostDto? shareDto = null)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        // Check if original post exists
+        var originalPost = await _postService.GetByIdAsync(postId);
+        if (originalPost == null)
+            return this.NotFoundResponse("Original post not found");
+
+        // Create a new post that references the original
+        var sharedPost = new Post
+        {
+            Content = shareDto?.Content ?? string.Empty, // Optional caption
+            ImageUrl = null, // Shared posts don't have their own image
+            UserId = userId,
+            GroupId = shareDto?.GroupId,
+            SharedPostId = postId // Reference to original post
+        };
+
+        var created = await _postService.CreateAsync(sharedPost);
+        
+        // Reload post with related data
+        var createdWithData = await _postService.GetByIdAsync(created.Id);
+        
+        if (createdWithData == null)
+            return this.ErrorResponse("Failed to retrieve created shared post", statusCode: 500);
+
+        var postDto = MapToPostResponseDto(createdWithData);
+
+        return this.CreatedResponse(postDto, "Post shared successfully");
     }
 
     [HttpDelete("{id}")]

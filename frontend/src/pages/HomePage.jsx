@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
- import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment, getNotifications } from '../api';
+ import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment, getNotifications, sharePost } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -43,6 +43,10 @@ export default function HomePage() {
   const [postPage, setPostPage] = useState(1);
   const [hasMorePosts, setHasMorePosts] = useState(false);
   const [postPageSize] = useState(20);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePostId, setSharePostId] = useState(null);
+  const [shareCaption, setShareCaption] = useState('');
+  const [sharePending, setSharePending] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const postsEndRef = useRef(null);
@@ -712,6 +716,39 @@ export default function HomePage() {
     }
   };
 
+  const handleShare = (post) => {
+    setSharePostId(post.Id);
+    setShareCaption('');
+    setShowShareModal(true);
+  };
+
+  const handleSubmitShare = async () => {
+    if (!sharePostId) return;
+
+    try {
+      setSharePending(true);
+      const newSharedPost = await sharePost(sharePostId, {
+        content: shareCaption || ''
+      });
+
+      if (newSharedPost) {
+        // Add the new shared post to the top of the posts list
+        setPosts([newSharedPost, ...posts]);
+        setError('');
+      }
+      
+      // Close modal
+      setShowShareModal(false);
+      setSharePostId(null);
+      setShareCaption('');
+    } catch (err) {
+      console.error('Error sharing post:', err);
+      setError(`Lỗi chia sẻ bài viết: ${err.message}`);
+    } finally {
+      setSharePending(false);
+    }
+  };
+
   const handleAcceptRequest = async (request) => {
     try {
       await acceptFriendRequest(request.Id);
@@ -1056,6 +1093,123 @@ export default function HomePage() {
                     {post.ImageUrl && (
                       <img src={post.ImageUrl} alt="Post" className="post-image" />
                     )}
+
+                    {/* Shared Post Display */}
+                    {post.IsShared && post.SharedPost && (
+                      <div className="shared-post-container" style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        backgroundColor: '#f0f2f5',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginBottom: '10px',
+                          color: '#65676b',
+                          fontSize: '13px'
+                        }}>
+                          <i className="fa-solid fa-share"></i>
+                          <span>{post.UserFullName || post.UserName} đã chia sẻ</span>
+                        </div>
+                        
+                        <div className="original-post" style={{
+                          backgroundColor: '#fff',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          border: '1px solid #ddd'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '8px'
+                          }}>
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              backgroundColor: '#e5e7eb'
+                            }}>
+                              {post.SharedPost.UserProfilePictureUrl ? (
+                                <img 
+                                  src={post.SharedPost.UserProfilePictureUrl} 
+                                  alt="Author"
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                <div style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}>
+                                  <i className="fa-solid fa-user"></i>
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p style={{
+                                margin: '0',
+                                fontWeight: '600',
+                                fontSize: '14px'
+                              }}>
+                                {post.SharedPost.UserFullName || post.SharedPost.UserName}
+                              </p>
+                              <p style={{
+                                margin: '0',
+                                fontSize: '12px',
+                                color: '#65676b'
+                              }}>
+                                {new Date(post.SharedPost.CreatedAt).toLocaleDateString('vi-VN')}
+                              </p>
+                            </div>
+                          </div>
+
+                          <p style={{
+                            margin: '8px 0',
+                            fontSize: '14px',
+                            color: '#050505'
+                          }}>
+                            <HashtagContent 
+                              content={post.SharedPost.Content} 
+                              onHashtagClick={handleHashtagClick}
+                            />
+                          </p>
+
+                          {post.SharedPost.ImageUrl && (
+                            <img 
+                              src={post.SharedPost.ImageUrl} 
+                              alt="Shared Post" 
+                              style={{
+                                marginTop: '8px',
+                                maxWidth: '100%',
+                                borderRadius: '6px',
+                                maxHeight: '300px',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          )}
+
+                          <div style={{
+                            display: 'flex',
+                            gap: '16px',
+                            marginTop: '8px',
+                            paddingTop: '8px',
+                            borderTop: '1px solid #e5e7eb',
+                            fontSize: '12px',
+                            color: '#65676b'
+                          }}>
+                            <span>❤️ {post.SharedPost.LikesCount} lượt thích</span>
+                            <span><i className="fa-solid fa-comments"></i> {post.SharedPost.CommentsCount} bình luận</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="post-stats">
@@ -1074,8 +1228,8 @@ export default function HomePage() {
                     <button className="post-action-btn" onClick={() => handleToggleComments(post)}>
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
-                    <button className="post-action-btn">
-                      <span><i class="fa-solid fa-share"></i></span> Chia sẻ
+                    <button className="post-action-btn" onClick={() => handleShare(post)}>
+                      <span><i className="fa-solid fa-share"></i></span> Chia sẻ
                     </button>
                   </div>
                   {activeCommentPostId === post.Id && (
@@ -1370,6 +1524,53 @@ export default function HomePage() {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showShareModal && (
+        <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h2>Chia sẻ bài viết</h2>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowShareModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="share-modal-body" style={{ padding: '20px' }}>
+              <textarea
+                value={shareCaption}
+                onChange={(e) => setShareCaption(e.target.value)}
+                placeholder="Thêm chú thích cho bài viết của bạn..."
+                className="post-textarea"
+                rows="4"
+                style={{ marginBottom: '20px', width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
+              />
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  type="button"
+                  className="btn-post"
+                  onClick={handleSubmitShare}
+                  disabled={sharePending}
+                  style={{ flex: 1 }}
+                >
+                  {sharePending ? 'Đang chia sẻ...' : 'Chia sẻ'}
+                </button>
+                <button 
+                  type="button"
+                  className="btn-post"
+                  onClick={() => setShowShareModal(false)}
+                  style={{ flex: 1, backgroundColor: '#ccc', color: '#333' }}
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

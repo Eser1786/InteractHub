@@ -14,6 +14,10 @@ public class Post
     public int? GroupId {get; set;}
     public Group? Group {get; set;}
 
+    // Share Post feature
+    public int? SharedPostId {get; set;}
+    public Post? SharedPost {get; set;}
+
     public ICollection <Comment> Comments {get; set;}
     public ICollection <Like> Likes {get; set;}
     public ICollection<PostHashtag> PostHashtags {get; set;}

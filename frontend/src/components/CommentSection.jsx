@@ -31,6 +31,8 @@ function formatCommentTime(dateString) {
 }
 
 export default function CommentSection({ post, comments, onClose, onAddComment, onDeleteComment, onEditComment, currentUser }) {
+  const postId = post?.Id ?? post?.id;
+  const postUserId = post?.UserId ?? post?.userId;
   const [commentList, setCommentList] = useState(comments ?? []);
   const [newComment, setNewComment] = useState('');
   const [likedComments, setLikedComments] = useState(new Set());
@@ -41,7 +43,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
 
   useEffect(() => {
     setNewComment('');
-  }, [post?.Id]);
+  }, [postId]);
 
   useEffect(() => {
     setCommentList(comments ?? []);
@@ -118,14 +120,14 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
 
     const initSignalR = async () => {
       const token = localStorage.getItem('token');
-      if (!token || !post?.Id) return;
+      if (!token || !postId) return;
 
       try {
         if (!commentHubConnection.isActive()) {
           await commentHubConnection.connect(token);
         }
 
-        await commentHubConnection.joinPostGroup(post.Id);
+        await commentHubConnection.joinPostGroup(postId);
       } catch (err) {
         console.error('CommentHub connection error:', err);
       }
@@ -135,7 +137,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
         const incomingPostId = comment.PostId ?? comment.postId;
         const incomingId = comment.Id ?? comment.id;
 
-        if (incomingPostId !== post.Id) return;
+        if (incomingPostId !== postId) return;
 
         setCommentList((prev) => {
           if (prev.some((item) => item.id === incomingId)) {
@@ -159,7 +161,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
         const incomingPostId = comment.PostId ?? comment.postId;
         const incomingId = comment.Id ?? comment.id;
 
-        if (incomingPostId !== post.Id) return;
+        if (incomingPostId !== postId) return;
 
         setCommentList((prev) => prev.map((item) =>
           item.id === incomingId ? { ...item, content: comment.Content ?? comment.content } : item
@@ -171,7 +173,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
         const incomingPostId = payload.PostId ?? payload.postId;
         const incomingId = payload.Id ?? payload.id;
 
-        if (incomingPostId !== post.Id) return;
+        if (incomingPostId !== postId) return;
 
         setCommentList((prev) => prev.filter((item) => item.id !== incomingId));
       });
@@ -180,18 +182,18 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
     initSignalR();
 
     return () => {
-      if (post?.Id) {
-        commentHubConnection.leavePostGroup(post.Id).catch(() => {});
+      if (postId) {
+        commentHubConnection.leavePostGroup(postId).catch(() => {});
       }
       if (unsubscribeCreated) unsubscribeCreated();
       if (unsubscribeUpdated) unsubscribeUpdated();
       if (unsubscribeDeleted) unsubscribeDeleted();
     };
-  }, [post?.Id]);
+  }, [postId]);
 
   const handleSubmit = () => {
     if (!newComment.trim()) return;
-    onAddComment(post.Id, newComment.trim());
+    onAddComment(postId, newComment.trim());
     setNewComment('');
   };
 
@@ -208,7 +210,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
     
     // Call parent callback to update state
     if (onEditComment) {
-      onEditComment(post.Id, commentId, editingCommentText.trim());
+      onEditComment(postId, commentId, editingCommentText.trim());
     }
     
     // Close editing mode
@@ -246,7 +248,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                 const displayProfilePic = userData?.ProfilePictureUrl || userData?.profilePictureUrl || comment.userProfilePictureUrl;
                 
                 // Check if current user can delete this comment
-                const canDeleteComment = currentUser?.Id === comment.userId || currentUser?.Id === post.UserId;
+                const canDeleteComment = currentUser?.Id === comment.userId || currentUser?.Id === postUserId;
                 
                 console.log('Rendering comment:', {
                   id: comment.id,
@@ -255,40 +257,40 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                   createdAt: comment.createdAt,
                   canDelete: canDeleteComment,
                   currentUserId: currentUser?.Id,
-                  postUserId: post.UserId,
+                  postUserId,
                   displayName
                 });
-                
+
                 return (
-                <div key={comment.id} className="comment-item">
-                  <div className="comment-avatar">
-                    {displayProfilePic ? (
-                      <img 
-                        src={displayProfilePic} 
-                        alt={displayName}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={(e) => {
-                          console.warn('Failed to load comment avatar:', displayProfilePic);
-                          e.target.style.display = 'none';
-                          const fallbackIcon = e.target.nextElementSibling;
-                          if (fallbackIcon) {
-                            fallbackIcon.style.display = 'flex';
-                          }
+                  <div key={comment.id} className="comment-item">
+                    <div className="comment-avatar">
+                      {displayProfilePic ? (
+                        <img 
+                          src={displayProfilePic} 
+                          alt={displayName}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            console.warn('Failed to load comment avatar:', displayProfilePic);
+                            e.target.style.display = 'none';
+                            const fallbackIcon = e.target.nextElementSibling;
+                            if (fallbackIcon) {
+                              fallbackIcon.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <i 
+                        className="fa-solid fa-user" 
+                        style={{ 
+                          display: displayProfilePic ? 'none' : 'flex',
+                          width: '100%',
+                          height: '100%',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
-                      />
-                    ) : null}
-                    <i 
-                      className="fa-solid fa-user" 
-                      style={{ 
-                        display: displayProfilePic ? 'none' : 'flex',
-                        width: '100%',
-                        height: '100%',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    ></i>
-                  </div>
-                  <div className="comment-content-wrapper">
+                      ></i>
+                    </div>
+                    <div className="comment-content-wrapper">
                     <div className="comment-header">
                       <div className="comment-user-info">
                         <strong>{displayName}</strong>
@@ -330,7 +332,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                                   e.stopPropagation();
                                   console.log('Delete button clicked');
                                   setActiveMenuCommentId(null);
-                                  onDeleteComment(post.Id, comment.id);
+                                  onDeleteComment(postId, comment.id);
                                 }}
                               >
                                 <i className="fa-solid fa-trash"></i> Xóa

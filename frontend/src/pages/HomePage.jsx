@@ -65,6 +65,23 @@ export default function HomePage() {
     return `${days} ngày trước`;
   };
 
+  const normalizeSearchText = (text = '') => {
+    return text
+      .toString()
+      .normalize('NFD')
+      .replace(/([̀-ͯ])/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'd')
+      .toLowerCase()
+      .trim();
+  };
+
+  const matchesSearch = (value = '', query = '') => {
+    const normalizedValue = normalizeSearchText(value);
+    const normalizedQuery = normalizeSearchText(query);
+    return normalizedValue.includes(normalizedQuery);
+  };
+
   const loadNotifications = async (userData) => {
     if (!userData?.Id) return;
     try {
@@ -870,18 +887,18 @@ export default function HomePage() {
   console.log('Current user:', currentUser);
   console.log('Friends:', friends);
 
-  const filteredUsers = searchQuery.trim() ? 
-    allUsers.filter(u => 
-      u.Id !== currentUser?.Id &&
-      !friends.some(f => {
-        const fId = f.FriendId || f.friendId;
-        return fId === u.Id;
-      }) &&
-      (u.FullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       u.UserName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       u.userName?.toLowerCase().includes(searchQuery.toLowerCase()))
-    ) : suggestedUsers;
+const filteredUsers = searchQuery.trim() ?
+    allUsers.filter(u => {
+      const userText = `${u.FullName || u.fullName || ''} ${u.UserName || u.userName || ''}`;
+      return (
+        u.Id !== currentUser?.Id &&
+        !friends.some(f => {
+          const fId = f.FriendId || f.friendId;
+          return fId === u.Id;
+        }) &&
+        matchesSearch(userText, searchQuery)
+      );
+    }) : suggestedUsers;
 
   console.log('Search query:', searchQuery);
   console.log('Filtered users:', filteredUsers);

@@ -100,12 +100,12 @@ builder.Services
                 
                 // Check query string first (for backward compatibility)
                 if (!string.IsNullOrEmpty(accessToken) && 
-                    (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub")))
+                    (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub") || path.StartsWithSegments("/commentHub")))
                 {
                     context.Token = accessToken;
                 }
                 // Check Authorization header for WebSocket connections
-                else if (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub"))
+                else if (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub") || path.StartsWithSegments("/commentHub"))
                 {
                     var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
                     if (authHeader?.StartsWith("Bearer ") == true)
@@ -209,6 +209,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<MessageHub>("/messageHub");
+app.MapHub<CommentHub>("/commentHub");
 
 // ✅ Chuyển hướng các đường dẫn (Router) của React về trang chủ index.html
 app.MapFallbackToFile("index.html");

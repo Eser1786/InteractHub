@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using InteractHub.Application.Interfaces;
 using InteractHub.Application.Entities;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
+using InteractHub.Infrastructure.Hubs;
 using System.Security.Claims;
 
 namespace InteractHub.API.Controllers;
@@ -18,12 +20,18 @@ public class CommentsController : ControllerBase
     private readonly ICommentService _commentService;
     private readonly IPostService _postService;
     private readonly INotificationService _notificationService;
+    private readonly IHubContext<CommentHub> _commentHubContext;
 
-    public CommentsController(ICommentService commentService, IPostService postService, INotificationService notificationService)
+    public CommentsController(
+        ICommentService commentService,
+        IPostService postService,
+        INotificationService notificationService,
+        IHubContext<CommentHub> commentHubContext)
     {
         _commentService = commentService;
         _postService = postService;
         _notificationService = notificationService;
+        _commentHubContext = commentHubContext;
     }
 
     [HttpGet]
@@ -118,6 +126,17 @@ public class CommentsController : ControllerBase
             CreatedAt = created.CreatedAt
         };
 
+        try
+        {
+            await _commentHubContext.Clients
+                .Group(GetPostGroupName(created.PostId))
+                .SendAsync("ReceiveCommentCreated", commentDto);
+        }
+        catch
+        {
+            // Ignore real-time delivery failures.
+        }
+
         return this.CreatedResponse(commentDto, "Comment created successfully");
     }
 
@@ -141,6 +160,24 @@ public class CommentsController : ControllerBase
 
         await _commentService.UpdateAsync(comment);
 
+        try
+        {
+            await _commentHubContext.Clients
+                .Group(GetPostGroupName(comment.PostId))
+                .SendAsync("ReceiveCommentUpdated", new CommentResponseDto
+                {
+                    Id = comment.Id,
+                    Content = comment.Content,
+                    PostId = comment.PostId,
+                    UserId = comment.UserId,
+                    CreatedAt = comment.CreatedAt
+                });
+        }
+        catch
+        {
+            // Ignore real-time delivery failures.
+        }
+
         return this.SuccessResponse(message: "Comment updated successfully", statusCode: 200);
     }
 
@@ -163,6 +200,19 @@ public class CommentsController : ControllerBase
         if (!result)
             return this.NotFoundResponse("Comment not found");
 
+        try
+        {
+            await _commentHubContext.Clients
+                .Group(GetPostGroupName(comment.PostId))
+                .SendAsync("ReceiveCommentDeleted", new { Id = id, PostId = comment.PostId });
+        }
+        catch
+        {
+            // Ignore real-time delivery failures.
+        }
+
         return this.SuccessResponse(message: "Comment deleted successfully", statusCode: 200);
     }
+
+    private static string GetPostGroupName(int postId) => $"comments-{postId}";
 }

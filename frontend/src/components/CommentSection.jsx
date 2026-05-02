@@ -1,50 +1,37 @@
 import { useState, useEffect } from 'react';
 import { getUser } from '../api';
+import { commentHubConnection } from '../utils/commentHubConnection';
 import '../styles/CommentSection.css';
 
 // Format timestamp function
 function formatCommentTime(dateString) {
   if (!dateString) {
-    return 'Vừa xong';
-  }
-
-  // If it's the old format "Vừa xong", return it
-  if (dateString === 'Vừa xong') {
-    return 'Vừa xong';
+    return '';
   }
 
   try {
-    const now = new Date();
     const commentDate = new Date(dateString);
-    
-    // Check if date is valid
+
     if (isNaN(commentDate.getTime())) {
       console.warn('Invalid date string:', dateString);
-      return 'Vừa xong';
+      return '';
     }
 
-    const diffMs = now - commentDate;
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins < 1) {
-      return 'Vừa xong';
-    }
-
-    // Format: DD/MM/YYYY HH:mm
-    const day = String(commentDate.getDate()).padStart(2, '0');
-    const month = String(commentDate.getMonth() + 1).padStart(2, '0');
-    const year = commentDate.getFullYear();
-    const hours = String(commentDate.getHours()).padStart(2, '0');
-    const mins = String(commentDate.getMinutes()).padStart(2, '0');
-
-    return `${day}/${month}/${year} ${hours}:${mins}`;
+    return commentDate.toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   } catch (err) {
     console.error('Error formatting comment time:', err, dateString);
-    return 'Vừa xong';
+    return '';
   }
 }
 
 export default function CommentSection({ post, comments, onClose, onAddComment, onDeleteComment, onEditComment, currentUser }) {
+  const [commentList, setCommentList] = useState(comments ?? []);
   const [newComment, setNewComment] = useState('');
   const [likedComments, setLikedComments] = useState(new Set());
   const [commentUsers, setCommentUsers] = useState({});
@@ -57,23 +44,25 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
   }, [post?.Id]);
 
   useEffect(() => {
-    // Initialize liked comments from comment data
+    setCommentList(comments ?? []);
+  }, [comments]);
+
+  useEffect(() => {
     const liked = new Set();
-    comments.forEach(comment => {
+    commentList.forEach(comment => {
       if (comment.likes && Array.isArray(comment.likes) && comment.likes.includes(currentUser?.Id)) {
         liked.add(comment.id);
       }
     });
     setLikedComments(liked);
-  }, [comments, currentUser?.Id]);
+  }, [commentList, currentUser?.Id]);
 
   // Load user data for comments that don't have profile picture
   useEffect(() => {
     const loadUserData = async () => {
       const newUsers = { ...commentUsers };
       
-      for (const comment of comments) {
-        // Load fresh user data if comment has userId (to get current name in case it changed)
+      for (const comment of commentList) {
         if (comment.userId && !newUsers[comment.userId]) {
           try {
             const userData = await getUser(comment.userId);
@@ -89,19 +78,18 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
       }
     };
 
-    if (comments.length > 0) {
+    if (commentList.length > 0) {
       loadUserData();
     }
-  }, [comments]);
+  }, [commentList]);
 
   // Listen for user updates to refresh comment user data (e.g., when profile name changes)
   useEffect(() => {
     const handleUserUpdate = async () => {
       console.log('userUpdated event received in CommentSection - refreshing user cache');
-      // Refresh all user data in comments
       const newUsers = {};
       
-      for (const comment of comments) {
+      for (const comment of commentList) {
         if (comment.userId && !newUsers[comment.userId]) {
           try {
             const userData = await getUser(comment.userId);
@@ -121,7 +109,85 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
     return () => {
       window.removeEventListener('userUpdated', handleUserUpdate);
     };
-  }, [comments]);
+  }, [commentList]);
+
+  useEffect(() => {
+    let unsubscribeCreated = null;
+    let unsubscribeUpdated = null;
+    let unsubscribeDeleted = null;
+
+    const initSignalR = async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !post?.Id) return;
+
+      try {
+        if (!commentHubConnection.isActive()) {
+          await commentHubConnection.connect(token);
+        }
+
+        await commentHubConnection.joinPostGroup(post.Id);
+      } catch (err) {
+        console.error('CommentHub connection error:', err);
+      }
+
+      unsubscribeCreated = commentHubConnection.onCommentCreated((comment) => {
+        if (!comment) return;
+        const incomingPostId = comment.PostId ?? comment.postId;
+        const incomingId = comment.Id ?? comment.id;
+
+        if (incomingPostId !== post.Id) return;
+
+        setCommentList((prev) => {
+          if (prev.some((item) => item.id === incomingId)) {
+            return prev;
+          }
+
+          return [{
+            ...comment,
+            id: incomingId,
+            postId: incomingPostId,
+            content: comment.Content ?? comment.content,
+            userId: comment.UserId ?? comment.userId,
+            userName: comment.UserName ?? comment.userName,
+            createdAt: comment.CreatedAt ?? comment.createdAt
+          }, ...prev];
+        });
+      });
+
+      unsubscribeUpdated = commentHubConnection.onCommentUpdated((comment) => {
+        if (!comment) return;
+        const incomingPostId = comment.PostId ?? comment.postId;
+        const incomingId = comment.Id ?? comment.id;
+
+        if (incomingPostId !== post.Id) return;
+
+        setCommentList((prev) => prev.map((item) =>
+          item.id === incomingId ? { ...item, content: comment.Content ?? comment.content } : item
+        ));
+      });
+
+      unsubscribeDeleted = commentHubConnection.onCommentDeleted((payload) => {
+        if (!payload) return;
+        const incomingPostId = payload.PostId ?? payload.postId;
+        const incomingId = payload.Id ?? payload.id;
+
+        if (incomingPostId !== post.Id) return;
+
+        setCommentList((prev) => prev.filter((item) => item.id !== incomingId));
+      });
+    };
+
+    initSignalR();
+
+    return () => {
+      if (post?.Id) {
+        commentHubConnection.leavePostGroup(post.Id).catch(() => {});
+      }
+      if (unsubscribeCreated) unsubscribeCreated();
+      if (unsubscribeUpdated) unsubscribeUpdated();
+      if (unsubscribeDeleted) unsubscribeDeleted();
+    };
+  }, [post?.Id]);
 
   const handleSubmit = () => {
     if (!newComment.trim()) return;
@@ -161,19 +227,19 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
         <div className="comment-modal-header">
           <div>
             <h2>Bình luận</h2>
-            <p>{comments.length} bình luận</p>
+            <p>{commentList.length} bình luận</p>
           </div>
           <button className="close-comment-modal" onClick={onClose}>✕</button>
         </div>
 
         <div className="comment-modal-body">
-          {comments.length === 0 ? (
+          {commentList.length === 0 ? (
             <div className="empty-comment-state">
               <p>Chưa có bình luận nào. Bạn hãy là người bình luận đầu tiên!</p>
             </div>
           ) : (
             <div className="comment-thread">
-              {comments.map((comment) => {
+              {commentList.map((comment) => {
                 // Get user data from loaded users or use comment data
                 const userData = commentUsers[comment.userId];
                 const displayName = userData?.FullName || userData?.fullName || comment.userName;

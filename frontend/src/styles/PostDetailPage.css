@@ -1,0 +1,153 @@
+.post-detail-page {
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+.post-detail-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.back-btn {
+  background: #1877f2;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-btn:hover {
+  background: #166fe5;
+}
+
+.post-detail-card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.post-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.post-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.post-user-details {
+  flex: 1;
+}
+
+.post-username {
+  margin: 0;
+  font-weight: 600;
+  font-size: 15px;
+  color: #050505;
+}
+
+.post-time {
+  margin: 0;
+  font-size: 13px;
+  color: #65676b;
+}
+
+.post-content {
+  margin-bottom: 12px;
+}
+
+.post-content p {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #050505;
+}
+
+.post-image {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.post-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #65676b;
+  padding: 8px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.post-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.post-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #dadde1;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #65676b;
+  transition: all 0.2s;
+}
+
+.post-action-btn:hover {
+  background: #f2f3f5;
+}
+
+.post-action-btn.liked {
+  color: #e0245e;
+  border-color: #e0245e;
+}
+
+.post-action-btn.liked:hover {
+  background: #fef2f2;
+}
+
+.shared-post-action {
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+}
+
+.error {
+  color: #dc2626;
+}

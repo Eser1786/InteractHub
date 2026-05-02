@@ -733,7 +733,7 @@ export default function ProfilePage() {
                           border: '1px solid #ddd',
                           cursor: 'pointer'
                         }}
-                        onClick={() => handleToggleSharedComments(post.SharedPost)}
+                        onClick={() => navigate('/post/' + post.SharedPost.Id)}
                       >
                         <div style={{
                           display: 'flex',

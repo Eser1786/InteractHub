@@ -569,7 +569,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #d9cae8, #c9b8d8);
+  background: linear-gradient(135deg, #d9cae8, #9f46ff);
   border: none;
   cursor: pointer;
   font-size: 16px;
@@ -583,7 +583,7 @@
 }
 
 .message-send-btn:hover {
-  background: linear-gradient(135deg, #c9b8d8, #b9a8c8);
+  background: linear-gradient(135deg, #c081f7, #951bff);
   box-shadow: 0 4px 10px rgba(107, 79, 199, 0.3);
   transform: scale(1.05);
 }

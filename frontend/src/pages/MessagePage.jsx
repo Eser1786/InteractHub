@@ -10,6 +10,15 @@ const SCROLL_THRESHOLD = 100; // pixels from top to trigger lazy load
 const DEBOUNCE_DELAY = 300; // ms for scroll event debouncing
 
 export default function MessagePage() {
+  const sortConversationsByLatest = (list = []) => {
+    return [...list].sort((a, b) => {
+      const timeA = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const timeB = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      if (timeA !== timeB) return timeB - timeA;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
+  };
+
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,6 +100,7 @@ export default function MessagePage() {
           isActive: convo.IsOnline ?? convo.isOnline ?? false,
           lastSeenAt: convo.LastSeenAt ?? convo.lastSeenAt ?? null,
           lastMessage: convo.LastMessage || convo.lastMessage || '',
+          lastMessageAt: convo.LastMessageTime || convo.lastMessageTime || null,
           lastTime: (convo.LastMessageTime || convo.lastMessageTime)
             ? new Date(convo.LastMessageTime || convo.lastMessageTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
             : convo.lastTime || '',
@@ -98,7 +108,7 @@ export default function MessagePage() {
           participantCount: convo.ParticipantCount ?? convo.participantCount ?? 2
         }));
 
-        setConversations(conversationList);
+        setConversations(sortConversationsByLatest(conversationList));
         
         // Extract online friends
         const online = conversationList.filter(c => c.isActive && !c.isGroup);
@@ -270,7 +280,7 @@ export default function MessagePage() {
           const last = safeSorted[safeSorted.length - 1]; // Get the last (newest) message
           setConversations((prev) => prev.map((item) =>
             item.id === conversation.id
-              ? { ...item, lastMessage: last.text, lastTime: last.timestamp, isUnread: false }
+              ? { ...item, lastMessage: last.text, lastTime: last.timestamp, lastMessageAt: last.createdAt.toISOString(), isUnread: false }
               : item
           ));
         }
@@ -383,20 +393,10 @@ export default function MessagePage() {
       setConversations((prev) => {
         const updated = prev.map((item) =>
           item.id === selectedConversation.id
-            ? { ...item, lastMessage: nextMessage.text, lastTime: nextMessage.timestamp, isUnread: false }
+            ? { ...item, lastMessage: nextMessage.text, lastTime: nextMessage.timestamp, lastMessageAt: nextMessage.createdAt.toISOString(), isUnread: false }
             : item
         );
-        
-        // Re-sort by last message time (newest first), then by name
-        return updated.sort((a, b) => {
-          const timeA = a.lastTime ? new Date(a.lastTime) : new Date(0);
-          const timeB = b.lastTime ? new Date(b.lastTime) : new Date(0);
-          
-          if (timeA.getTime() !== timeB.getTime()) {
-            return timeB.getTime() - timeA.getTime();
-          }
-          return a.name.localeCompare(b.name);
-        });
+        return sortConversationsByLatest(updated);
       });
       
       setNewMessage('');
@@ -457,20 +457,10 @@ export default function MessagePage() {
         setConversations((prev) => {
           const updated = prev.map((item) =>
             item.id === selectedConversation.id
-              ? { ...item, lastMessage: formattedMessage.text, lastTime: formattedMessage.timestamp }
+              ? { ...item, lastMessage: formattedMessage.text, lastTime: formattedMessage.timestamp, lastMessageAt: formattedMessage.createdAt.toISOString() }
               : item
           );
-          
-          // Re-sort by last message time (newest first), then by name
-          return updated.sort((a, b) => {
-            const timeA = a.lastTime ? new Date(a.lastTime) : new Date(0);
-            const timeB = b.lastTime ? new Date(b.lastTime) : new Date(0);
-            
-            if (timeA.getTime() !== timeB.getTime()) {
-              return timeB.getTime() - timeA.getTime(); // Newest first
-            }
-            return a.name.localeCompare(b.name); // Then by name
-          });
+          return sortConversationsByLatest(updated);
         });
         
         // 🎯 Smart scroll: Only scroll if user is already at bottom

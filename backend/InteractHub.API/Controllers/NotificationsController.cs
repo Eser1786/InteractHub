@@ -35,6 +35,10 @@ public class NotificationsController : ControllerBase
         if (notification == null)
             return this.NotFoundResponse("Notification not found");
 
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (notification.UserId != userId)
+            return this.ForbiddenResponse();
+
         var notificationDto = MapToNotificationResponseDto(notification);
         return this.SuccessResponse(notificationDto);
     }

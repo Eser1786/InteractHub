@@ -55,6 +55,12 @@ public class FriendshipsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetAcceptedFriends(string userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
     {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return this.UnauthorizedResponse("User not authenticated");
+        if (currentUserId != userId)
+            return this.ForbiddenResponse();
+
         try
         {
             // ✅ Validate pagination parameters using PaginationHelper
@@ -160,7 +166,11 @@ public class FriendshipsController : ControllerBase
     {
         try
         {
-            var friendship = await _friendshipService.AcceptFriendRequestAsync(id);
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(currentUserId))
+                return this.UnauthorizedResponse("User not authenticated");
+
+            var friendship = await _friendshipService.AcceptFriendRequestAsync(id, currentUserId);
             var friendshipDto = MapToFriendshipResponseDto(friendship);
             return this.SuccessResponse(friendshipDto);
         }
@@ -181,7 +191,11 @@ public class FriendshipsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> DeclineFriendRequest(int id)
     {
-        var result = await _friendshipService.DeclineFriendRequestAsync(id);
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return this.UnauthorizedResponse("User not authenticated");
+
+        var result = await _friendshipService.DeclineFriendRequestAsync(id, currentUserId);
         if (!result)
             return this.BadRequestResponse(new List<ApiError> 
             { 
@@ -234,6 +248,12 @@ public class FriendshipsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<List<ConversationDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetConversationsSorted(string userId)
     {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return this.UnauthorizedResponse("User not authenticated");
+        if (currentUserId != userId)
+            return this.ForbiddenResponse();
+
         try
         {
             // Get accepted friends

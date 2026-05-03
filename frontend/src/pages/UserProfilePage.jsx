@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getAcceptedFriends, getCommentsByPost, createComment, updateComment, deleteComment, getPostById, removeFriend } from '../api';
+import { getUserPosts, getUser, likePost, unlikePost, sendFriendRequest, deletePost, getCommentsByPost, createComment, updateComment, deleteComment, getPostById, removeFriend, checkFriendshipStatus } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
@@ -53,12 +53,12 @@ export default function UserProfilePage() {
           .map(post => post.Id);
         setLikedPosts(new Set(userLikedPostIds));
         
-        // Check if already friends
-        const friendsData = await getAcceptedFriends(currentUserData.Id, 1, 100);
-        const isFriendAlready = (friendsData || []).some(f => String(f.FriendId || f.friendId) === String(userId));
-        console.log('Friend check:', { userId, isFriendAlready, friendIds: friendsData?.map(f => f.FriendId || f.friendId) });
+        const statusData = await checkFriendshipStatus(userId);
+        const relationshipStatus = String(statusData?.Status || statusData?.status || 'None');
+        const isFriendAlready = relationshipStatus.toLowerCase() === 'accepted';
+        const isPending = relationshipStatus.toLowerCase() === 'pending';
         setIsFriend(isFriendAlready);
-        setFriendRequestSent(false);
+        setFriendRequestSent(isPending);
       }
     } catch (err) {
       console.error('Error loading user data:', err);
@@ -104,10 +104,6 @@ export default function UserProfilePage() {
       // Emit event to notify HomePage about new friend request
       window.dispatchEvent(new Event('friendRequestSent'));
       
-      // Show success notification
-      setTimeout(() => {
-        setFriendRequestSent(false);
-      }, 3000);
     } catch (err) {
       console.error('Error sending friend request:', err);
       setError(`Lỗi gửi lời mời: ${err.message}`);

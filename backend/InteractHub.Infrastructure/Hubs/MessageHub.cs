@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
+using System.Linq;
 using InteractHub.Application.Interfaces;
 
 namespace InteractHub.Infrastructure.Hubs;
@@ -9,11 +10,16 @@ namespace InteractHub.Infrastructure.Hubs;
 public class MessageHub : Hub
 {
     private readonly IFriendshipService _friendshipService;
+    private readonly IGroupService _groupService;
     private readonly IUserPresenceService _userPresenceService;
 
-    public MessageHub(IFriendshipService friendshipService, IUserPresenceService userPresenceService)
+    public MessageHub(
+        IFriendshipService friendshipService,
+        IGroupService groupService,
+        IUserPresenceService userPresenceService)
     {
         _friendshipService = friendshipService;
+        _groupService = groupService;
         _userPresenceService = userPresenceService;
     }
     /// <summary>
@@ -39,6 +45,13 @@ public class MessageHub : Hub
             return;
         }
 
+        var friendshipStatus = await _friendshipService.CheckFriendshipStatusAsync(currentUserId, userId);
+        if (friendshipStatus != InteractHub.Application.Entities.Enums.FriendshipStatus.Accepted)
+        {
+            Console.WriteLine($"[MessageHub] ⛔ JoinConversation denied. Users are not accepted friends.");
+            return;
+        }
+
         // Create a group name for the conversation (sorted IDs to ensure consistency)
         var groupName = GetConversationGroupName(currentUserId, userId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
@@ -59,6 +72,13 @@ public class MessageHub : Hub
         if (string.IsNullOrEmpty(currentUserId))
         {
             Console.WriteLine($"[MessageHub] ⚠️ JoinGroupConversation: currentUserId is empty");
+            return;
+        }
+
+        var group = await _groupService.GetByIdAsync(groupId);
+        if (group == null || !group.Memberships.Any(m => m.UserId == currentUserId))
+        {
+            Console.WriteLine($"[MessageHub] ⛔ JoinGroupConversation denied for user {currentUserId}, group {groupId}");
             return;
         }
 

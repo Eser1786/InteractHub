@@ -22,12 +22,12 @@ public interface IFriendshipService
     /// <summary>
     /// Chấp nhận lời mời kết bạn
     /// </summary>
-    Task<Friendship> AcceptFriendRequestAsync(int friendshipId);
+    Task<Friendship> AcceptFriendRequestAsync(int friendshipId, string currentUserId);
     
     /// <summary>
     /// Từ chối lời mời kết bạn
     /// </summary>
-    Task<bool> DeclineFriendRequestAsync(int friendshipId);
+    Task<bool> DeclineFriendRequestAsync(int friendshipId, string currentUserId);
     
     /// <summary>
     /// Chặn người dùng

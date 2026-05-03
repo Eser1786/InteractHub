@@ -311,24 +311,26 @@ export default function HomePage() {
 
     // Listen for new friend request from UserProfilePage
     const handleFriendRequestSent = async () => {
-      if (currentUser) {
-        console.log('Friend request sent - reloading pending requests');
-        const requestsData = await getPendingRequests(currentUser.Id, 1, 20);
-        setPendingRequests(requestsData || []);
-        // Clear requesters info cache to reload user info
-        setRequestersInfo({});
-      }
+      const userDataJson = localStorage.getItem('user');
+      const latestUser = userDataJson ? JSON.parse(userDataJson) : null;
+      if (!latestUser?.Id) return;
+      console.log('Friend request sent - reloading pending requests');
+      const requestsData = await getPendingRequests(latestUser.Id, 1, 20);
+      setPendingRequests(requestsData || []);
+      // Clear requesters info cache to reload user info
+      setRequestersInfo({});
     };
 
     // Listen for friend acceptance - reload friends list
     const handleFriendAccepted = async () => {
-      if (currentUser) {
-        console.log('Friend accepted - reloading friends list');
-        const friendsData = await getAcceptedFriends(currentUser.Id, 1, 10);
-        setFriends(friendsData || []);
-        // Clear friends info cache to reload user info
-        setFriendsInfo({});
-      }
+      const userDataJson = localStorage.getItem('user');
+      const latestUser = userDataJson ? JSON.parse(userDataJson) : null;
+      if (!latestUser?.Id) return;
+      console.log('Friend accepted - reloading friends list');
+      const friendsData = await getAcceptedFriends(latestUser.Id, 1, 10);
+      setFriends(friendsData || []);
+      // Clear friends info cache to reload user info
+      setFriendsInfo({});
     };
 
     window.addEventListener('userUpdated', handleUserUpdate);

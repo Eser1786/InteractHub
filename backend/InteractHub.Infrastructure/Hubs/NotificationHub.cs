@@ -9,18 +9,20 @@ public class NotificationHub : Hub
 {
     public async Task JoinNotificationsGroup(string userId)
     {
-        if (string.IsNullOrEmpty(userId))
+        var currentUserId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
             return;
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupName(userId));
+        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupName(currentUserId));
     }
 
     public async Task LeaveNotificationsGroup(string userId)
     {
-        if (string.IsNullOrEmpty(userId))
+        var currentUserId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
             return;
 
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupName(userId));
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupName(currentUserId));
     }
 
     public override async Task OnConnectedAsync()

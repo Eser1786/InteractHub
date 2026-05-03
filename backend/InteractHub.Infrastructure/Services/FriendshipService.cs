@@ -101,7 +101,7 @@ public class FriendshipService : IFriendshipService
     /// <summary>
     /// Chấp nhận lời mời kết bạn
     /// </summary>
-    public async Task<Friendship> AcceptFriendRequestAsync(int friendshipId)
+    public async Task<Friendship> AcceptFriendRequestAsync(int friendshipId, string currentUserId)
     {
         var friendship = await GetByIdAsync(friendshipId);
         if (friendship == null)
@@ -109,6 +109,9 @@ public class FriendshipService : IFriendshipService
 
         if (friendship.Status != FriendshipStatus.Pending)
             throw new InvalidOperationException("Lời mời kết bạn không ở trạng thái chờ xử lý");
+
+        if (friendship.FriendId != currentUserId)
+            throw new InvalidOperationException("Bạn không có quyền chấp nhận lời mời này");
 
         friendship.Status = FriendshipStatus.Accepted;
         friendship.UpdatedAt = DateTime.Now;
@@ -124,13 +127,16 @@ public class FriendshipService : IFriendshipService
     /// <summary>
     /// Từ chối lời mời kết bạn
     /// </summary>
-    public async Task<bool> DeclineFriendRequestAsync(int friendshipId)
+    public async Task<bool> DeclineFriendRequestAsync(int friendshipId, string currentUserId)
     {
         var friendship = await GetByIdAsync(friendshipId);
         if (friendship == null)
             return false;
 
         if (friendship.Status != FriendshipStatus.Pending)
+            return false;
+
+        if (friendship.FriendId != currentUserId)
             return false;
 
         friendship.Status = FriendshipStatus.Declined;

@@ -561,3 +561,12 @@ export async function removeFriend(friendId) {
   const data = await handleResponse(response);
   return data?.Data || null;
 }
+
+export async function checkFriendshipStatus(friendId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/friendships/status/${friendId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}

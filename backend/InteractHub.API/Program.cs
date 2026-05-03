@@ -221,7 +221,7 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<MessageHub>("/messageHub");
 app.MapHub<CommentHub>("/commentHub");
-app.MapHub<PostHub>("/postHub");
+app.MapHub<PostHub>("/postHub").RequireAuthorization();
 app.MapHub<StoryHub>("/storyHub");
 app.MapHub<GroupHub>("/groupHub");
 

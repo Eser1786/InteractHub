@@ -152,8 +152,8 @@ export default function Header({ onLogout, showControls = true, onSearch, search
                       backgroundColor: '#dc3545',
                       color: 'white',
                       borderRadius: '50%',
-                      width: '18px',
-                      height: '18px',
+                      width: '12px',
+                      height: '12px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -161,7 +161,7 @@ export default function Header({ onLogout, showControls = true, onSearch, search
                       fontWeight: 'bold',
                       border: '2px solid white'
                     }}>
-                      {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                      
                     </span>
                   )}
                 </span>

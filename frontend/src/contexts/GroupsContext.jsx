@@ -13,14 +13,25 @@ export const useGroups = () => {
 
 export const GroupsProvider = ({ children }) => {
   const [groups, setGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(true);
 
   const refreshGroups = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setGroups([]);
+      setGroupsLoading(false);
+      return;
+    }
+
+    setGroupsLoading(true);
     try {
       const fetchedGroups = await getGroups();
       setGroups(fetchedGroups);
     } catch (err) {
       console.error('Error loading groups from backend:', err);
       setGroups([]);
+    } finally {
+      setGroupsLoading(false);
     }
   };
 
@@ -39,12 +50,20 @@ export const GroupsProvider = ({ children }) => {
       refreshGroups();
     };
 
+    const handleTokenChange = () => {
+      refreshGroups();
+    };
+
     window.addEventListener("signalr:group-created", handleGroupCreated);
     window.addEventListener("signalr:group-updated", handleGroupUpdated);
+    window.addEventListener('tokenUpdated', handleTokenChange);
+    window.addEventListener('storage', handleTokenChange);
 
     return () => {
       window.removeEventListener("signalr:group-created", handleGroupCreated);
       window.removeEventListener("signalr:group-updated", handleGroupUpdated);
+      window.removeEventListener('tokenUpdated', handleTokenChange);
+      window.removeEventListener('storage', handleTokenChange);
     };
   }, []);
 
@@ -75,7 +94,7 @@ export const GroupsProvider = ({ children }) => {
   };
 
   return (
-    <GroupsContext.Provider value={{ groups, joinGroup, leaveGroup, refreshGroups }}>
+    <GroupsContext.Provider value={{ groups, groupsLoading, joinGroup, leaveGroup, refreshGroups }}>
       {children}
     </GroupsContext.Provider>
   );

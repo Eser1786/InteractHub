@@ -11,7 +11,7 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const { groups } = useGroups();
+  const { groups, groupsLoading } = useGroups();
 
   useEffect(() => {
     try {
@@ -44,15 +44,15 @@ export default function GroupPage() {
   const filteredGroups = groups.filter(g => {
     const matchesSearch = g.name.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // In 'my-groups', show groups user has joined or created
-    // In 'discover', show groups user has NOT joined AND did NOT create
-    const isMyGroup = g.isJoined || (currentUser && g.creatorId === (currentUser.Id || currentUser.id));
+    // In 'my-groups', only show groups that user has joined (is a member)
+    // In 'discover', show all remaining groups
+    const isMyGroup = g.isJoined;
     const matchesNav = selectedNav === 'my-groups' ? isMyGroup : !isMyGroup;
     
     return matchesSearch && matchesNav;
   });
 
-  if (loading) {
+  if (loading || groupsLoading) {
     return <div className="group-wrapper"><p>Đang tải...</p></div>;
   }
 

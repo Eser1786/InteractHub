@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createGroup } from '../api';
+import { createGroup, getAcceptedFriends, getUser } from '../api';
 import { useGroups } from '../contexts/GroupsContext';
 import Header from '../components/Header';
 import '../styles/CreateGroupPage.css';
@@ -8,16 +8,47 @@ import '../styles/CreateGroupPage.css';
 export default function CreateGroupPage() {
   const [groupName, setGroupName] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
-  const [newPostContent, setNewPostContent] = useState('');
-  const [newPostFile, setNewPostFile] = useState(null);
-  const [postImagePreview, setPostImagePreview] = useState('');
-  const [posting, setPosting] = useState(false);
+  const [friends, setFriends] = useState([]);
+  const [selectedFriendIds, setSelectedFriendIds] = useState([]);
+  const [loadingFriends, setLoadingFriends] = useState(true);
+  const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
   const { refreshGroups } = useGroups();
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user') || 'null');
     setCurrentUser(userData);
+    const loadFriends = async () => {
+      if (!userData?.Id) {
+        setFriends([]);
+        setLoadingFriends(false);
+        return;
+      }
+      try {
+        const accepted = await getAcceptedFriends(userData.Id, 1, 100);
+        const friendIds = (accepted || [])
+          .map((f) => f.FriendId || f.friendId)
+          .filter(Boolean);
+
+        const users = await Promise.all(
+          friendIds.map(async (id) => {
+            try {
+              return await getUser(id);
+            } catch {
+              return null;
+            }
+          })
+        );
+        setFriends(users.filter(Boolean));
+      } catch (err) {
+        console.error('Failed to load friends for group creation', err);
+        setFriends([]);
+      } finally {
+        setLoadingFriends(false);
+      }
+    };
+
+    loadFriends();
   }, []);
 
   const handleLogout = () => {
@@ -34,63 +65,30 @@ export default function CreateGroupPage() {
     }
 
     try {
-      await createGroup({ name: groupName.trim(), description: '' });
+      setCreating(true);
+      await createGroup({
+        name: groupName.trim(),
+        description: '',
+        memberIds: selectedFriendIds
+      });
       await refreshGroups();
       alert(`Tạo nhóm "${groupName}" thành công!`);
       navigate('/group');
     } catch (err) {
       console.error('Failed to create group', err);
       alert('Tạo nhóm thất bại. Vui lòng thử lại.');
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    const maxSize = 5 * 1024 * 1024;
-
-    if (!validTypes.includes(file.type)) {
-      alert('Vui lòng chọn ảnh JPEG, PNG, GIF hoặc WebP');
-      return;
-    }
-
-    if (file.size > maxSize) {
-      alert('Kích thước ảnh không vượt quá 5MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setNewPostFile(file);
-      setPostImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleCreatePost = async (e) => {
-    e.preventDefault();
-    if (!newPostContent.trim() && !postImagePreview) {
-      alert('Vui lòng nhập nội dung hoặc chọn hình ảnh');
-      return;
-    }
-
-    setPosting(true);
-    try {
-      // Here you would typically call API to create a post
-      // For now, just reset the form
-      setNewPostContent('');
-      setNewPostFile(null);
-      setPostImagePreview('');
-      alert('Bài viết đã được tạo thành công!');
-    } catch (err) {
-      alert('Lỗi khi tạo bài viết');
-      console.error(err);
     } finally {
-      setPosting(false);
+      setCreating(false);
     }
   };
+
+  const toggleFriend = (friendId) => {
+    setSelectedFriendIds((prev) =>
+      prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]
+    );
+  };
+
+  const selectedCount = useMemo(() => selectedFriendIds.length + 1, [selectedFriendIds]);
 
   return (
     <div className="create-group-wrapper">
@@ -118,94 +116,47 @@ export default function CreateGroupPage() {
             className="group-name-input"
           />
 
-          <button className="btn-create-group" onClick={handleCreateGroup}>
-            Tạo
+          <p className="member-status">Bạn có thể tạo nhóm chỉ với tên nhóm, hoặc chọn thêm bạn bè.</p>
+          <button className="btn-create-group" onClick={handleCreateGroup} disabled={creating}>
+            {creating ? 'Đang tạo...' : 'Tạo'}
           </button>
         </aside>
 
         <main className="create-group-main">
           <div className="group-info-section">
             <h2 className="group-display-name">{groupName || 'Tên nhóm'}</h2>
-            <p className="group-member-count">1 thành viên</p>
+            <p className="group-member-count">{selectedCount} thành viên (bao gồm bạn)</p>
 
             <section className="create-post-section">
               <div className="create-post-header">
-                <div className="user-avatar">
-                  {currentUser?.ProfilePictureUrl ? (
-                    <img 
-                      src={currentUser.ProfilePictureUrl} 
-                      alt="Avatar"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        if (e.target.nextElementSibling) {
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }
-                      }}
-                    />
-                  ) : null}
-                  <div className="avatar-placeholder" style={{ display: currentUser?.ProfilePictureUrl ? 'none' : 'flex' }}>
-                    <i className="fa-solid fa-user"></i>
-                  </div>
-                </div>
-                <p className="create-post-prompt">
-                  Bạn đang nghĩ gì? Hãy chia sẻ cảm nghĩ của bạn đến thành viên nhóm...
-                </p>
+                <p className="create-post-prompt">Thêm bạn bè vào nhóm (tùy chọn)</p>
               </div>
 
-              <form onSubmit={handleCreatePost} className="create-post-form">
-                <textarea
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="Chia sẻ suy nghĩ của bạn..."
-                  className="post-textarea"
-                  rows="4"
-                />
-                
-                <div className="post-form-bottom">
-                  <div className="file-input-wrapper">
-                    <label htmlFor="create-post-image-input" className="file-input-label">
-                      <i className="fa-solid fa-image"></i>
-                      <span>Thêm hình ảnh</span>
-                    </label>
-                    <input
-                      id="create-post-image-input"
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      onChange={handleFileChange}
-                      className="post-file-input"
-                    />
-                    {newPostFile && (
-                      <span className="file-selected">
-                        ✓ {newPostFile.name}
-                      </span>
-                    )}
-                  </div>
-                  <button 
-                    type="submit" 
-                    className="btn-post"
-                    disabled={posting}
-                  >
-                    {posting ? 'Đang đăng...' : 'Đăng'}
-                  </button>
+              {loadingFriends ? (
+                <p>Đang tải danh sách bạn bè...</p>
+              ) : friends.length === 0 ? (
+                <p>Bạn chưa có bạn bè nào để thêm.</p>
+              ) : (
+                <div>
+                  {friends.map((friend) => {
+                    const friendId = friend.Id || friend.id;
+                    const checked = selectedFriendIds.includes(friendId);
+                    return (
+                      <label key={friendId} className="member-item" style={{ marginBottom: 10 }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleFriend(friendId)}
+                          style={{ marginRight: 8 }}
+                        />
+                        <span className="member-name">
+                          {friend.FullName || friend.fullName || friend.UserName || friend.userName}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
-                
-                {postImagePreview && (
-                  <div className="post-image-preview-wrapper">
-                    <img src={postImagePreview} alt="Preview" className="post-image-preview" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewPostFile(null);
-                        setPostImagePreview('');
-                      }}
-                      className="btn-remove-image"
-                    >
-                      ✕ Xóa hình ảnh
-                    </button>
-                  </div>
-                )}
-              </form>
+              )}
             </section>
           </div>
         </main>

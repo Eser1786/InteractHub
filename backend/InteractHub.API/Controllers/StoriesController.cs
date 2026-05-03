@@ -61,8 +61,8 @@ public class StoriesController : ControllerBase
         return this.SuccessResponse(storyDtos);
     }
 
-    /// <summary>Người nhận realtime story: chủ tin + bạn bè đã kết nối (cùng logic feed).</summary>
-    private async Task<string[]> GetStoryRealtimeRecipientUserIdsAsync(string storyAuthorUserId)
+    /// <summary>Nhóm realtime story: chủ tin + bạn bè đã kết nối (cùng logic feed).</summary>
+    private async Task<List<string>> GetStoryRealtimeRecipientGroupsAsync(string storyAuthorUserId)
     {
         var friends = await _friendshipService.GetAcceptedFriendsAsync(storyAuthorUserId);
         var ids = friends
@@ -72,7 +72,10 @@ public class StoriesController : ControllerBase
             .Distinct()
             .ToList();
         ids.Add(storyAuthorUserId);
-        return ids.Distinct().ToArray();
+        return ids
+            .Distinct()
+            .Select(id => $"story-user-{id}")
+            .ToList();
     }
 
     [HttpGet("{id}")]
@@ -180,8 +183,8 @@ public class StoriesController : ControllerBase
 
         try
         {
-            var recipients = await GetStoryRealtimeRecipientUserIdsAsync(userId);
-            await _storyHub.Clients.Users(recipients)
+            var recipientGroups = await GetStoryRealtimeRecipientGroupsAsync(userId);
+            await _storyHub.Clients.Groups(recipientGroups)
                 .SendAsync("StoryCreated", new
                 {
                     storyDto.Id,
@@ -223,8 +226,8 @@ public class StoriesController : ControllerBase
 
         try
         {
-            var recipients = await GetStoryRealtimeRecipientUserIdsAsync(story.UserId);
-            await _storyHub.Clients.Users(recipients)
+            var recipientGroups = await GetStoryRealtimeRecipientGroupsAsync(story.UserId);
+            await _storyHub.Clients.Groups(recipientGroups)
                 .SendAsync("StoryDeleted", new { storyId = id, userId = story.UserId });
         }
         catch

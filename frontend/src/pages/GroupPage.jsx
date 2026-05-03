@@ -11,7 +11,7 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const { groups, joinGroup } = useGroups();
+  const { groups } = useGroups();
 
   useEffect(() => {
     try {
@@ -31,15 +31,7 @@ export default function GroupPage() {
   }, [location.state]);
 
   const handleViewGroup = (group) => {
-    if (group.isJoined) {
-      navigate(`/group/${group.slug}`);
-    }
-  };
-
-  const handleJoinGroup = (group) => {
-    if (!group.isJoined) {
-      joinGroup(group.id);
-    }
+    navigate(`/group/${group.slug}`);
   };
 
   const handleLogout = () => {
@@ -124,11 +116,11 @@ export default function GroupPage() {
                   </div>
 
                   <div className="group-actions">
-                    <button 
+                    <button
                       className="group-action-btn"
-                      onClick={() => group.isJoined ? handleViewGroup(group) : handleJoinGroup(group)}
+                      onClick={() => handleViewGroup(group)}
                     >
-                      <span>{group.isJoined ? <i class="fa-solid fa-eye"></i> : '➕'}</span> {group.isJoined ? 'Xem' : 'Tham gia'}
+                      <span><i className="fa-solid fa-eye"></i></span> Xem nhóm
                     </button>
                   </div>
                 </div>

@@ -24,7 +24,7 @@ export default function GroupDetailPage() {
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const navigate = useNavigate();
-  const { groups, leaveGroup } = useGroups();
+  const { groups, leaveGroup, joinGroup } = useGroups();
 
   const normalizePost = (post) => ({
     id: post.id || post.Id,
@@ -188,6 +188,17 @@ export default function GroupDetailPage() {
     leaveGroup(group.id);
     // Navigate back to group list with discover tab selected
     navigate('/group', { state: { tab: 'discover' } });
+  };
+
+  const handleJoinGroup = async () => {
+    try {
+      await joinGroup(group.id);
+      // Refresh local group state immediately so UI updates without reload
+      setGroup((prev) => (prev ? { ...prev, isJoined: true, memberCount: (prev.memberCount || 0) + 1 } : prev));
+    } catch (err) {
+      console.error('Error joining group:', err);
+      setError('Không thể vào nhóm lúc này');
+    }
   };
 
   const handleToggleComments = (post) => {
@@ -396,30 +407,34 @@ export default function GroupDetailPage() {
               </button>
               <h1 className="group-title">{group.name}</h1>
             </div>
-            <div className="group-menu-container">
-              <button 
-                className="btn-group-menu" 
-                onClick={() => setShowGroupMenu(!showGroupMenu)}
-              >
-                ⋯
-              </button>
-              {showGroupMenu && (
-                <div className="group-menu-dropdown">
-                  <button 
-                    className="menu-item leave" 
-                    onClick={() => {
-                      handleLeaveGroup();
-                      setShowGroupMenu(false);
-                    }}
-                  >
-                    Rời nhóm
-                  </button>
-                </div>
-              )}
-            </div>
+            {group.isJoined ? (
+              <div className="group-menu-container">
+                <button
+                  className="btn-group-menu"
+                  onClick={() => setShowGroupMenu(!showGroupMenu)}
+                >
+                  ⋯
+                </button>
+                {showGroupMenu && (
+                  <div className="group-menu-dropdown">
+                    <button
+                      className="menu-item leave"
+                      onClick={() => {
+                        handleLeaveGroup();
+                        setShowGroupMenu(false);
+                      }}
+                    >
+                      Rời nhóm
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button className="btn-post" onClick={handleJoinGroup}>Vào nhóm</button>
+            )}
           </div>
 
-          {/* Create Post Section */}
+          {group.isJoined ? (
           <section className="create-post-section">
             <div className="create-post-header">
               <div className="user-avatar">
@@ -489,6 +504,7 @@ export default function GroupDetailPage() {
               )}
             </form>
           </section>
+          ) : null}
 
           <section className="posts-feed">
             {posts.length === 0 ? (

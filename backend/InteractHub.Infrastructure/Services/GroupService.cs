@@ -42,10 +42,7 @@ public class GroupService : IGroupService
 
     public async Task<Group> CreateWithMembersAsync(Group group, string creatorId, List<string> memberIds)
     {
-        if (memberIds.Count < 2)
-        {
-            throw new ArgumentException("Group must have at least 3 members including creator");
-        }
+        memberIds ??= new List<string>();
 
         // Check if all members are friends with creator
         foreach (var memberId in memberIds)

@@ -38,7 +38,7 @@ public class StoriesControllerTests
     {
         var clientProxy = new Mock<IClientProxy>();
         var hubClients = new Mock<IHubClients>();
-        hubClients.Setup(c => c.Users(It.IsAny<string[]>())).Returns(clientProxy.Object);
+        hubClients.Setup(c => c.Groups(It.IsAny<IReadOnlyList<string>>())).Returns(clientProxy.Object);
         var hubContext = new Mock<IHubContext<StoryHub>>();
         hubContext.Setup(h => h.Clients).Returns(hubClients.Object);
         return hubContext;

@@ -12,7 +12,9 @@ import ProfilePage from './pages/ProfilePage';
 import StoryPage from './pages/StoryPage';
 import UserProfilePage from './pages/UserProfilePage';
 import PostDetailPage from './pages/PostDetailPage';
-import { startConnection } from './utils/postHubConnection';
+import { startConnection, resetPostHubConnection } from './utils/postHubConnection';
+import { startStoryConnection, resetStoryHubConnection } from './utils/storyHubConnection';
+import NotificationHubBridge from './components/NotificationHubBridge';
 
 // Helper function to check if JWT token is valid (not expired)
 function isTokenValid(token) {
@@ -68,9 +70,16 @@ function App() {
   });
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      resetStoryHubConnection();
+      resetPostHubConnection();
+      return;
+    }
     startConnection().catch((err) => {
       console.error('Failed to start PostHub connection:', err);
+    });
+    startStoryConnection().catch((err) => {
+      console.error('Failed to start StoryHub connection:', err);
     });
   }, [token]);
 
@@ -85,6 +94,11 @@ function App() {
         } catch (err) {
           console.error('Failed to start PostHub connection:', err);
           // App still works without PostHub, just won't have real-time updates
+        }
+        try {
+          await startStoryConnection();
+        } catch (err) {
+          console.error('Failed to start StoryHub connection:', err);
         }
       } else {
         setToken(null);
@@ -106,6 +120,7 @@ function App() {
   return (
     <GroupsProvider>
       <Router>
+        {token ? <NotificationHubBridge token={token} /> : null}
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

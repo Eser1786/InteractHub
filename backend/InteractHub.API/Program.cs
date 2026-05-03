@@ -102,12 +102,12 @@ builder.Services
                 
                 // Check query string first (for backward compatibility)
                 if (!string.IsNullOrEmpty(accessToken) && 
-                    (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub") || path.StartsWithSegments("/commentHub")))
+                    (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub") || path.StartsWithSegments("/commentHub") || path.StartsWithSegments("/storyHub") || path.StartsWithSegments("/postHub")))
                 {
                     context.Token = accessToken;
                 }
                 // Check Authorization header for WebSocket connections
-                else if (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub") || path.StartsWithSegments("/commentHub"))
+                else if (path.StartsWithSegments("/messageHub") || path.StartsWithSegments("/notificationHub") || path.StartsWithSegments("/commentHub") || path.StartsWithSegments("/storyHub") || path.StartsWithSegments("/postHub"))
                 {
                     var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
                     if (authHeader?.StartsWith("Bearer ") == true)
@@ -221,6 +221,7 @@ app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<MessageHub>("/messageHub");
 app.MapHub<CommentHub>("/commentHub");
 app.MapHub<PostHub>("/postHub");
+app.MapHub<StoryHub>("/storyHub");
 
 // ✅ Chuyển hướng các đường dẫn (Router) của React về trang chủ index.html
 app.MapFallbackToFile("index.html");

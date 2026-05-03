@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
- import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment, getNotifications, sharePost, getPostById } from '../api';
+import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, getStories, getPendingRequests, likePost, unlikePost, deletePost, acceptFriendRequest, declineFriendRequest, getUser, getCommentsByPost, createComment, updateComment, deleteComment, getNotifications, markFeedNotificationsRead, sharePost, getPostById } from '../api';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
 import '../styles/HomePage.css';
 import { startConnection } from '../utils/postHubConnection';
 import { mergeCommentIntoList, sameCommentId } from '../utils/commentNormalize';
+import { isMessageNotificationType } from '../utils/notificationPayload';
+import { normalizeStoryPayload, isStoryActive } from '../utils/storyRealtime';
+import { normalizeFeedPostFromRealtime } from '../utils/postRealtime';
 
 export default function HomePage() {
   const [posts, setPosts] = useState([]);
@@ -29,7 +31,6 @@ export default function HomePage() {
   const [selectedNav, setSelectedNav] = useState('friends');
   const [searchQuery, setSearchQuery] = useState('');
   const [notifications, setNotifications] = useState([]);
-  const [notificationConnection, setNotificationConnection] = useState(null);
   const [stories, setStories] = useState([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentsByPost, setCommentsByPost] = useState({});
@@ -52,6 +53,14 @@ export default function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const postsEndRef = useRef(null);
+
+  const feedUnreadNotificationCount = useMemo(
+    () =>
+      notifications.filter(
+        (n) => !isMessageNotificationType(n.Type) && !(n.IsRead ?? n.isRead)
+      ).length,
+    [notifications]
+  );
 
   const formatTimeAgo = (createdAt) => {
     if (!createdAt) return '';
@@ -90,13 +99,13 @@ export default function HomePage() {
       const notificationData = await getNotifications(userData.Id);
       // Filter out message notifications - only show friend requests, likes, comments, and shares
       const filteredNotifications = (notificationData || [])
-        .filter(n => n.Type !== 'Message')
+        .filter((n) => !isMessageNotificationType(n.Type))
         .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
       setNotifications(filteredNotifications);
       
       // Count unread messages separately
       const unreadMessages = (notificationData || [])
-        .filter(n => n.Type === 'Message' && !n.IsRead)
+        .filter((n) => isMessageNotificationType(n.Type) && !n.IsRead)
         .length;
       setUnreadMessageCount(unreadMessages);
     } catch (err) {
@@ -108,6 +117,12 @@ export default function HomePage() {
     setSelectedNav(nav);
     if (nav === 'notifications' && currentUser) {
       await loadNotifications(currentUser);
+      try {
+        await markFeedNotificationsRead(currentUser.Id);
+        await loadNotifications(currentUser);
+      } catch (err) {
+        console.error('Error marking feed notifications read:', err);
+      }
     }
   };
 
@@ -328,47 +343,88 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.Id) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    const friendIdSet = new Set(
+      (friends || []).map((f) => f.FriendId || f.friendId).filter(Boolean).map(String)
+    );
 
-    const connection = new HubConnectionBuilder()
-      .withUrl('/notificationHub', { accessTokenFactory: () => token })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
-      .build();
+    const onStoryCreated = (e) => {
+      const s = normalizeStoryPayload(e.detail);
+      if (!s || !isStoryActive(s)) return;
+      const uid = String(s.UserId);
+      if (uid !== String(currentUser.Id) && !friendIdSet.has(uid)) return;
+      setStories((prev) => {
+        if (prev.some((x) => (x.Id ?? x.id) === s.Id)) return prev;
+        return [s, ...prev];
+      });
+    };
 
-    connection.on('ReceiveNotification', (notification) => {
-      if (!notification) return;
-      
-      // Filter out message notifications - only show in message badge
-      if (notification.Type === 'Message') {
-        setUnreadMessageCount(prev => prev + 1);
-      } else {
-        setNotifications((prevNotifications) => [
-          notification,
-          ...prevNotifications.filter((item) => item.Id !== notification.Id)
-        ]);
-      }
-    });
+    const onStoryDeleted = (e) => {
+      const d = e.detail;
+      const sid = d?.storyId ?? d?.StoryId;
+      if (sid == null) return;
+      setStories((prev) => prev.filter((st) => (st.Id ?? st.id) !== sid));
+    };
 
-    connection.start()
-      .then(() => {
-        if (currentUser?.Id) {
-          connection.invoke('JoinNotificationsGroup', currentUser.Id).catch(err => console.error('SignalR join group failed:', err));
-        }
-      })
-      .catch((err) => {
-        console.error('SignalR connection error:', err);
+    window.addEventListener('signalr:story-created', onStoryCreated);
+    window.addEventListener('signalr:story-deleted', onStoryDeleted);
+    return () => {
+      window.removeEventListener('signalr:story-created', onStoryCreated);
+      window.removeEventListener('signalr:story-deleted', onStoryDeleted);
+    };
+  }, [currentUser, friends]);
+
+  useEffect(() => {
+    if (!currentUser?.Id) return;
+
+    const visibleUserIds = new Set(
+      (friends || []).map((f) => String(f.FriendId || f.friendId)).filter(Boolean)
+    );
+    visibleUserIds.add(String(currentUser.Id));
+
+    const onPostCreated = (e) => {
+      const post = normalizeFeedPostFromRealtime(e.detail);
+      if (!post || post.GroupId != null) return;
+      if (!visibleUserIds.has(String(post.UserId))) return;
+
+      setPosts((prev) => {
+        if (prev.some((p) => p.Id === post.Id)) return prev;
+        return [post, ...prev];
       });
 
-    setNotificationConnection(connection);
-
-    return () => {
-      connection.stop().catch(() => {});
+      const liked = post.LikedByUserIds || [];
+      if (liked.includes(currentUser.Id)) {
+        setLikedPosts((prev) => new Set(prev).add(post.Id));
+      }
     };
-  }, [currentUser]);
+
+    window.addEventListener('signalr:post-created', onPostCreated);
+    return () => window.removeEventListener('signalr:post-created', onPostCreated);
+  }, [currentUser, friends]);
+
+  useEffect(() => {
+    const onRealtimeNotification = (e) => {
+      const notification = e.detail;
+      if (!notification) return;
+      if (isMessageNotificationType(notification.Type)) return;
+      const nid = notification.Id ?? notification.id;
+      setNotifications((prev) =>
+        [notification, ...prev.filter((item) => (item.Id ?? item.id) !== nid)]
+      );
+    };
+
+    const onMessageUnread = () => {
+      setUnreadMessageCount((prev) => prev + 1);
+    };
+
+    window.addEventListener('signalr:notification', onRealtimeNotification);
+    window.addEventListener('signalr:message-unread', onMessageUnread);
+    return () => {
+      window.removeEventListener('signalr:notification', onRealtimeNotification);
+      window.removeEventListener('signalr:message-unread', onMessageUnread);
+    };
+  }, []);
 
   useEffect(() => {
     const loadInfoForFriends = async () => {
@@ -816,8 +872,9 @@ export default function HomePage() {
       });
 
       if (newSharedPost) {
-        // Add the new shared post to the top of the posts list
-        setPosts([newSharedPost, ...posts]);
+        setPosts((prev) =>
+          prev.some((p) => p.Id === newSharedPost.Id) ? prev : [newSharedPost, ...prev]
+        );
         setError('');
         
         // Trigger event to notify ProfilePage to reload posts
@@ -1084,7 +1141,11 @@ export default function HomePage() {
                 <span className="nav-icon"><i className="fa-solid fa-bell"></i></span>
                 <div className="notification-text">
                   <strong>Thông báo</strong>
-                  <p>{notifications.length} cập nhật mới</p>
+                  <p>
+                    {feedUnreadNotificationCount > 0
+                      ? `${feedUnreadNotificationCount} cập nhật mới`
+                      : 'Xem lịch sử thông báo'}
+                  </p>
                 </div>
               </div>
               <div className={`nav-item ${selectedNav === 'friends' ? 'active' : ''}`} onClick={() => handleSelectNav('friends')}>

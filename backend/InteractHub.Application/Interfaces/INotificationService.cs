@@ -33,6 +33,11 @@ public interface INotificationService
     /// Đánh dấu tất cả là đã đọc
     /// </summary>
     Task<bool> MarkAllAsReadAsync(string userId);
+
+    /// <summary>
+    /// Đánh dấu đã đọc các thông báo feed (không gồm tin nhắn), giữ nguyên lịch sử.
+    /// </summary>
+    Task<bool> MarkFeedNotificationsAsReadAsync(string userId);
     
     /// <summary>
     /// Lấy số lượng notifications chưa đọc
@@ -63,6 +68,16 @@ public interface INotificationService
     /// Tạo notification khi có tin nhắn
     /// </summary>
     Task<Notification> NotifyMessageAsync(string userId, string senderId, int messageId, string messageContent);
+
+    /// <summary>
+    /// Gửi thông báo tới các bạn đã kết nối khi người dùng đăng bài lên feed cá nhân.
+    /// </summary>
+    Task NotifyFriendsAboutNewPostAsync(string authorUserId, int postId);
+
+    /// <summary>
+    /// Thông báo chủ bài gốc khi người khác chia sẻ bài của họ.
+    /// </summary>
+    Task NotifyOriginalAuthorPostSharedAsync(string originalAuthorUserId, string sharerUserId, int sharedPostId);
     
     /// <summary>
     /// Xóa notifications theo type

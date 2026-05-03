@@ -10,5 +10,7 @@ public enum NotificationType
     Follow = 5,             // Follow
     PostReport = 6,         // Report bài viết
     Message = 7,            // Tin nhắn
-    System = 8              // Thông báo hệ thống
+    System = 8,             // Thông báo hệ thống
+    FriendPublishedPost = 9, // Bạn bè đăng bài (feed)
+    PostShared = 10         // Ai đó chia sẻ bài viết của mình
 }

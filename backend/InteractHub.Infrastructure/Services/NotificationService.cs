@@ -88,7 +88,8 @@ public class NotificationService : INotificationService
             Type = type,
             RelatedUserId = relatedUserId,
             RelatedEntityId = relatedEntityId,
-            IsRead = false
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
         };
 
         var createdNotification = await CreateAsync(notification);
@@ -147,6 +148,24 @@ public class NotificationService : INotificationService
         }
 
         _context.Notifications.UpdateRange(unreadNotifications);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> MarkFeedNotificationsAsReadAsync(string userId)
+    {
+        var unreadFeed = await _context.Notifications
+            .Where(n => n.UserId == userId && !n.IsRead && n.Type != NotificationType.Message)
+            .ToListAsync();
+
+        if (unreadFeed.Count == 0)
+            return true;
+
+        foreach (var n in unreadFeed)
+            n.IsRead = true;
+
+        _context.Notifications.UpdateRange(unreadFeed);
         await _context.SaveChangesAsync();
         return true;
     }
@@ -248,6 +267,64 @@ public class NotificationService : INotificationService
             NotificationType.Comment,
             commenterUserId,
             postId
+        );
+    }
+
+    /// <summary>
+    /// Gửi thông báo tới bạn bè khi có bài đăng mới trên feed cá nhân.
+    /// </summary>
+    public async Task NotifyFriendsAboutNewPostAsync(string authorUserId, int postId)
+    {
+        var friendships = await _context.Friendships
+            .AsNoTracking()
+            .Where(f =>
+                f.Status == FriendshipStatus.Accepted &&
+                (f.UserId == authorUserId || f.FriendId == authorUserId))
+            .ToListAsync();
+
+        var friendIds = friendships
+            .Select(f => f.UserId == authorUserId ? f.FriendId : f.UserId)
+            .Where(id => !string.IsNullOrEmpty(id) && id != authorUserId)
+            .Distinct()
+            .ToList();
+
+        if (friendIds.Count == 0)
+            return;
+
+        var author = await _context.Users.FindAsync(authorUserId);
+        var displayName = GetDisplayName(author);
+        var content = $"{displayName} vừa đăng bài viết mới";
+
+        foreach (var friendId in friendIds)
+        {
+            await CreateNotificationAsync(
+                friendId,
+                content,
+                NotificationType.FriendPublishedPost,
+                authorUserId,
+                postId
+            );
+        }
+    }
+
+    /// <summary>
+    /// Thông báo chủ bài gốc khi được chia sẻ.
+    /// </summary>
+    public async Task NotifyOriginalAuthorPostSharedAsync(string originalAuthorUserId, string sharerUserId, int sharedPostId)
+    {
+        if (string.IsNullOrEmpty(originalAuthorUserId) || originalAuthorUserId == sharerUserId)
+            return;
+
+        var sharer = await _context.Users.FindAsync(sharerUserId);
+        var displayName = GetDisplayName(sharer);
+        var content = $"{displayName} đã chia sẻ bài viết của bạn";
+
+        await CreateNotificationAsync(
+            originalAuthorUserId,
+            content,
+            NotificationType.PostShared,
+            sharerUserId,
+            sharedPostId
         );
     }
 

@@ -1,5 +1,8 @@
 const react = require('@vitejs/plugin-react');
 
+// Dùng 127.0.0.1 thay vì localhost để tránh IPv6 (::1) gây lỗi proxy kiểu "Parse Error: Data after Connection: close" với một số bản Node/Kestrel.
+const API_ORIGIN = 'http://127.0.0.1:5142';
+
 /** @type {import('vite').UserConfig} */
 module.exports = {
   plugins: [react()],
@@ -7,33 +10,40 @@ module.exports = {
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:5142',
+        target: API_ORIGIN,
         changeOrigin: true,
-        rewrite: (path) => path
+        rewrite: (path) => path,
       },
       '/messageHub': {
-        target: 'http://localhost:5142',
+        target: API_ORIGIN,
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path,
         logLevel: 'debug'
       },
       '/notificationHub': {
-        target: 'http://localhost:5142',
+        target: API_ORIGIN,
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path,
         logLevel: 'debug'
       },
       '/postHub': {
-        target: 'http://localhost:5142',
+        target: API_ORIGIN,
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path,
+        logLevel: 'debug'
+      },
+      '/storyHub': {
+        target: API_ORIGIN,
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path,
         logLevel: 'debug'
       },
       '/commentHub': {
-        target: 'http://localhost:5142',
+        target: API_ORIGIN,
         changeOrigin: true,
         ws: true,
         rewrite: (path) => path,

@@ -7,6 +7,8 @@ using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
 using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR;
+using InteractHub.Infrastructure.Hubs;
 
 namespace InteractHub.API.Controllers;
 
@@ -17,11 +19,13 @@ public class StoriesController : ControllerBase
 {
     private readonly IStoryService _storyService;
     private readonly IFriendshipService _friendshipService;
+    private readonly IHubContext<StoryHub> _storyHub;
 
-    public StoriesController(IStoryService storyService, IFriendshipService friendshipService)
+    public StoriesController(IStoryService storyService, IFriendshipService friendshipService, IHubContext<StoryHub> storyHub)
     {
         _storyService = storyService;
         _friendshipService = friendshipService;
+        _storyHub = storyHub;
     }
 
     [HttpGet]
@@ -55,6 +59,20 @@ public class StoriesController : ControllerBase
         }).ToList();
 
         return this.SuccessResponse(storyDtos);
+    }
+
+    /// <summary>Người nhận realtime story: chủ tin + bạn bè đã kết nối (cùng logic feed).</summary>
+    private async Task<string[]> GetStoryRealtimeRecipientUserIdsAsync(string storyAuthorUserId)
+    {
+        var friends = await _friendshipService.GetAcceptedFriendsAsync(storyAuthorUserId);
+        var ids = friends
+            .Select(f => storyAuthorUserId == f.UserId ? f.Friend?.Id : f.User?.Id)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Select(id => id!)
+            .Distinct()
+            .ToList();
+        ids.Add(storyAuthorUserId);
+        return ids.Distinct().ToArray();
     }
 
     [HttpGet("{id}")]
@@ -160,6 +178,27 @@ public class StoriesController : ControllerBase
             UserProfilePictureUrl = createdWithUser.User?.ProfilePictureUrl
         };
 
+        try
+        {
+            var recipients = await GetStoryRealtimeRecipientUserIdsAsync(userId);
+            await _storyHub.Clients.Users(recipients)
+                .SendAsync("StoryCreated", new
+                {
+                    storyDto.Id,
+                    storyDto.ImageUrl,
+                    storyDto.Content,
+                    storyDto.CreatedAt,
+                    storyDto.ExpireAt,
+                    storyDto.UserId,
+                    storyDto.UserName,
+                    storyDto.UserProfilePictureUrl
+                });
+        }
+        catch
+        {
+            // Ignore realtime failures
+        }
+
         return this.CreatedResponse(storyDto);
     }
 
@@ -181,6 +220,17 @@ public class StoriesController : ControllerBase
         var result = await _storyService.DeleteAsync(id);
         if (!result)
             return this.NotFoundResponse("Story not found");
+
+        try
+        {
+            var recipients = await GetStoryRealtimeRecipientUserIdsAsync(story.UserId);
+            await _storyHub.Clients.Users(recipients)
+                .SendAsync("StoryDeleted", new { storyId = id, userId = story.UserId });
+        }
+        catch
+        {
+            // Ignore realtime failures
+        }
 
         return this.SuccessResponse(statusCode: 204);
     }

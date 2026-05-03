@@ -125,6 +125,21 @@ public class NotificationsController : ControllerBase
     }
 
     /// <summary>
+    /// Đánh dấu đã đọc thông báo feed (trừ tin nhắn), giữ nguyên bản ghi lịch sử.
+    /// </summary>
+    [HttpPut("user/{userId}/mark-feed-read")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> MarkFeedNotificationsAsRead(string userId)
+    {
+        var userIdCurrent = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId != userIdCurrent)
+            return this.ForbiddenResponse();
+
+        await _notificationService.MarkFeedNotificationsAsReadAsync(userId);
+        return this.SuccessResponse(message: "Feed notifications marked as read");
+    }
+
+    /// <summary>
     /// Xóa notification
     /// </summary>
     [HttpDelete("{id}")]

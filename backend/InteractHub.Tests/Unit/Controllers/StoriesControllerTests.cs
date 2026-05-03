@@ -1,16 +1,61 @@
 using InteractHub.API.Controllers;
 using InteractHub.API.DTOs;
 using InteractHub.Application.Entities;
+using InteractHub.Application.Entities.Enums;
 using InteractHub.Application.Interfaces;
+using InteractHub.Infrastructure.Hubs;
 using InteractHub.Tests.Common;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Moq;
 
 namespace InteractHub.Tests.Unit.Controllers;
 
 public class StoriesControllerTests
 {
-    // GetAll tests - trả về tất cả stories
+    private static StoriesController CreateController(
+        Mock<IStoryService> serviceMock,
+        Mock<IFriendshipService>? friendshipMock = null,
+        Mock<IHubContext<StoryHub>>? hubContextMock = null)
+    {
+        var friendship = friendshipMock ?? CreateDefaultFriendshipMock();
+        var hub = hubContextMock ?? CreateStoryHubContextMock();
+        return new StoriesController(serviceMock.Object, friendship.Object, hub.Object);
+    }
+
+    private static Mock<IFriendshipService> CreateDefaultFriendshipMock()
+    {
+        var friendship = new Mock<IFriendshipService>();
+        friendship.Setup(f => f.GetAcceptedFriendsAsync(It.IsAny<string>()))
+            .ReturnsAsync(new List<Friendship>());
+        friendship.Setup(f =>
+                f.CheckFriendshipStatusAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(FriendshipStatus.Accepted);
+        return friendship;
+    }
+
+    private static Mock<IHubContext<StoryHub>> CreateStoryHubContextMock()
+    {
+        var clientProxy = new Mock<IClientProxy>();
+        var hubClients = new Mock<IHubClients>();
+        hubClients.Setup(c => c.Users(It.IsAny<string[]>())).Returns(clientProxy.Object);
+        var hubContext = new Mock<IHubContext<StoryHub>>();
+        hubContext.Setup(h => h.Clients).Returns(hubClients.Object);
+        return hubContext;
+    }
+
+    private static List<Friendship> AcceptedFriendshipsFor(string viewerId, params string[] otherUserIds)
+    {
+        return otherUserIds.Select(oid => new Friendship
+        {
+            UserId = viewerId,
+            FriendId = oid,
+            Friend = new User { Id = oid, UserName = oid },
+            User = new User { Id = viewerId }
+        }).ToList();
+    }
+
+    // GetAll tests - trả về tất cả stories (của bản thân và bạn bè được chấp nhận)
     [Fact]
     public async Task GetAll_ShouldReturnAllStories_WhenStoriesExist()
     {
@@ -22,7 +67,12 @@ public class StoriesControllerTests
         };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(stories);
-        var controller = new StoriesController(serviceMock.Object);
+
+        var friendshipMock = CreateDefaultFriendshipMock();
+        friendshipMock.Setup(f => f.GetAcceptedFriendsAsync("u1")).ReturnsAsync(
+            AcceptedFriendshipsFor("u1", "u2"));
+
+        var controller = CreateController(serviceMock, friendshipMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -43,7 +93,7 @@ public class StoriesControllerTests
         var stories = new List<Story>();
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(stories);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -63,7 +113,7 @@ public class StoriesControllerTests
         var story = new Story { Id = 1, UserId = "u1", Content = "test story", ImageUrl = "img.jpg", CreatedAt = DateTime.UtcNow, ExpireAt = DateTime.UtcNow.AddDays(1) };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(story);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -83,7 +133,7 @@ public class StoriesControllerTests
         // given
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Story?)null);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -107,7 +157,7 @@ public class StoriesControllerTests
         };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByUserIdAsync(userId)).ReturnsAsync(stories);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -129,7 +179,7 @@ public class StoriesControllerTests
         var stories = new List<Story>();
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByUserIdAsync(userId)).ReturnsAsync(stories);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -150,7 +200,8 @@ public class StoriesControllerTests
         var story = new Story { Id = 1, UserId = "u1", Content = createDto.Content, ImageUrl = createDto.ImageUrl, ExpireAt = createDto.ExpireAt, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.CreateAsync(It.IsAny<Story>())).ReturnsAsync(story);
-        var controller = new StoriesController(serviceMock.Object);
+        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(story);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -160,6 +211,7 @@ public class StoriesControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
         serviceMock.Verify(s => s.CreateAsync(It.IsAny<Story>()), Times.Once);
+        serviceMock.Verify(s => s.GetByIdAsync(1), Times.Once);
     }
 
     // Create tests - trả về 401 khi không có user claim
@@ -168,7 +220,7 @@ public class StoriesControllerTests
     {
         // given
         var serviceMock = new Mock<IStoryService>();
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -188,7 +240,7 @@ public class StoriesControllerTests
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(3)).ReturnsAsync(story);
         serviceMock.Setup(s => s.DeleteAsync(3)).ReturnsAsync(true);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -207,7 +259,7 @@ public class StoriesControllerTests
         // given
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Story?)null);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -226,7 +278,7 @@ public class StoriesControllerTests
         var story = new Story { Id = 3, UserId = "owner", Content = "abc", ExpireAt = DateTime.UtcNow.AddDays(1) };
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(3)).ReturnsAsync(story);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "other");
 
         // when
@@ -246,7 +298,7 @@ public class StoriesControllerTests
         var serviceMock = new Mock<IStoryService>();
         serviceMock.Setup(s => s.GetByIdAsync(3)).ReturnsAsync(story);
         serviceMock.Setup(s => s.DeleteAsync(3)).ReturnsAsync(false);
-        var controller = new StoriesController(serviceMock.Object);
+        var controller = CreateController(serviceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when

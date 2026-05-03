@@ -1,4 +1,4 @@
-import { shapeComment } from './utils/commentNormalize';
+import { shapeComment, sortCommentsNewestFirst } from './utils/commentNormalize';
 import { toIsoUtcString } from './utils/commentDateTime';
 
 const API_BASE = '/api';
@@ -272,6 +272,17 @@ export async function getNotifications(userId) {
   return data?.Data || [];
 }
 
+/** Đánh dấu đã đọc thông báo feed (không gồm tin nhắn); lịch sử giữ nguyên trên server. */
+export async function markFeedNotificationsRead(userId) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/notifications/user/${userId}/mark-feed-read`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  await handleResponse(response);
+  return true;
+}
+
 const normalizeComment = (comment) => {
   const shaped = shapeComment(comment);
   if (shaped) return shaped;
@@ -294,7 +305,7 @@ export async function getCommentsByPost(postId) {
   });
   const data = await handleResponse(response);
   const comments = data?.Data || [];
-  return (comments || []).map(normalizeComment);
+  return sortCommentsNewestFirst((comments || []).map(normalizeComment));
 }
 
 export async function createComment(postId, content) {

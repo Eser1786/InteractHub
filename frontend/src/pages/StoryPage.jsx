@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
-import { getStoryById, getStories, deleteStory, createStory, getStoriesByUserId } from '../api';
+import { getStoryById, getStories, deleteStory, createStory } from '../api';
 import '../styles/StoryPage.css';
+import { normalizeStoryPayload, isStoryActive } from '../utils/storyRealtime';
 
 export default function StoryPage() {
   const [story, setStory] = useState(null);
@@ -19,6 +20,7 @@ export default function StoryPage() {
   const [showStoryOptions, setShowStoryOptions] = useState(false);
   const { storyId, userId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
@@ -28,21 +30,26 @@ export default function StoryPage() {
   useEffect(() => {
     const loadStories = async () => {
       try {
-        let storiesData;
-        if (userId) {
-          // Load stories by user
-          storiesData = await getStoriesByUserId(userId);
-        } else {
-          // Load all stories
-          storiesData = await getStories();
-        }
-        const activeStories = (storiesData || []).filter(story => {
-          return !story.ExpireAt || new Date(story.ExpireAt) > new Date();
+        // Luôn dùng feed giống Home (bản thân + bạn đã kết bạn). Không dùng chỉ getStoriesByUserId — route /story/user/:id sẽ chỉ có 1 user trong list và phải bấm sang /story/:id mới refetch full feed.
+        const storiesData = await getStories();
+        let activeStories = (storiesData || []).filter((s) => {
+          return !s.ExpireAt || new Date(s.ExpireAt) > new Date();
         });
+        activeStories = [...activeStories].sort(
+          (a, b) =>
+            new Date(b.CreatedAt ?? b.createdAt) - new Date(a.CreatedAt ?? a.createdAt)
+        );
         setStoriesList(activeStories);
 
-        if (userId && activeStories.length > 0) {
-          setStory(activeStories[0]);
+        // URL /story/user/:userId (không có storyId): mặc định xem tin mới nhất — trừ khi vừa xóa tin (state.skipAutoStory).
+        if (userId && !storyId && !location.state?.skipAutoStory) {
+          const uid = String(userId);
+          const theirs = activeStories.filter(
+            (s) => String(s.UserId ?? s.userId) === uid
+          );
+          if (theirs.length > 0) {
+            setStory(theirs[0]);
+          }
         }
       } catch (err) {
         console.error('Error loading story list:', err);
@@ -80,6 +87,62 @@ export default function StoryPage() {
     loadStory();
   }, [storyId, userId]);
 
+  useEffect(() => {
+    const refetchAllStories = () => {
+      getStories()
+        .then((data) => {
+          const activeStories = (data || []).filter((s) => {
+            return !s.ExpireAt || new Date(s.ExpireAt) > new Date();
+          });
+          setStoriesList(activeStories);
+        })
+        .catch(() => {});
+    };
+
+    const onStoryCreated = (e) => {
+      const s = normalizeStoryPayload(e.detail);
+      if (!s || !isStoryActive(s)) return;
+
+      if (userId) {
+        if (String(s.UserId) !== String(userId)) return;
+        setStoriesList((prev) => {
+          const sid = s.Id ?? s.id;
+          if (prev.some((x) => (x.Id ?? x.id) === sid)) return prev;
+          return [s, ...prev];
+        });
+        return;
+      }
+
+      refetchAllStories();
+    };
+
+    const onStoryDeleted = (e) => {
+      const sid = e.detail?.storyId ?? e.detail?.StoryId;
+      if (sid == null) return;
+
+      setStoriesList((prev) => prev.filter((item) => (item.Id ?? item.id) !== sid));
+      setStory((cur) => {
+        const cid = cur?.Id ?? cur?.id;
+        if (cid == null || cid !== sid) return cur;
+        return null;
+      });
+
+      if (storyId != null && Number(storyId) === Number(sid) && currentUser?.Id) {
+        navigate(`/story/user/${currentUser.Id}`, {
+          replace: true,
+          state: { skipAutoStory: true }
+        });
+      }
+    };
+
+    window.addEventListener('signalr:story-created', onStoryCreated);
+    window.addEventListener('signalr:story-deleted', onStoryDeleted);
+    return () => {
+      window.removeEventListener('signalr:story-created', onStoryCreated);
+      window.removeEventListener('signalr:story-deleted', onStoryDeleted);
+    };
+  }, [userId, storyId, navigate, currentUser]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -93,7 +156,15 @@ export default function StoryPage() {
 
     try {
       await deleteStory(story.Id);
-      navigate('/home');
+      const sid = story.Id;
+      setStoriesList((prev) => prev.filter((item) => (item.Id ?? item.id) !== sid));
+      setStory(null);
+      setShowStoryOptions(false);
+      setError('');
+      const uid = currentUser?.Id;
+      if (uid) {
+        navigate(`/story/user/${uid}`, { replace: true, state: { skipAutoStory: true } });
+      }
     } catch (err) {
       console.error('Error deleting story:', err);
       setError(`Lỗi xóa tin: ${err.message}`);
@@ -294,9 +365,13 @@ export default function StoryPage() {
                 )}
               </div>
             </div>
+          ) : storiesList.length > 0 ? (
+            <div className="story-empty">
+              <p>Chọn một tin trong danh sách bên trái để xem.</p>
+            </div>
           ) : (
             <div className="story-empty">
-              <p>Không có story để hiển thị.</p>
+              <p>Không có tin để hiển thị.</p>
             </div>
           )}
         </main>

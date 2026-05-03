@@ -1,4 +1,16 @@
-import { toIsoUtcString } from './commentDateTime';
+import { toIsoUtcString, parseCommentDateTime } from './commentDateTime';
+
+/** Mới nhất lên trên (theo createdAt, tie-break theo id giảm dần). */
+export function sortCommentsNewestFirst(list) {
+  return [...(list || [])].sort((a, b) => {
+    const ta = parseCommentDateTime(a.createdAt ?? a.CreatedAt)?.getTime() ?? 0;
+    const tb = parseCommentDateTime(b.createdAt ?? b.CreatedAt)?.getTime() ?? 0;
+    if (tb !== ta) return tb - ta;
+    const ia = Number(a.id ?? a.Id) || 0;
+    const ib = Number(b.id ?? b.Id) || 0;
+    return ib - ia;
+  });
+}
 
 export function commentIdKey(id) {
   return id == null ? '' : String(id);
@@ -40,12 +52,13 @@ export function shapeComment(raw) {
 export function mergeCommentIntoList(prev, incoming, { prepend = true } = {}) {
   const list = prev || [];
   const shaped = shapeComment(incoming);
-  if (!shaped) return list;
+  if (!shaped) return sortCommentsNewestFirst(list);
   const key = commentIdKey(shaped.id);
   if (list.some((item) => commentIdKey(item.id ?? item.Id) === key)) {
-    return list;
+    return sortCommentsNewestFirst(list);
   }
-  return prepend ? [shaped, ...list] : [...list, shaped];
+  const merged = prepend ? [shaped, ...list] : [...list, shaped];
+  return sortCommentsNewestFirst(merged);
 }
 
 /** Remove duplicates (e.g. API + hubs), keep first occurrence, normalize shape when possible */
@@ -72,5 +85,5 @@ export function dedupeCommentList(list) {
     seen.add(key);
     out.push(row);
   }
-  return out;
+  return sortCommentsNewestFirst(out);
 }

@@ -19,12 +19,18 @@ public class PostsController : ControllerBase
 {
     private readonly IPostService _postService;
     private readonly IFriendshipService _friendshipService;
+    private readonly INotificationService _notificationService;
     private readonly IHubContext<PostHub> _postHub;
 
-    public PostsController(IPostService postService, IFriendshipService friendshipService, IHubContext<PostHub> postHub)
+    public PostsController(
+        IPostService postService,
+        IFriendshipService friendshipService,
+        INotificationService notificationService,
+        IHubContext<PostHub> postHub)
     {
         _postService = postService;
         _friendshipService = friendshipService;
+        _notificationService = notificationService;
         _postHub = postHub;
     }
 
@@ -203,6 +209,11 @@ public class PostsController : ControllerBase
         await _postHub.Clients.Group("feed")
             .SendAsync("PostCreated", postDto);
 
+        if (createdWithUser.GroupId == null && createdWithUser.SharedPostId == null)
+        {
+            await _notificationService.NotifyFriendsAboutNewPostAsync(userId, createdWithUser.Id);
+        }
+
         return this.CreatedResponse(postDto, "Post created successfully");
     }
 
@@ -244,6 +255,8 @@ public class PostsController : ControllerBase
 
         await _postHub.Clients.Group("feed")
             .SendAsync("PostCreated", postDto);
+
+        await _notificationService.NotifyOriginalAuthorPostSharedAsync(originalPost.UserId, userId, createdWithData.Id);
 
         return this.CreatedResponse(postDto, "Post shared successfully");
     }

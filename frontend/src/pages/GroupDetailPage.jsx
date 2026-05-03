@@ -400,13 +400,19 @@ export default function GroupDetailPage() {
         {/* Main Content */}
         <main className="group-detail-main">
           {/* Group Header */}
-          <div className="group-detail-header">
-            <div className="group-header-left">
-              <button className="btn-back" onClick={handleBackToGroup}>
-                ← Quay lại
-              </button>
-              <h1 className="group-title">{group.name}</h1>
-            </div>
+          <div className="group-detail-header" style={{ position: 'relative', overflow: 'hidden', padding: group.imageUrl ? '120px 20px 20px' : '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {group.imageUrl && (
+              <img src={group.imageUrl} alt={group.name} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, opacity: 0.3 }} />
+            )}
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+              <div className="group-header-left" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <button className="btn-back" onClick={handleBackToGroup} style={{ alignSelf: 'flex-start' }}>
+                  ← Quay lại
+                </button>
+                <h1 className="group-title" style={{ fontSize: '28px', margin: 0 }}>{group.name}</h1>
+                {group.description && <p style={{ margin: 0, color: '#555', fontSize: '15px' }}>{group.description}</p>}
+                <p style={{ margin: 0, color: '#888', fontSize: '13px' }}>{group.memberCount} thành viên</p>
+              </div>
             {group.isJoined ? (
               <div className="group-menu-container">
                 <button
@@ -432,6 +438,7 @@ export default function GroupDetailPage() {
             ) : (
               <button className="btn-post" onClick={handleJoinGroup}>Vào nhóm</button>
             )}
+            </div>
           </div>
 
           {group.isJoined ? (

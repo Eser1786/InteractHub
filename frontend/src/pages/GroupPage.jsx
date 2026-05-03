@@ -111,13 +111,22 @@ export default function GroupPage() {
               filteredGroups.map((group) => (
                 <div key={group.id} className="group-card">
                   <div className="group-images">
-                    {group.images.map((_, idx) => (
-                      <div key={idx} className="group-image-placeholder"></div>
-                    ))}
+                    {group.imageUrl ? (
+                      <img src={group.imageUrl} alt={group.name} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px' }} />
+                    ) : (
+                      group.images.map((_, idx) => (
+                        <div key={idx} className="group-image-placeholder"></div>
+                      ))
+                    )}
                   </div>
 
                   <div className="group-info">
                     <h3 className="group-name">{group.name}</h3>
+                    {group.description && (
+                      <p style={{ fontSize: '12px', color: '#666', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {group.description}
+                      </p>
+                    )}
                   </div>
 
                   <div className="group-actions">

@@ -7,6 +7,8 @@ import '../styles/CreateGroupPage.css';
 
 export default function CreateGroupPage() {
   const [groupName, setGroupName] = useState('');
+  const [description, setDescription] = useState('');
+  const [coverImage, setCoverImage] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [friends, setFriends] = useState([]);
   const [selectedFriendIds, setSelectedFriendIds] = useState([]);
@@ -68,7 +70,8 @@ export default function CreateGroupPage() {
       setCreating(true);
       await createGroup({
         name: groupName.trim(),
-        description: '',
+        description: description.trim(),
+        imageUrl: coverImage,
         memberIds: selectedFriendIds
       });
       await refreshGroups();
@@ -85,6 +88,25 @@ export default function CreateGroupPage() {
     setSelectedFriendIds((prev) =>
       prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]
     );
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File quá lớn. Vui lòng chọn ảnh dưới 5MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeCoverImage = () => {
+    setCoverImage('');
   };
 
   const selectedCount = useMemo(() => selectedFriendIds.length + 1, [selectedFriendIds]);
@@ -115,15 +137,52 @@ export default function CreateGroupPage() {
             className="group-name-input"
           />
 
-          <p className="member-status">Bạn có thể tạo nhóm chỉ với tên nhóm, hoặc chọn thêm bạn bè.</p>
+          <textarea
+            placeholder="Mô tả nhóm (tùy chọn)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="group-name-input"
+            style={{ minHeight: '80px', resize: 'vertical' }}
+          />
+
+          <p className="member-status">Bạn có thể tạo nhóm với tên và mô tả, hoặc chọn thêm bạn bè.</p>
           <button className="btn-create-group" onClick={handleCreateGroup} disabled={creating}>
             {creating ? 'Đang tạo...' : 'Tạo'}
           </button>
         </aside>
 
         <main className="create-group-main">
+          {/* Cover Image Section */}
+          <div className="group-cover">
+            {coverImage ? (
+              <>
+                <img src={coverImage} alt="Cover Preview" />
+                <div style={{ position: 'absolute', display: 'flex', gap: '10px' }}>
+                  <label className="cover-file-button small">
+                    Đổi ảnh
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="cover-file-input" />
+                  </label>
+                  <button onClick={removeCoverImage} className="cover-remove-button" style={{ padding: '8px 14px', fontSize: '12px' }}>
+                    Xóa
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="cover-placeholder">
+                <div className="cover-upload-controls">
+                  <span style={{ color: '#666', fontSize: '14px', marginBottom: '8px' }}>Ảnh bìa nhóm</span>
+                  <label className="cover-file-button">
+                    Thêm ảnh bìa
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="cover-file-input" />
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="group-info-section">
             <h2 className="group-display-name">{groupName || 'Tên nhóm'}</h2>
+            {description && <p style={{ fontSize: '14px', color: '#555', marginTop: '0', marginBottom: '10px' }}>{description}</p>}
             <p className="group-member-count">{selectedCount} thành viên (bao gồm bạn)</p>
 
             <section className="create-post-section">

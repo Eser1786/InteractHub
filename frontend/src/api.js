@@ -351,6 +351,7 @@ const normalizeGroup = (group) => {
     isJoined: group.IsJoined ?? group.isJoined ?? false,
     memberCount: group.MemberCount ?? group.memberCount ?? 0,
     createdAt: group.CreatedAt ?? group.createdAt,
+    imageUrl: group.ImageUrl ?? group.imageUrl ?? null,
     images: group.Images ?? group.images ?? ['img1', 'img2', 'img3'],
     likes: group.Likes ?? group.likes ?? 0,
     comments: group.Comments ?? group.comments ?? 0
@@ -366,7 +367,7 @@ export async function getGroups() {
   return (data?.Data || data?.data || []).map(normalizeGroup);
 }
 
-export async function createGroup({ name, description, memberIds }) {
+export async function createGroup({ name, description, memberIds, imageUrl }) {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE}/groups`, {
     method: 'POST',
@@ -374,7 +375,7 @@ export async function createGroup({ name, description, memberIds }) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ name, description, memberIds })
+    body: JSON.stringify({ name, description, memberIds, imageUrl })
   });
   const data = await handleResponse(response);
   return normalizeGroup(data?.Data || data?.data);

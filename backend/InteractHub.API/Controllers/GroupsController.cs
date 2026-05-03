@@ -39,6 +39,7 @@ public class GroupsController : ControllerBase
             Name = g.Name,
             Slug = g.Slug,
             Description = g.Description,
+            ImageUrl = g.ImageUrl,
             CreatorId = g.CreatorId,
             IsJoined = g.Memberships.Any(m => m.UserId == userId),
             MemberCount = g.Memberships.Count,
@@ -65,7 +66,8 @@ public class GroupsController : ControllerBase
         var newGroup = new Group
         {
             Name = dto.Name.Trim(),
-            Description = dto.Description?.Trim()
+            Description = dto.Description?.Trim(),
+            ImageUrl = dto.ImageUrl
         };
 
         var createdGroup = await _groupService.CreateWithMembersAsync(newGroup, userId, dto.MemberIds);
@@ -76,6 +78,7 @@ public class GroupsController : ControllerBase
             Name = createdGroup.Name,
             Slug = createdGroup.Slug,
             Description = createdGroup.Description,
+            ImageUrl = createdGroup.ImageUrl,
             CreatorId = createdGroup.CreatorId,
             IsJoined = true,
             MemberCount = createdGroup.Memberships.Count,

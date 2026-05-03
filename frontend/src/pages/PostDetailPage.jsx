@@ -255,85 +255,44 @@ export default function PostDetailPage() {
 
             {/* Shared Post Display */}
             {post.IsShared && post.SharedPost && (
-              <div className="shared-post-container" style={{
-                marginTop: '12px',
-                padding: '12px',
-                backgroundColor: '#f0f2f5',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '10px',
-                  color: '#65676b',
-                  fontSize: '13px'
-                }}>
-                  <i className="fa-solid fa-share"></i>
-                  <span>{post.UserFullName || post.UserName} đã chia sẻ</span>
+              <div className="shared-post-container">
+                <div className="shared-post-header">
+                  <div className="shared-post-label">
+                    <i className="fa-solid fa-share"></i>
+                    <span>Bài viết được chia sẻ</span>
+                  </div>
+                  <span className="shared-post-user">{post.UserFullName || post.UserName} đã chia sẻ</span>
                 </div>
 
-                <div className="original-post" style={{
-                  backgroundColor: '#fff',
-                  padding: '10px',
-                  borderRadius: '6px',
-                  border: '1px solid #ddd'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    marginBottom: '8px'
-                  }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      backgroundColor: '#e5e7eb'
-                    }}>
+                <div
+                  className="original-post-card"
+                  title="Xem bài viết gốc"
+                  onClick={() => navigate('/post/' + post.SharedPost.Id)}
+                >
+                  <div className="original-post-author">
+                    <div className="original-post-avatar">
                       {post.SharedPost.UserProfilePictureUrl ? (
                         <img
                           src={post.SharedPost.UserProfilePictureUrl}
                           alt="Author"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
+                        <div className="original-post-avatar-icon">
                           <i className="fa-solid fa-user"></i>
                         </div>
                       )}
                     </div>
                     <div>
-                      <p style={{
-                        margin: '0',
-                        fontWeight: '600',
-                        fontSize: '14px'
-                      }}>
+                      <p className="original-post-author-name">
                         {post.SharedPost.UserFullName || post.SharedPost.UserName}
                       </p>
-                      <p style={{
-                        margin: '0',
-                        fontSize: '12px',
-                        color: '#65676b'
-                      }}>
+                      <p className="original-post-meta">
                         {new Date(post.SharedPost.CreatedAt).toLocaleDateString('vi-VN')}
                       </p>
                     </div>
                   </div>
 
-                  <p style={{
-                    margin: '8px 0',
-                    fontSize: '14px',
-                    color: '#050505'
-                  }}>
+                  <p className="original-post-text">
                     <HashtagContent
                       content={post.SharedPost.Content}
                       onHashtagClick={handleHashtagClick}
@@ -344,21 +303,13 @@ export default function PostDetailPage() {
                     <img
                       src={post.SharedPost.ImageUrl}
                       alt="Shared Post"
-                      style={{
-                        marginTop: '8px',
-                        maxWidth: '100%',
-                        borderRadius: '6px',
-                        maxHeight: '300px',
-                        objectFit: 'cover'
-                      }}
+                      className="original-post-image"
                     />
                   )}
+                </div>
 
-                  <div style={{
-                    display: 'flex',
-                    gap: '10px',
-                    marginTop: '8px'
-                  }}>
+                <div className="shared-post-footer">
+                  <div className="shared-post-actions">
                     <button
                       type="button"
                       className={`post-action-btn shared-post-action ${likedPosts.has(post.SharedPost.Id) ? 'liked' : ''}`}
@@ -382,33 +333,25 @@ export default function PostDetailPage() {
                     </button>
                   </div>
 
-                  <div style={{
-                    display: 'flex',
-                    gap: '16px',
-                    marginTop: '8px',
-                    paddingTop: '8px',
-                    borderTop: '1px solid #e5e7eb',
-                    fontSize: '12px',
-                    color: '#65676b'
-                  }}>
+                  <div className="shared-post-stats">
                     <span>❤️ {post.SharedPost.LikesCount} lượt thích</span>
                     <span><i className="fa-solid fa-comments"></i> {post.SharedPost.CommentsCount} bình luận</span>
                   </div>
-
-                  {activeCommentPostId === post.SharedPost.Id && (
-                    <div style={{ marginTop: '12px' }}>
-                      <CommentSection
-                        post={post.SharedPost}
-                        comments={commentsByPost[post.SharedPost.Id] || []}
-                        onClose={() => setActiveCommentPostId(null)}
-                        onAddComment={handleAddComment}
-                        onDeleteComment={handleDeleteComment}
-                        onEditComment={handleEditComment}
-                        currentUser={currentUser}
-                      />
-                    </div>
-                  )}
                 </div>
+
+                {activeCommentPostId === post.SharedPost.Id && (
+                  <div className="shared-post-comments">
+                    <CommentSection
+                      post={post.SharedPost}
+                      comments={commentsByPost[post.SharedPost.Id] || []}
+                      onClose={() => setActiveCommentPostId(null)}
+                      onAddComment={handleAddComment}
+                      onDeleteComment={handleDeleteComment}
+                      onEditComment={handleEditComment}
+                      currentUser={currentUser}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

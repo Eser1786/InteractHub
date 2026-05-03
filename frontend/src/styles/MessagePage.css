@@ -237,17 +237,6 @@
   font-size: 18px;
 }
 
-.online-status {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #31a24c;
-  border: 3px solid white;
-  bottom: -2px;
-  right: -2px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-}
 
 .conversation-info {
   flex: 1;
@@ -949,17 +938,6 @@
   object-fit: cover;
 }
 
-.online-dot {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #31a24c;
-  border: 2px solid white;
-  bottom: -2px;
-  right: -2px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-}
 
 .friend-name {
   flex: 1;

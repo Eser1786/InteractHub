@@ -41,11 +41,16 @@ export default function GroupPage() {
     navigate('/login');
   };
 
-  const filteredGroups = searchQuery.trim() 
-    ? groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : selectedNav === 'my-groups' 
-      ? groups.filter(g => g.isJoined)
-      : groups.filter(g => !g.isJoined);
+  const filteredGroups = groups.filter(g => {
+    const matchesSearch = g.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // In 'my-groups', show groups user has joined or created
+    // In 'discover', show groups user has NOT joined AND did NOT create
+    const isMyGroup = g.isJoined || (currentUser && g.creatorId === (currentUser.Id || currentUser.id));
+    const matchesNav = selectedNav === 'my-groups' ? isMyGroup : !isMyGroup;
+    
+    return matchesSearch && matchesNav;
+  });
 
   if (loading) {
     return <div className="group-wrapper"><p>Đang tải...</p></div>;
@@ -106,13 +111,45 @@ export default function GroupPage() {
               filteredGroups.map((group) => (
                 <div key={group.id} className="group-card">
                   <div className="group-images">
-                    {group.images.map((_, idx) => (
-                      <div key={idx} className="group-image-placeholder"></div>
-                    ))}
+                    {(() => {
+                      let parsedImages = null;
+                      try {
+                        if (group.imageUrl && group.imageUrl.startsWith('[')) {
+                          parsedImages = JSON.parse(group.imageUrl);
+                        } else if (group.imageUrl) {
+                          parsedImages = [group.imageUrl];
+                        }
+                      } catch (e) {}
+
+                      if (parsedImages && parsedImages.length > 0) {
+                        if (parsedImages.length >= 3) {
+                          return parsedImages.slice(0, 3).map((img, idx) => (
+                            <img key={idx} src={img} alt={`${group.name}-${idx}`} className="group-image-placeholder" style={{ objectFit: 'cover' }} />
+                          ));
+                        } else {
+                          return (
+                            <div style={{ display: 'flex', gap: '5px', width: '100%', height: '100px' }}>
+                              {parsedImages.map((img, idx) => (
+                                <img key={idx} src={img} alt={`${group.name}-${idx}`} style={{ flex: 1, objectFit: 'cover', borderRadius: '8px' }} />
+                              ))}
+                            </div>
+                          );
+                        }
+                      } else {
+                        return group.images.map((_, idx) => (
+                          <div key={idx} className="group-image-placeholder"></div>
+                        ));
+                      }
+                    })()}
                   </div>
 
                   <div className="group-info">
                     <h3 className="group-name">{group.name}</h3>
+                    {group.description && (
+                      <p style={{ fontSize: '12px', color: '#666', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {group.description}
+                      </p>
+                    )}
                   </div>
 
                   <div className="group-actions">

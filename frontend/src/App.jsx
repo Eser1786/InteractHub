@@ -14,6 +14,7 @@ import UserProfilePage from './pages/UserProfilePage';
 import PostDetailPage from './pages/PostDetailPage';
 import { startConnection, resetPostHubConnection } from './utils/postHubConnection';
 import { startStoryConnection, resetStoryHubConnection } from './utils/storyHubConnection';
+import { startConnection as startGroupConnection, resetGroupHubConnection } from './utils/groupHubConnection';
 import NotificationHubBridge from './components/NotificationHubBridge';
 
 // Helper function to check if JWT token is valid (not expired)
@@ -73,6 +74,7 @@ function App() {
     if (!token) {
       resetStoryHubConnection();
       resetPostHubConnection();
+      resetGroupHubConnection();
       return;
     }
     startConnection().catch((err) => {
@@ -80,6 +82,9 @@ function App() {
     });
     startStoryConnection().catch((err) => {
       console.error('Failed to start StoryHub connection:', err);
+    });
+    startGroupConnection().catch((err) => {
+      console.error('Failed to start GroupHub connection:', err);
     });
   }, [token]);
 
@@ -99,6 +104,11 @@ function App() {
           await startStoryConnection();
         } catch (err) {
           console.error('Failed to start StoryHub connection:', err);
+        }
+        try {
+          await startGroupConnection();
+        } catch (err) {
+          console.error('Failed to start GroupHub connection:', err);
         }
       } else {
         setToken(null);

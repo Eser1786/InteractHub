@@ -222,6 +222,7 @@ app.MapHub<MessageHub>("/messageHub");
 app.MapHub<CommentHub>("/commentHub");
 app.MapHub<PostHub>("/postHub");
 app.MapHub<StoryHub>("/storyHub");
+app.MapHub<GroupHub>("/groupHub");
 
 // ✅ Chuyển hướng các đường dẫn (Router) của React về trang chủ index.html
 app.MapFallbackToFile("index.html");

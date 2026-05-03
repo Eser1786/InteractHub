@@ -36,4 +36,6 @@ public class ConversationDto
     public string? LastMessageSenderId { get; set; }
     public bool IsGroup { get; set; } = false; // True if group conversation
     public int ParticipantCount { get; set; } = 2; // Number of participants in conversation
+    public bool IsOnline { get; set; } = false;
+    public DateTime? LastSeenAt { get; set; }
 }

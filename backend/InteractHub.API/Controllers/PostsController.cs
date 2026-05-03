@@ -73,7 +73,8 @@ public class PostsController : ControllerBase
                 UserFullName = post.SharedPost.User?.FullName,
                 UserProfilePictureUrl = post.SharedPost.User?.ProfilePictureUrl,
                 LikesCount = post.SharedPost.Likes?.Count ?? 0,
-                CommentsCount = post.SharedPost.Comments?.Count ?? 0
+                CommentsCount = post.SharedPost.Comments?.Count ?? 0,
+                LikedByUserIds = post.SharedPost.Likes?.Select(l => l.UserId).ToList() ?? new()
             };
         }
 

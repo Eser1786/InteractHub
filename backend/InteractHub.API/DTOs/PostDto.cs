@@ -27,6 +27,7 @@ public class SharedPostDto
     public string? UserProfilePictureUrl { get; set; }
     public int LikesCount { get; set; }
     public int CommentsCount { get; set; }
+    public List<string> LikedByUserIds { get; set; } = new();
 }
 
 public class PostResponseDto

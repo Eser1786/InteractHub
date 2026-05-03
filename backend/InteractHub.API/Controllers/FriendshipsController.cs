@@ -19,11 +19,16 @@ public class FriendshipsController : ControllerBase
 {
     private readonly IFriendshipService _friendshipService;
     private readonly IMessageService _messageService;
+    private readonly IUserPresenceService _userPresenceService;
 
-    public FriendshipsController(IFriendshipService friendshipService, IMessageService messageService)
+    public FriendshipsController(
+        IFriendshipService friendshipService,
+        IMessageService messageService,
+        IUserPresenceService userPresenceService)
     {
         _friendshipService = friendshipService;
         _messageService = messageService;
+        _userPresenceService = userPresenceService;
     }
 
     /// <summary>
@@ -257,7 +262,9 @@ public class FriendshipsController : ControllerBase
                     LastMessageTime = latestMessage?.CreatedAt,
                     LastMessageSenderId = latestMessage?.SenderId,
                     IsGroup = false, // Private 1-1 conversation
-                    ParticipantCount = 2 // Current user + friend
+                    ParticipantCount = 2, // Current user + friend
+                    IsOnline = _userPresenceService.IsOnline(friendObj.Id),
+                    LastSeenAt = _userPresenceService.GetLastSeenAtUtc(friendObj.Id)
                 });
             }
 

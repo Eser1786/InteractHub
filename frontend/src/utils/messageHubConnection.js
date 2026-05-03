@@ -65,7 +65,9 @@ class MessageHubConnection {
       // Handle user offline status
       this.connection.on('UserOffline', (data) => {
         console.log('[MessageHub] 🔴 User offline:', data.UserId);
-        this.presenceListeners.forEach(listener => listener({ userId: data.UserId, status: 'offline' }));
+        this.presenceListeners.forEach(listener =>
+          listener({ userId: data.UserId, status: 'offline', lastSeenAt: data.LastSeenAt || data.lastSeenAt })
+        );
       });
 
       // Handle connection state changes

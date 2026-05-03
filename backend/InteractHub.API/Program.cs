@@ -37,6 +37,7 @@ builder.Services.AddScoped<IHashtagService, HashtagService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IFileService, CloudinaryService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddSingleton<IUserPresenceService, UserPresenceService>();
 
 builder.Services.AddSwaggerGen(c =>
 {

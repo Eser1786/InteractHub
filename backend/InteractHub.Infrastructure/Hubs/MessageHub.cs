@@ -9,10 +9,12 @@ namespace InteractHub.Infrastructure.Hubs;
 public class MessageHub : Hub
 {
     private readonly IFriendshipService _friendshipService;
+    private readonly IUserPresenceService _userPresenceService;
 
-    public MessageHub(IFriendshipService friendshipService)
+    public MessageHub(IFriendshipService friendshipService, IUserPresenceService userPresenceService)
     {
         _friendshipService = friendshipService;
+        _userPresenceService = userPresenceService;
     }
     /// <summary>
     /// User joins the conversation group for real-time messaging
@@ -107,25 +109,29 @@ public class MessageHub : Hub
             // Add user to their own group so we can send them direct messages
             await Groups.AddToGroupAsync(Context.ConnectionId, GetUserGroupName(userId));
             Console.WriteLine($"[MessageHub] ✅ User {userId} added to group: {GetUserGroupName(userId)}");
-            
-            // 🟢 Broadcast user online status to all friends
-            try
+
+            var becameOnline = _userPresenceService.UserConnected(userId);
+            if (becameOnline)
             {
-                var friends = await _friendshipService.GetAcceptedFriendsAsync(userId);
-                foreach (var friendship in friends)
+                // 🟢 Broadcast user online status to all friends
+                try
                 {
-                    var friendId = friendship.UserId == userId ? friendship.FriendId : friendship.UserId;
-                    if (!string.IsNullOrEmpty(friendId))
+                    var friends = await _friendshipService.GetAcceptedFriendsAsync(userId);
+                    foreach (var friendship in friends)
                     {
-                        await Clients.Group(GetUserGroupName(friendId))
-                            .SendAsync("UserOnline", new { UserId = userId });
-                        Console.WriteLine($"[MessageHub] 🟢 Broadcasted {userId} is ONLINE to friend {friendId}");
+                        var friendId = friendship.UserId == userId ? friendship.FriendId : friendship.UserId;
+                        if (!string.IsNullOrEmpty(friendId))
+                        {
+                            await Clients.Group(GetUserGroupName(friendId))
+                                .SendAsync("UserOnline", new { UserId = userId });
+                            Console.WriteLine($"[MessageHub] 🟢 Broadcasted {userId} is ONLINE to friend {friendId}");
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[MessageHub] ⚠️ Error broadcasting online status: {ex.Message}");
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MessageHub] ⚠️ Error broadcasting online status: {ex.Message}");
+                }
             }
         }
         else
@@ -152,23 +158,27 @@ public class MessageHub : Hub
         // 🔴 Broadcast user offline status to all friends
         if (!string.IsNullOrEmpty(userId))
         {
-            try
+            var (becameOffline, lastSeenAtUtc) = _userPresenceService.UserDisconnected(userId);
+            if (becameOffline)
             {
-                var friends = await _friendshipService.GetAcceptedFriendsAsync(userId);
-                foreach (var friendship in friends)
+                try
                 {
-                    var friendId = friendship.UserId == userId ? friendship.FriendId : friendship.UserId;
-                    if (!string.IsNullOrEmpty(friendId))
+                    var friends = await _friendshipService.GetAcceptedFriendsAsync(userId);
+                    foreach (var friendship in friends)
                     {
-                        await Clients.Group(GetUserGroupName(friendId))
-                            .SendAsync("UserOffline", new { UserId = userId });
-                        Console.WriteLine($"[MessageHub] 🔴 Broadcasted {userId} is OFFLINE to friend {friendId}");
+                        var friendId = friendship.UserId == userId ? friendship.FriendId : friendship.UserId;
+                        if (!string.IsNullOrEmpty(friendId))
+                        {
+                            await Clients.Group(GetUserGroupName(friendId))
+                                .SendAsync("UserOffline", new { UserId = userId, LastSeenAt = lastSeenAtUtc });
+                            Console.WriteLine($"[MessageHub] 🔴 Broadcasted {userId} is OFFLINE to friend {friendId}");
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[MessageHub] ⚠️ Error broadcasting offline status: {ex.Message}");
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MessageHub] ⚠️ Error broadcasting offline status: {ex.Message}");
+                }
             }
         }
 

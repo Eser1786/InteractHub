@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getConversationsSorted, getConversationMessages, sendMessage, getGroups, getAcceptedFriends, createGroup, getGroupMessages } from '../api';
+import { getConversationsSorted, getConversationMessages, sendMessage } from '../api';
 import { messageHubConnection } from '../utils/messageHubConnection';
 import Header from '../components/Header';
 import '../styles/MessagePage.css';
@@ -11,10 +11,8 @@ const DEBOUNCE_DELAY = 300; // ms for scroll event debouncing
 
 export default function MessagePage() {
   const [conversations, setConversations] = useState([]);
-  const [groups, setGroups] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTab, setSelectedTab] = useState('all');
   const [currentUser, setCurrentUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -24,11 +22,6 @@ export default function MessagePage() {
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [error, setError] = useState('');
   const [onlineFriends, setOnlineFriends] = useState([]);
-  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-  const [groupName, setGroupName] = useState('');
-  const [groupDescription, setGroupDescription] = useState('');
-  const [selectedFriends, setSelectedFriends] = useState([]);
-  const [friends, setFriends] = useState([]);
   
   const navigate = useNavigate();
   const unsubscribeRef = useRef(null);
@@ -38,6 +31,23 @@ export default function MessagePage() {
   const isNearBottomRef = useRef(true); // Track if user is at bottom
   const scrollTimeoutRef = useRef(null); // Debounce scroll
   const lastScrollHeightRef = useRef(0); // Preserve scroll position
+
+  const formatLastSeen = useCallback((lastSeenAt) => {
+    if (!lastSeenAt) return '⚫ Offline';
+    const lastSeen = new Date(lastSeenAt);
+    const diffMs = Date.now() - lastSeen.getTime();
+    if (!Number.isFinite(diffMs) || diffMs < 0) return '⚫ Offline';
+
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'Vừa mới hoạt động';
+    if (minutes < 60) return `Hoạt động ${minutes} phút trước`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Hoạt động ${hours} giờ trước`;
+
+    const days = Math.floor(hours / 24);
+    return `Hoạt động ${days} ngày trước`;
+  }, []);
 
   // Initialize SignalR connection and load friends
   useEffect(() => {
@@ -71,34 +81,27 @@ export default function MessagePage() {
         const conversationsData = await getConversationsSorted(normalizedUser.Id);
         console.log('[MessagePage] 💬 Conversations loaded:', conversationsData?.length || 0);
         
-        const conversationList = (conversationsData || []).map((convo) => ({
+        const conversationList = (conversationsData || [])
+          .filter((convo) => !(convo.IsGroup ?? convo.isGroup ?? false))
+          .map((convo) => ({
           id: convo.Id || convo.id || convo.FriendId || convo.friendId,
           name: convo.ConversationName || convo.conversationName || convo.FriendName || convo.friendName || 'Bạn',
           avatarUrl: convo.ConversationAvatarUrl || convo.conversationAvatarUrl || convo.FriendProfilePictureUrl || convo.friendProfilePictureUrl || '',
           isUnread: false,
-          isActive: true,
+          isActive: convo.IsOnline ?? convo.isOnline ?? false,
+          lastSeenAt: convo.LastSeenAt ?? convo.lastSeenAt ?? null,
           lastMessage: convo.LastMessage || convo.lastMessage || '',
           lastTime: (convo.LastMessageTime || convo.lastMessageTime)
             ? new Date(convo.LastMessageTime || convo.lastMessageTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
             : convo.lastTime || '',
-          isGroup: convo.IsGroup ?? convo.isGroup ?? false,
+          isGroup: false,
           participantCount: convo.ParticipantCount ?? convo.participantCount ?? 2
         }));
 
         setConversations(conversationList);
         
-        // 🔄 Get groups
-        const groupsData = await getGroups();
-        console.log('[MessagePage] 👥 Groups loaded:', groupsData?.length || 0);
-        setGroups(groupsData);
-        
-        // 🔄 Get friends for creating groups
-        const friendsData = await getAcceptedFriends(normalizedUser.Id);
-        console.log('[MessagePage] 👫 Friends loaded:', friendsData?.length || 0);
-        setFriends(friendsData);
-        
         // Extract online friends
-        const online = conversationList.filter(c => c.isActive);
+        const online = conversationList.filter(c => c.isActive && !c.isGroup);
         setOnlineFriends(online);
         
         if (conversationList.length > 0) {
@@ -137,7 +140,10 @@ export default function MessagePage() {
                 console.log(`[MessagePage] Updating ${conv.name} to ${presenceData.status}`);
                 return {
                   ...conv,
-                  isActive: presenceData.status === 'online'
+                  isActive: presenceData.status === 'online',
+                  lastSeenAt: presenceData.status === 'online'
+                    ? null
+                    : (presenceData.lastSeenAt || new Date().toISOString())
                 };
               }
               return conv;
@@ -221,12 +227,7 @@ export default function MessagePage() {
 
     try {
       setMessagesLoading(true);
-      let response;
-      if (conversation.isGroup) {
-        response = await getGroupMessages(conversation.id, pageNum, 50);
-      } else {
-        response = await getConversationMessages(conversation.id, pageNum, 50);
-      }
+      const response = await getConversationMessages(conversation.id, pageNum, 50);
       const messageData = response.messages || [];
       const paginationData = response.pagination || {};
 
@@ -341,12 +342,7 @@ export default function MessagePage() {
     if (!newMessage.trim() || !selectedConversation) return;
 
     try {
-      let sentMessage;
-      if (selectedConversation.isGroup) {
-        sentMessage = await sendMessage(null, newMessage.trim(), selectedConversation.id);
-      } else {
-        sentMessage = await sendMessage(selectedConversation.id, newMessage.trim());
-      }
+      const sentMessage = await sendMessage(selectedConversation.id, newMessage.trim());
       
       console.log('[MessagePage] 📤 API Response:', { 
         Id: sentMessage?.Id, 
@@ -531,55 +527,9 @@ export default function MessagePage() {
     };
   }, []);
 
-  const filteredConversations = conversations.filter((conv) => {
-    const matchesSearch = conv.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTab = selectedTab === 'all' || (selectedTab === 'group' && conv.isGroup);
-    return matchesSearch && matchesTab;
-  });
-
-  const handleCreateGroup = async () => {
-    if (!groupName.trim() || selectedFriends.length < 2) {
-      alert('Tên nhóm không được để trống và phải chọn ít nhất 2 người bạn');
-      return;
-    }
-
-    try {
-      const memberIds = selectedFriends.map(f => f.friendId || f.id);
-      const newGroup = await createGroup({
-        name: groupName.trim(),
-        description: groupDescription.trim(),
-        memberIds
-      });
-
-      // Add to groups list
-      setGroups(prev => [...prev, newGroup]);
-
-      // Add to conversations
-      const groupConversation = {
-        id: newGroup.id,
-        name: newGroup.name,
-        avatarUrl: '',
-        isUnread: false,
-        isActive: true,
-        lastMessage: '',
-        lastTime: '',
-        isGroup: true,
-        participantCount: newGroup.memberCount
-      };
-      setConversations(prev => [groupConversation, ...prev]);
-
-      // Reset modal
-      setGroupName('');
-      setGroupDescription('');
-      setSelectedFriends([]);
-      setShowCreateGroupModal(false);
-
-      alert('Tạo nhóm thành công!');
-    } catch (err) {
-      console.error('Error creating group:', err);
-      alert('Lỗi tạo nhóm: ' + err.message);
-    }
-  };
+  const filteredConversations = conversations.filter((conv) =>
+    conv.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -619,23 +569,8 @@ export default function MessagePage() {
           </div>
 
           <div className="message-tabs">
-            <button 
-              className={`message-tab ${selectedTab === 'all' ? 'active' : ''}`}
-              onClick={() => setSelectedTab('all')}
-            >
+            <button className="message-tab active" type="button">
               Tất cả
-            </button>
-            <button 
-              className={`message-tab ${selectedTab === 'group' ? 'active' : ''}`}
-              onClick={() => setSelectedTab('group')}
-            >
-              Nhóm
-            </button>
-            <button 
-              className="message-create-group-btn"
-              onClick={() => setShowCreateGroupModal(true)}
-            >
-              <i className="fa-solid fa-plus"></i> Tạo nhóm
             </button>
           </div>
 
@@ -691,9 +626,9 @@ export default function MessagePage() {
                   <div>
                     <h3 className="message-header-name">{selectedConversation.name}</h3>
                     <p className="message-header-status">
-                      {selectedConversation.isGroup 
-                        ? `${selectedConversation.participantCount || 2} thành viên`
-                        : (selectedConversation.isActive ? '🟢 Đang hoạt động' : '⚫ Offline')
+                      {selectedConversation.isActive
+                        ? '🟢 Đang hoạt động'
+                        : `⚫ ${formatLastSeen(selectedConversation.lastSeenAt)}`
                       }
                     </p>
                   </div>
@@ -793,89 +728,6 @@ export default function MessagePage() {
         </aside>
       </div>
 
-      {/* Create Group Modal */}
-      {showCreateGroupModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateGroupModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Tạo nhóm mới</h3>
-              <button className="modal-close" onClick={() => setShowCreateGroupModal(false)}>
-                <i className="fa-solid fa-times"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Tên nhóm *</label>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="Nhập tên nhóm"
-                  maxLength={100}
-                />
-              </div>
-              <div className="form-group">
-                <label>Mô tả (tùy chọn)</label>
-                <textarea
-                  value={groupDescription}
-                  onChange={(e) => setGroupDescription(e.target.value)}
-                  placeholder="Mô tả về nhóm"
-                  rows={3}
-                  maxLength={500}
-                />
-              </div>
-              <div className="form-group">
-                <label>Chọn thành viên (ít nhất 2 người) *</label>
-                <div className="friends-selection">
-                  {friends.map((friend) => (
-                    <div
-                      key={friend.id}
-                      className={`friend-select-item ${selectedFriends.some(f => f.id === friend.id) ? 'selected' : ''}`}
-                      onClick={() => {
-                        setSelectedFriends(prev => 
-                          prev.some(f => f.id === friend.id)
-                            ? prev.filter(f => f.id !== friend.id)
-                            : [...prev, friend]
-                        );
-                      }}
-                    >
-                      <div className="friend-select-avatar">
-                        {friend.friendProfilePictureUrl ? (
-                          <img src={friend.friendProfilePictureUrl} alt={friend.friendUserName} />
-                        ) : (
-                          <span>{friend.friendUserName?.charAt(0)?.toUpperCase() || 'U'}</span>
-                        )}
-                      </div>
-                      <span className="friend-select-name">{friend.friendUserName}</span>
-                      {selectedFriends.some(f => f.id === friend.id) && (
-                        <i className="fa-solid fa-check"></i>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <p className="selection-count">
-                  Đã chọn: {selectedFriends.length} người (cần ít nhất 2)
-                </p>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button 
-                className="btn-cancel" 
-                onClick={() => setShowCreateGroupModal(false)}
-              >
-                Hủy
-              </button>
-              <button 
-                className="btn-primary" 
-                onClick={handleCreateGroup}
-                disabled={!groupName.trim() || selectedFriends.length < 2}
-              >
-                Tạo nhóm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

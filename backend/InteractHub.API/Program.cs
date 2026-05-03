@@ -189,6 +189,10 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<AppDbContext>();
         await context.Database.MigrateAsync();
         await DbInitializer.SeedRolesAndAdmin(services);
+        
+        // 🌱 Seed Test Data (5 users, 3 posts each, 3 groups)
+        // Uncomment to enable test data seeding
+        await DbInitializer.SeedTestData(services);
     }
     catch (Exception ex)
     {

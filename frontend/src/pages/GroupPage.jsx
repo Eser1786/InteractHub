@@ -41,11 +41,16 @@ export default function GroupPage() {
     navigate('/login');
   };
 
-  const filteredGroups = searchQuery.trim() 
-    ? groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : selectedNav === 'my-groups' 
-      ? groups.filter(g => g.isJoined)
-      : groups.filter(g => !g.isJoined);
+  const filteredGroups = groups.filter(g => {
+    const matchesSearch = g.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // In 'my-groups', show groups user has joined or created
+    // In 'discover', show groups user has NOT joined AND did NOT create
+    const isMyGroup = g.isJoined || (currentUser && g.creatorId === (currentUser.Id || currentUser.id));
+    const matchesNav = selectedNav === 'my-groups' ? isMyGroup : !isMyGroup;
+    
+    return matchesSearch && matchesNav;
+  });
 
   if (loading) {
     return <div className="group-wrapper"><p>Đang tải...</p></div>;

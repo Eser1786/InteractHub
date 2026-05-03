@@ -214,4 +214,10 @@ app.MapHub<CommentHub>("/commentHub");
 // ✅ Chuyển hướng các đường dẫn (Router) của React về trang chủ index.html
 app.MapFallbackToFile("index.html");
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 app.Run();

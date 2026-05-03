@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InteractHub.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260413143701_AddSomeChanges")]
-    partial class AddSomeChanges
+    [Migration("20260503073934_InitClean")]
+    partial class InitClean
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -90,6 +90,60 @@ namespace InteractHub.Infrastructure.Migrations
                     b.ToTable("Friendships");
                 });
 
+            modelBuilder.Entity("InteractHub.Application.Entities.Group", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatorId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("InteractHub.Application.Entities.GroupMembership", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("GroupMemberships");
+                });
+
             modelBuilder.Entity("InteractHub.Application.Entities.Hashtag", b =>
                 {
                     b.Property<int>("Id")
@@ -133,6 +187,45 @@ namespace InteractHub.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Likes");
+                });
+
+            modelBuilder.Entity("InteractHub.Application.Entities.Message", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ReceiverId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SenderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("ReceiverId");
+
+                    b.HasIndex("SenderId");
+
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("InteractHub.Application.Entities.Notification", b =>
@@ -190,8 +283,14 @@ namespace InteractHub.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("SharedPostId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -201,6 +300,10 @@ namespace InteractHub.Infrastructure.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("SharedPostId");
 
                     b.HasIndex("UserId");
 
@@ -530,6 +633,36 @@ namespace InteractHub.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("InteractHub.Application.Entities.Group", b =>
+                {
+                    b.HasOne("InteractHub.Application.Entities.User", "Creator")
+                        .WithMany("CreatedGroups")
+                        .HasForeignKey("CreatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Creator");
+                });
+
+            modelBuilder.Entity("InteractHub.Application.Entities.GroupMembership", b =>
+                {
+                    b.HasOne("InteractHub.Application.Entities.Group", "Group")
+                        .WithMany("Memberships")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InteractHub.Application.Entities.User", "User")
+                        .WithMany("GroupMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("InteractHub.Application.Entities.Like", b =>
                 {
                     b.HasOne("InteractHub.Application.Entities.Post", "Post")
@@ -547,6 +680,30 @@ namespace InteractHub.Infrastructure.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("InteractHub.Application.Entities.Message", b =>
+                {
+                    b.HasOne("InteractHub.Application.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId");
+
+                    b.HasOne("InteractHub.Application.Entities.User", "Receiver")
+                        .WithMany("ReceivedMessages")
+                        .HasForeignKey("ReceiverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InteractHub.Application.Entities.User", "Sender")
+                        .WithMany("SentMessages")
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Receiver");
+
+                    b.Navigation("Sender");
                 });
 
             modelBuilder.Entity("InteractHub.Application.Entities.Notification", b =>
@@ -568,11 +725,23 @@ namespace InteractHub.Infrastructure.Migrations
 
             modelBuilder.Entity("InteractHub.Application.Entities.Post", b =>
                 {
+                    b.HasOne("InteractHub.Application.Entities.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId");
+
+                    b.HasOne("InteractHub.Application.Entities.Post", "SharedPost")
+                        .WithMany()
+                        .HasForeignKey("SharedPostId");
+
                     b.HasOne("InteractHub.Application.Entities.User", "User")
                         .WithMany("Posts")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("SharedPost");
 
                     b.Navigation("User");
                 });
@@ -677,6 +846,11 @@ namespace InteractHub.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("InteractHub.Application.Entities.Group", b =>
+                {
+                    b.Navigation("Memberships");
+                });
+
             modelBuilder.Entity("InteractHub.Application.Entities.Hashtag", b =>
                 {
                     b.Navigation("PostHashtags");
@@ -697,6 +871,10 @@ namespace InteractHub.Infrastructure.Migrations
                 {
                     b.Navigation("Comments");
 
+                    b.Navigation("CreatedGroups");
+
+                    b.Navigation("GroupMemberships");
+
                     b.Navigation("Likes");
 
                     b.Navigation("Notifications");
@@ -705,9 +883,13 @@ namespace InteractHub.Infrastructure.Migrations
 
                     b.Navigation("ReceivedFriendships");
 
+                    b.Navigation("ReceivedMessages");
+
                     b.Navigation("Reports");
 
                     b.Navigation("SentFriendships");
+
+                    b.Navigation("SentMessages");
 
                     b.Navigation("Stories");
                 });

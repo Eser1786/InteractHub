@@ -14,8 +14,33 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [passwordErrors, setPasswordErrors] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const validatePassword = (password) => {
+    const errors = {
+      length: password.length >= 6,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    };
+    setPasswordErrors({
+      length: !errors.length,
+      uppercase: !errors.uppercase,
+      lowercase: !errors.lowercase,
+      number: !errors.number,
+      special: !errors.special
+    });
+    return !Object.values(errors).includes(false);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -23,6 +48,11 @@ export default function RegisterPage() {
       ...prev,
       [name]: value
     }));
+
+    // Validate password format when user types
+    if (name === 'password') {
+      validatePassword(value);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -30,16 +60,16 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
 
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError('Mật khẩu không trùng khớp. Vui lòng kiểm tra lại!');
+    // Validate password format
+    if (!validatePassword(formData.password)) {
+      setError('Mật khẩu không đúng định dạng. Vui lòng kiểm tra các yêu cầu bên dưới!');
       setLoading(false);
       return;
     }
 
-    // Validate password length
-    if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Mật khẩu không trùng khớp. Vui lòng kiểm tra lại!');
       setLoading(false);
       return;
     }
@@ -150,6 +180,28 @@ export default function RegisterPage() {
                 >
                   <i class="fa-solid fa-eye"></i>
                 </button>
+              </div>
+              <div className="password-requirements">
+                <div className={passwordErrors.length ? 'requirement error' : 'requirement success'}>
+                  <i className={passwordErrors.length ? 'fa-solid fa-times' : 'fa-solid fa-check'}></i>
+                  Ít nhất 6 ký tự
+                </div>
+                <div className={passwordErrors.uppercase ? 'requirement error' : 'requirement success'}>
+                  <i className={passwordErrors.uppercase ? 'fa-solid fa-times' : 'fa-solid fa-check'}></i>
+                  Chứa chữ hoa (A-Z)
+                </div>
+                <div className={passwordErrors.lowercase ? 'requirement error' : 'requirement success'}>
+                  <i className={passwordErrors.lowercase ? 'fa-solid fa-times' : 'fa-solid fa-check'}></i>
+                  Chứa chữ thường (a-z)
+                </div>
+                <div className={passwordErrors.number ? 'requirement error' : 'requirement success'}>
+                  <i className={passwordErrors.number ? 'fa-solid fa-times' : 'fa-solid fa-check'}></i>
+                  Chứa số (0-9)
+                </div>
+                <div className={passwordErrors.special ? 'requirement error' : 'requirement success'}>
+                  <i className={passwordErrors.special ? 'fa-solid fa-times' : 'fa-solid fa-check'}></i>
+                  Chứa ký tự đặc biệt (!@#$%^&*...)
+                </div>
               </div>
             </div>
 

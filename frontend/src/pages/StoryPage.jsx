@@ -315,7 +315,7 @@ export default function StoryPage() {
                   <div className="story-user-details">
                     <p className="story-username">{story.UserName || 'Người dùng'}</p>
                     <p className="story-time">
-                      {new Date(story.CreatedAt).toLocaleDateString('vi-VN', {
+                      {new Date(story.CreatedAt).toLocaleString('vi-VN', {
                         hour: '2-digit',
                         minute: '2-digit',
                         day: '2-digit',

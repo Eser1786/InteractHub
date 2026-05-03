@@ -162,6 +162,7 @@ public class StoriesController : ControllerBase
         {
             ImageUrl = createStoryDto.ImageUrl,
             Content = createStoryDto.Content,
+            CreatedAt = DateTime.UtcNow,
             ExpireAt = createStoryDto.ExpireAt,
             UserId = userId
         };

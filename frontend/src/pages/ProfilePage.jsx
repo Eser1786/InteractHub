@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
 import '../styles/ProfilePage.css';
+import { mergeCommentIntoList } from '../utils/commentNormalize';
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -389,7 +390,7 @@ export default function ProfilePage() {
       const createdComment = await createComment(postId, content);
       setCommentsByPost((prev) => ({
         ...prev,
-        [postId]: [createdComment, ...(prev[postId] || [])]
+        [postId]: mergeCommentIntoList(prev[postId] || [], createdComment, { prepend: true })
       }));
       
       // Fetch updated post to sync shared post data

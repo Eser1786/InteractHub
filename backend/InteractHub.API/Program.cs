@@ -14,6 +14,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using InteractHub.API.Middleware;
 using InteractHub.Infrastructure.Hubs;
+using InteractHub.API.Serialization;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -144,6 +146,12 @@ builder.Services.AddSignalR(options =>
     // Reduce timeout to detect connection issues faster
     options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
     options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+})
+.AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.PayloadSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+    options.PayloadSerializerOptions.Converters.Add(new UtcNullableDateTimeJsonConverter());
 });
 
 // ✅ Add Authorization Policies
@@ -164,6 +172,8 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = null; // Keep Pascal case from C#
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
+        options.JsonSerializerOptions.Converters.Add(new UtcNullableDateTimeJsonConverter());
     })
     .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblies(new[] { typeof(CreatePostValidator).Assembly }));
 

@@ -1,34 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getUser } from '../api';
 import { commentHubConnection } from '../utils/commentHubConnection';
+import { formatCommentDateTime } from '../utils/commentDateTime';
+import { dedupeCommentList, mergeCommentIntoList, sameCommentId } from '../utils/commentNormalize';
 import '../styles/CommentSection.css';
-
-// Format timestamp function
-function formatCommentTime(dateString) {
-  if (!dateString) {
-    return '';
-  }
-
-  try {
-    const commentDate = new Date(dateString);
-
-    if (isNaN(commentDate.getTime())) {
-      console.warn('Invalid date string:', dateString);
-      return '';
-    }
-
-    return commentDate.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch (err) {
-    console.error('Error formatting comment time:', err, dateString);
-    return '';
-  }
-}
 
 export default function CommentSection({ post, comments, onClose, onAddComment, onDeleteComment, onEditComment, currentUser }) {
   const postId = post?.Id ?? post?.id;
@@ -46,7 +21,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
   }, [postId]);
 
   useEffect(() => {
-    setCommentList(comments ?? []);
+    setCommentList(dedupeCommentList(comments ?? []));
   }, [comments]);
 
   useEffect(() => {
@@ -139,25 +114,10 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
           commentHubConnection.onCommentCreated((comment) => {
             if (!comment) return;
             const incomingPostId = comment.PostId ?? comment.postId;
-            const incomingId = comment.Id ?? comment.id;
 
-            if (incomingPostId !== postId) return;
+            if (String(incomingPostId) !== String(postId)) return;
 
-            setCommentList((prev) => {
-              if (prev.some((item) => item.id === incomingId)) {
-                return prev;
-              }
-
-              return [{
-                ...comment,
-                id: incomingId,
-                postId: incomingPostId,
-                content: comment.Content ?? comment.content,
-                userId: comment.UserId ?? comment.userId,
-                userName: comment.UserName ?? comment.userName,
-                createdAt: comment.CreatedAt ?? comment.createdAt
-              }, ...prev];
-            });
+            setCommentList((prev) => mergeCommentIntoList(prev, comment, { prepend: true }));
           })
         );
 
@@ -167,11 +127,13 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
             const incomingPostId = comment.PostId ?? comment.postId;
             const incomingId = comment.Id ?? comment.id;
 
-            if (incomingPostId !== postId) return;
+            if (String(incomingPostId) !== String(postId)) return;
 
             setCommentList((prev) =>
               prev.map((item) =>
-                item.id === incomingId ? { ...item, content: comment.Content ?? comment.content } : item
+                sameCommentId(item.id ?? item.Id, incomingId)
+                  ? { ...item, content: comment.Content ?? comment.content }
+                  : item
               )
             );
           })
@@ -183,9 +145,11 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
             const incomingPostId = payload.PostId ?? payload.postId;
             const incomingId = payload.Id ?? payload.id;
 
-            if (incomingPostId !== postId) return;
+            if (String(incomingPostId) !== String(postId)) return;
 
-            setCommentList((prev) => prev.filter((item) => item.id !== incomingId));
+            setCommentList((prev) =>
+              prev.filter((item) => !sameCommentId(item.id ?? item.Id, incomingId))
+            );
           })
         );
       } catch (err) {
@@ -307,7 +271,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                     <div className="comment-header">
                       <div className="comment-user-info">
                         <strong>{displayName}</strong>
-                        <p className="comment-time">{formatCommentTime(comment.createdAt)}</p>
+                        <p className="comment-time">{formatCommentDateTime(comment.createdAt)}</p>
                       </div>
                       {canDeleteComment && (
                         <div className="comment-menu-container">
@@ -443,7 +407,7 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
                             <div className="comment-content-wrapper">
                               <div className="comment-top-row">
                                 <strong>{reply.userName}</strong>
-                                <span>{formatCommentTime(reply.createdAt)}</span>
+                                <span>{formatCommentDateTime(reply.createdAt)}</span>
                               </div>
                               <p className="comment-text">{reply.content}</p>
                               <div className="comment-meta-row">

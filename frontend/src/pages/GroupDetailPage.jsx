@@ -6,6 +6,7 @@ import { getPostsByGroup, createPost, deletePost, getCommentsByPost, createComme
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import '../styles/GroupDetailPage.css';
+import { mergeCommentIntoList } from '../utils/commentNormalize';
 
 export default function GroupDetailPage() {
   const { groupSlug } = useParams();
@@ -284,7 +285,7 @@ export default function GroupDetailPage() {
       const createdComment = await createComment(postId, content);
       setCommentsByPost((prev) => ({
         ...prev,
-        [postId]: [createdComment, ...(prev[postId] || [])]
+        [postId]: mergeCommentIntoList(prev[postId] || [], createdComment, { prepend: true })
       }));
       setPosts((prev) => prev.map((post) =>
         post.id === postId

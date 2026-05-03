@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
 import { startConnection } from '../utils/postHubConnection';
+import { mergeCommentIntoList, sameCommentId } from '../utils/commentNormalize';
 import '../styles/PostDetailPage.css';
 
 export default function PostDetailPage() {
@@ -125,22 +126,10 @@ export default function PostDetailPage() {
     let cancelled = false;
     let conn;
 
-    const caresAbout = (pid) =>
-      pid != null && (pid === mainId || (sharedNestedId != null && pid === sharedNestedId));
-
-    const normalizeHubComment = (c) => {
-      if (!c) return null;
-      const id = c.id ?? c.Id;
-      const postPid = c.postId ?? c.PostId;
-      const userPid = c.userId ?? c.UserId;
-      if (id == null || postPid == null) return null;
-      return {
-        id,
-        content: c.content ?? c.Content ?? '',
-        postId: postPid,
-        userId: userPid,
-        createdAt: c.createdAt ?? c.CreatedAt
-      };
+    const caresAbout = (pid) => {
+      if (pid == null) return false;
+      const key = String(pid);
+      return key === String(mainId) || (sharedNestedId != null && key === String(sharedNestedId));
     };
 
     const applyCount = (pid, count) => {
@@ -162,16 +151,13 @@ export default function PostDetailPage() {
 
     const onCommentAdded = (data) => {
       if (!data?.postId || !caresAbout(data.postId)) return;
-      const normalized = normalizeHubComment(data.comment);
-      if (normalized) {
-        setCommentsByPost((prev) => {
-          const list = prev[data.postId] || [];
-          if (list.some((item) => (item.id ?? item.Id) === normalized.id)) {
-            return prev;
-          }
-          return { ...prev, [data.postId]: [...list, normalized] };
-        });
-      }
+      setCommentsByPost((prev) => {
+        const pid = data.postId;
+        const list = prev[pid] || [];
+        const next = mergeCommentIntoList(list, data.comment, { prepend: true });
+        if (next === list) return prev;
+        return { ...prev, [pid]: next };
+      });
       applyCount(data.postId, data.commentsCount);
     };
 
@@ -182,7 +168,7 @@ export default function PostDetailPage() {
       setCommentsByPost((prev) => ({
         ...prev,
         [data.postId]: (prev[data.postId] || []).map((c) =>
-          (c.id ?? c.Id) === cid ? { ...c, content: nextContent } : c
+          sameCommentId(c.id ?? c.Id, cid) ? { ...c, content: nextContent } : c
         )
       }));
     };
@@ -192,7 +178,7 @@ export default function PostDetailPage() {
       const cid = data.commentId;
       setCommentsByPost((prev) => ({
         ...prev,
-        [data.postId]: (prev[data.postId] || []).filter((c) => (c.id ?? c.Id) !== cid)
+        [data.postId]: (prev[data.postId] || []).filter((c) => !sameCommentId(c.id ?? c.Id, cid))
       }));
       applyCount(data.postId, data.commentsCount);
     };
@@ -220,7 +206,9 @@ export default function PostDetailPage() {
       const createdComment = await createComment(commentPostId, content);
       setCommentsByPost((prev) => ({
         ...prev,
-        [commentPostId]: [createdComment, ...(prev[commentPostId] || [])]
+        [commentPostId]: mergeCommentIntoList(prev[commentPostId] || [], createdComment, {
+          prepend: true
+        })
       }));
 
       // Update post comment count
@@ -250,7 +238,9 @@ export default function PostDetailPage() {
       await deleteComment(commentId);
       setCommentsByPost((prev) => ({
         ...prev,
-        [commentPostId]: (prev[commentPostId] || []).filter(comment => comment.id !== commentId)
+        [commentPostId]: (prev[commentPostId] || []).filter(
+          (c) => !sameCommentId(c.id ?? c.Id, commentId)
+        )
       }));
 
       // Update post comment count
@@ -278,8 +268,10 @@ export default function PostDetailPage() {
       await updateComment(commentId, newContent);
       setCommentsByPost((prev) => ({
         ...prev,
-        [commentPostId]: (prev[commentPostId] || []).map(comment =>
-          comment.id === commentId ? { ...comment, content: newContent } : comment
+        [commentPostId]: (prev[commentPostId] || []).map((comment) =>
+          sameCommentId(comment.id ?? comment.Id, commentId)
+            ? { ...comment, content: newContent }
+            : comment
         )
       }));
     } catch (err) {

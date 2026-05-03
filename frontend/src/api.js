@@ -1,3 +1,6 @@
+import { shapeComment } from './utils/commentNormalize';
+import { toIsoUtcString } from './utils/commentDateTime';
+
 const API_BASE = '/api';
 
 // Helper function to handle API responses and errors
@@ -269,14 +272,20 @@ export async function getNotifications(userId) {
   return data?.Data || [];
 }
 
-const normalizeComment = (comment) => ({
-
-  id: comment.Id ?? comment.id,
-  content: comment.Content ?? comment.content,
-  postId: comment.PostId ?? comment.postId,
-  userId: comment.UserId ?? comment.userId,
-  createdAt: comment.CreatedAt ?? comment.createdAt
-});
+const normalizeComment = (comment) => {
+  const shaped = shapeComment(comment);
+  if (shaped) return shaped;
+  const rawT = comment?.CreatedAt ?? comment?.createdAt;
+  const iso = toIsoUtcString(rawT);
+  const createdAt = iso || (rawT != null && rawT !== '' ? String(rawT) : '');
+  return {
+    id: comment?.Id ?? comment?.id,
+    content: comment?.Content ?? comment?.content ?? '',
+    postId: comment?.PostId ?? comment?.postId,
+    userId: comment?.UserId ?? comment?.userId,
+    createdAt
+  };
+};
 
 export async function getCommentsByPost(postId) {
   const token = localStorage.getItem('token');

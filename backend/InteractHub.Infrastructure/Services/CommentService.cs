@@ -26,11 +26,17 @@ public class CommentService : ICommentService
 
     public async Task<List<Comment>> GetByPostIdAsync(int postId)
     {
-        return await _context.Comments.Where(c => c.PostId == postId).Include(c => c.User).ToListAsync();
+        return await _context.Comments
+            .Where(c => c.PostId == postId)
+            .Include(c => c.User)
+            .OrderByDescending(c => c.CreatedAt)
+            .ThenByDescending(c => c.Id)
+            .ToListAsync();
     }
 
     public async Task<Comment> CreateAsync(Comment comment)
     {
+        comment.CreatedAt = DateTime.UtcNow;
         _context.Comments.Add(comment);
         await _context.SaveChangesAsync();
         return comment;

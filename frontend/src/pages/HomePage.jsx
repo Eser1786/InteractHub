@@ -7,6 +7,7 @@ import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
 import '../styles/HomePage.css';
 import { startConnection } from '../utils/postHubConnection';
+import { mergeCommentIntoList, sameCommentId } from '../utils/commentNormalize';
 
 export default function HomePage() {
   const [posts, setPosts] = useState([]);
@@ -693,7 +694,7 @@ export default function HomePage() {
       const createdComment = await createComment(postId, content);
       setCommentsByPost((prev) => ({
         ...prev,
-        [postId]: [createdComment, ...(prev[postId] || [])]
+        [postId]: mergeCommentIntoList(prev[postId] || [], createdComment, { prepend: true })
       }));
       
       // Update comments count locally for immediate UI update
@@ -732,7 +733,7 @@ export default function HomePage() {
       await deleteComment(commentId);
       setCommentsByPost((prev) => ({
         ...prev,
-        [postId]: (prev[postId] || []).filter(comment => comment.id !== commentId)
+        [postId]: (prev[postId] || []).filter((c) => !sameCommentId(c.id ?? c.Id, commentId))
       }));
       
       // Update comments count locally for immediate UI update
@@ -767,8 +768,8 @@ export default function HomePage() {
       await updateComment(commentId, newContent);
       setCommentsByPost((prev) => ({
         ...prev,
-        [postId]: (prev[postId] || []).map(comment =>
-          comment.id === commentId
+        [postId]: (prev[postId] || []).map((comment) =>
+          sameCommentId(comment.id ?? comment.Id, commentId)
             ? { ...comment, content: newContent }
             : comment
         )
@@ -935,21 +936,6 @@ export default function HomePage() {
       );
     };
 
-    const normalizeHubComment = (c) => {
-      if (!c) return null;
-      const id = c.id ?? c.Id;
-      const postPid = c.postId ?? c.PostId;
-      const userPid = c.userId ?? c.UserId;
-      if (id == null || postPid == null) return null;
-      return {
-        id,
-        content: c.content ?? c.Content ?? '',
-        postId: postPid,
-        userId: userPid,
-        createdAt: c.createdAt ?? c.CreatedAt
-      };
-    };
-
     const applyCommentsCount = (postId, count) => {
       if (postId == null || typeof count !== 'number') return;
       setPosts((prev) =>
@@ -970,16 +956,13 @@ export default function HomePage() {
 
     const onCommentAdded = (data) => {
       if (!data?.postId) return;
-      const normalized = normalizeHubComment(data.comment);
-      if (normalized) {
-        setCommentsByPost((prev) => {
-          const list = prev[data.postId] || [];
-          if (list.some((item) => (item.id ?? item.Id) === normalized.id)) {
-            return prev;
-          }
-          return { ...prev, [data.postId]: [...list, normalized] };
-        });
-      }
+      setCommentsByPost((prev) => {
+        const pid = data.postId;
+        const list = prev[pid] || [];
+        const next = mergeCommentIntoList(list, data.comment, { prepend: true });
+        if (next === list) return prev;
+        return { ...prev, [pid]: next };
+      });
       if (typeof data.commentsCount === 'number') {
         applyCommentsCount(data.postId, data.commentsCount);
       }
@@ -992,7 +975,7 @@ export default function HomePage() {
       setCommentsByPost((prev) => ({
         ...prev,
         [data.postId]: (prev[data.postId] || []).map((c) =>
-          (c.id ?? c.Id) === cid ? { ...c, content: nextContent } : c
+          sameCommentId(c.id ?? c.Id, cid) ? { ...c, content: nextContent } : c
         )
       }));
     };
@@ -1003,7 +986,7 @@ export default function HomePage() {
       setCommentsByPost((prev) => ({
         ...prev,
         [data.postId]: (prev[data.postId] || []).filter(
-          (c) => (c.Id ?? c.id) !== cid
+          (c) => !sameCommentId(c.Id ?? c.id, cid)
         )
       }));
       if (typeof data.commentsCount === 'number') {

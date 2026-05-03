@@ -50,6 +50,14 @@ function bindRealtimeHandlers(conn) {
   conn.on("GroupCommentDeleted", (payload) => {
     window.dispatchEvent(new CustomEvent("signalr:group-comment-deleted", { detail: payload }));
   });
+
+  conn.on("GroupPostLiked", (payload) => {
+    window.dispatchEvent(new CustomEvent("signalr:group-post-liked", { detail: payload }));
+  });
+
+  conn.on("GroupPostUnliked", (payload) => {
+    window.dispatchEvent(new CustomEvent("signalr:group-post-unliked", { detail: payload }));
+  });
 }
 
 export const startConnection = async () => {

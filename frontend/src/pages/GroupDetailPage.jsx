@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
 import { useGroups } from '../contexts/GroupsContext';
-import { getPostsByGroup, createPost, deletePost, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
+import { getPostsByGroup, createPost, deletePost, getCommentsByPost, createComment, updateComment, deleteComment, likePost, unlikePost, sharePost } from '../api';
 import { joinGroupChannel, leaveGroupChannel } from '../utils/postHubConnection';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
@@ -67,12 +66,10 @@ export default function GroupDetailPage() {
 
           const normalizedPosts = groupPosts.map((p) => {
             const normalized = normalizePost(p);
-            const userLikedPosts = userData?.Id ? getLikedPostsForUser(userData.Id) : {};
-            const likedByArray = userLikedPosts[normalized.id] || [];
             return {
               ...normalized,
-              likedBy: likedByArray,
-              likesCount: normalized.likesCount || likedByArray.length,
+              likedBy: normalized.likedBy || [],
+              likesCount: normalized.likesCount || 0,
               commentsCount: normalized.commentsCount || 0
             };
           });
@@ -207,11 +204,52 @@ export default function GroupDetailPage() {
       ));
     };
 
+    const handleGroupPostLiked = (event) => {
+      const payload = event.detail || {};
+      const payloadGroupId = payload.groupId ?? payload.GroupId;
+      if (payloadGroupId !== group.id) return;
+
+      const postId = payload.postId ?? payload.PostId;
+      const actorUserId = payload.userId ?? payload.UserId;
+      if (!postId || !actorUserId) return;
+
+      setPosts((prev) => prev.map((post) => {
+        if (post.id !== postId) return post;
+        const likedBy = post.likedBy || [];
+        return {
+          ...post,
+          likesCount: payload.likesCount ?? payload.LikesCount ?? post.likesCount,
+          likedBy: likedBy.includes(actorUserId) ? likedBy : [...likedBy, actorUserId]
+        };
+      }));
+    };
+
+    const handleGroupPostUnliked = (event) => {
+      const payload = event.detail || {};
+      const payloadGroupId = payload.groupId ?? payload.GroupId;
+      if (payloadGroupId !== group.id) return;
+
+      const postId = payload.postId ?? payload.PostId;
+      const actorUserId = payload.userId ?? payload.UserId;
+      if (!postId || !actorUserId) return;
+
+      setPosts((prev) => prev.map((post) => {
+        if (post.id !== postId) return post;
+        return {
+          ...post,
+          likesCount: payload.likesCount ?? payload.LikesCount ?? post.likesCount,
+          likedBy: (post.likedBy || []).filter((id) => id !== actorUserId)
+        };
+      }));
+    };
+
     window.addEventListener('signalr:group-post-created', handleGroupPostCreated);
     window.addEventListener('signalr:group-post-deleted', handleGroupPostDeleted);
     window.addEventListener('signalr:group-comment-added', handleGroupCommentAdded);
     window.addEventListener('signalr:group-comment-updated', handleGroupCommentUpdated);
     window.addEventListener('signalr:group-comment-deleted', handleGroupCommentDeleted);
+    window.addEventListener('signalr:group-post-liked', handleGroupPostLiked);
+    window.addEventListener('signalr:group-post-unliked', handleGroupPostUnliked);
 
     return () => {
       leaveGroupChannel(group.id).catch(() => {});
@@ -220,6 +258,8 @@ export default function GroupDetailPage() {
       window.removeEventListener('signalr:group-comment-added', handleGroupCommentAdded);
       window.removeEventListener('signalr:group-comment-updated', handleGroupCommentUpdated);
       window.removeEventListener('signalr:group-comment-deleted', handleGroupCommentDeleted);
+      window.removeEventListener('signalr:group-post-liked', handleGroupPostLiked);
+      window.removeEventListener('signalr:group-post-unliked', handleGroupPostUnliked);
     };
   }, [group?.id]);
 
@@ -247,37 +287,29 @@ export default function GroupDetailPage() {
       const likedBy = post.likedBy || [];
       const isLiked = likedBy.includes(currentUser.Id);
       const postId = post.id || post.Id;
-
-      const userData = getUserData(currentUser.Id);
-      const likedPosts = userData.likedPosts || {};
       let newLikesCount = post.likesCount || 0;
 
       if (isLiked) {
-        if (likedPosts[postId]) {
-          likedPosts[postId] = likedPosts[postId].filter(id => id !== currentUser.Id);
-          if (likedPosts[postId].length === 0) {
-            delete likedPosts[postId];
-          }
-        }
+        unlikePost(postId, currentUser.Id).catch((err) => {
+          console.error('Error unliking group post:', err);
+        });
         newLikesCount = Math.max(0, newLikesCount - 1);
       } else {
-        if (!likedPosts[postId]) {
-          likedPosts[postId] = [];
-        }
-        if (!likedPosts[postId].includes(currentUser.Id)) {
-          likedPosts[postId].push(currentUser.Id);
-        }
+        likePost(postId, currentUser.Id).catch((err) => {
+          console.error('Error liking group post:', err);
+        });
         newLikesCount += 1;
       }
-
-      updateUserData(currentUser.Id, { likedPosts });
 
       const newPosts = posts.map(p => {
         const normalizedId = p.id || p.Id;
         if (normalizedId === postId) {
+          const nextLikedBy = isLiked
+            ? likedBy.filter((id) => id !== currentUser.Id)
+            : [...likedBy, currentUser.Id];
           return {
             ...p,
-            likedBy: likedPosts[postId] || [],
+            likedBy: nextLikedBy,
             likesCount: newLikesCount
           };
         }
@@ -287,6 +319,19 @@ export default function GroupDetailPage() {
       console.log('Like/Unlike successful');
     } catch (err) {
       console.error('Error liking post:', err);
+    }
+  };
+
+  const handleShare = async (post) => {
+    const caption = window.prompt('Nhập chú thích cho bài chia sẻ (có thể để trống):', '') ?? '';
+    try {
+      await sharePost(post.id, { content: caption });
+      window.dispatchEvent(new Event('postShared'));
+      setError('');
+      alert('Đã chia sẻ bài viết ra trang chủ');
+    } catch (err) {
+      console.error('Error sharing group post:', err);
+      setError('Không thể chia sẻ bài viết lúc này');
     }
   };
 
@@ -711,7 +756,7 @@ export default function GroupDetailPage() {
                     <button className="post-action-btn" onClick={() => handleToggleComments(post)}>
                       <span><i className="fa-solid fa-comments"></i></span> Bình luận
                     </button>
-                    <button className="post-action-btn">
+                    <button className="post-action-btn" onClick={() => handleShare(post)}>
                       <span><i className="fa-solid fa-share"></i></span> Chia sẻ
                     </button>
                   </div>

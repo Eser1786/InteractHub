@@ -107,12 +107,26 @@ public class LikesController : ControllerBase
 
         var updatedPost = await _postService.GetByIdAsync(created.PostId);
 
-        await _postHub.Clients.Group("feed")
-            .SendAsync("PostLiked", new {
-                postId = created.PostId,
-                likesCount = updatedPost?.Likes.Count ?? 0,
-                userId = created.UserId
-            });
+        if (updatedPost?.GroupId != null)
+        {
+            await _postHub.Clients.Group($"group_{updatedPost.GroupId.Value}")
+                .SendAsync("GroupPostLiked", new
+                {
+                    postId = created.PostId,
+                    groupId = updatedPost.GroupId.Value,
+                    likesCount = updatedPost.Likes.Count,
+                    userId = created.UserId
+                });
+        }
+        else
+        {
+            await _postHub.Clients.Group("feed")
+                .SendAsync("PostLiked", new {
+                    postId = created.PostId,
+                    likesCount = updatedPost?.Likes.Count ?? 0,
+                    userId = created.UserId
+                });
+        }
 
         return this.CreatedResponse(likeDto, "Like created successfully");
     }
@@ -140,12 +154,26 @@ public class LikesController : ControllerBase
         {
             var updatedPost = await _postService.GetByIdAsync(like.PostId);
 
-            await _postHub.Clients.Group("feed")
-                .SendAsync("PostUnliked", new {
-                    postId = like.PostId,
-                    likesCount = updatedPost?.Likes.Count ?? 0,
-                    userId = like.UserId
-                });
+            if (updatedPost?.GroupId != null)
+            {
+                await _postHub.Clients.Group($"group_{updatedPost.GroupId.Value}")
+                    .SendAsync("GroupPostUnliked", new
+                    {
+                        postId = like.PostId,
+                        groupId = updatedPost.GroupId.Value,
+                        likesCount = updatedPost.Likes.Count,
+                        userId = like.UserId
+                    });
+            }
+            else
+            {
+                await _postHub.Clients.Group("feed")
+                    .SendAsync("PostUnliked", new {
+                        postId = like.PostId,
+                        likesCount = updatedPost?.Likes.Count ?? 0,
+                        userId = like.UserId
+                    });
+            }
         }
 
         return this.SuccessResponse(message: "Like deleted successfully", statusCode: 200);
@@ -177,12 +205,26 @@ public class LikesController : ControllerBase
         {
             var updatedPost = await _postService.GetByIdAsync(postId);
 
-            await _postHub.Clients.Group("feed")
-                .SendAsync("PostUnliked", new {
-                    postId = postId,
-                    likesCount = updatedPost?.Likes.Count ?? 0,
-                    userId = userId
-                });
+            if (updatedPost?.GroupId != null)
+            {
+                await _postHub.Clients.Group($"group_{updatedPost.GroupId.Value}")
+                    .SendAsync("GroupPostUnliked", new
+                    {
+                        postId = postId,
+                        groupId = updatedPost.GroupId.Value,
+                        likesCount = updatedPost.Likes.Count,
+                        userId = userId
+                    });
+            }
+            else
+            {
+                await _postHub.Clients.Group("feed")
+                    .SendAsync("PostUnliked", new {
+                        postId = postId,
+                        likesCount = updatedPost?.Likes.Count ?? 0,
+                        userId = userId
+                    });
+            }
         }
 
         return this.SuccessResponse(message: "Like deleted successfully", statusCode: 200);

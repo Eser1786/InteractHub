@@ -124,17 +124,12 @@ public class PostsController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return this.UnauthorizedResponse("User not authenticated");
 
-        var acceptedFriendships = await _friendshipService.GetAcceptedFriendsAsync(userId);
-        var visibleUserIds = new HashSet<string>(acceptedFriendships
-            .Select(f => f.UserId == userId ? f.FriendId : f.UserId)
-            .Where(id => !string.IsNullOrEmpty(id)));
-        visibleUserIds.Add(userId);
-
         var posts = await _postService.GetAllAsync();
 
-        // Filter posts so only the current user and accepted friends are visible
+        // ✅ Filter posts - show all posts from feed (not from groups)
+        // Removed friendship filter to allow users to see all posts without being friends
         var sortedPosts = posts
-            .Where(p => p.GroupId == null && visibleUserIds.Contains(p.UserId))
+            .Where(p => p.GroupId == null)
             .OrderByDescending(p => p.CreatedAt)
             .ToList();
 

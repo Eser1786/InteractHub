@@ -340,19 +340,22 @@ export async function deleteComment(commentId) {
   return true;
 }
 
-const normalizeGroup = (group) => ({
-  id: group.Id,
-  name: group.Name,
-  slug: group.Slug,
-  description: group.Description || '',
-  creatorId: group.CreatorId,
-  isJoined: group.IsJoined ?? false,
-  memberCount: group.MemberCount ?? 0,
-  createdAt: group.CreatedAt,
-  images: group.Images || ['img1', 'img2', 'img3'],
-  likes: group.Likes ?? 0,
-  comments: group.Comments ?? 0
-});
+const normalizeGroup = (group) => {
+  if (!group) return null;
+  return {
+    id: group.Id ?? group.id,
+    name: group.Name ?? group.name,
+    slug: group.Slug ?? group.slug,
+    description: group.Description ?? group.description ?? '',
+    creatorId: group.CreatorId ?? group.creatorId,
+    isJoined: group.IsJoined ?? group.isJoined ?? false,
+    memberCount: group.MemberCount ?? group.memberCount ?? 0,
+    createdAt: group.CreatedAt ?? group.createdAt,
+    images: group.Images ?? group.images ?? ['img1', 'img2', 'img3'],
+    likes: group.Likes ?? group.likes ?? 0,
+    comments: group.Comments ?? group.comments ?? 0
+  };
+};
 
 export async function getGroups() {
   const token = localStorage.getItem('token');
@@ -360,7 +363,7 @@ export async function getGroups() {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const data = await handleResponse(response);
-  return (data?.Data || []).map(normalizeGroup);
+  return (data?.Data || data?.data || []).map(normalizeGroup);
 }
 
 export async function createGroup({ name, description, memberIds }) {
@@ -374,7 +377,7 @@ export async function createGroup({ name, description, memberIds }) {
     body: JSON.stringify({ name, description, memberIds })
   });
   const data = await handleResponse(response);
-  return normalizeGroup(data?.Data);
+  return normalizeGroup(data?.Data || data?.data);
 }
 
 export async function joinGroupApi(groupId) {

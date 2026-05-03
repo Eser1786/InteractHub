@@ -72,8 +72,7 @@ export default function CreateGroupPage() {
         memberIds: selectedFriendIds
       });
       await refreshGroups();
-      alert(`Tạo nhóm "${groupName}" thành công!`);
-      navigate('/group');
+      navigate('/group', { state: { tab: 'my-groups' } });
     } catch (err) {
       console.error('Failed to create group', err);
       alert('Tạo nhóm thất bại. Vui lòng thử lại.');

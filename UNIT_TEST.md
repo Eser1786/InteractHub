@@ -3,7 +3,7 @@
 **Dự án:** InteractHub - Social Media Application  
 **Ngôn ngữ:** C# 11 (.NET 9)  
 **Công nghệ:** xUnit, Moq, EF Core In-Memory  
-**Cập nhật:** May 02, 2026
+**Cập nhật:** May 03, 2026
 
 ---
 
@@ -11,8 +11,9 @@
 
 1. [T1: Cơ Sở Lý Thuyết & Mẫu Thiết Kế](#t1-cơ-sở-lý-thuyết--mẫu-thiết-kế)
 2. [T2: Cấu Trúc Mã Nguồn Kiểm Thử](#t2-cấu-trúc-mã-nguồn-kiểm-thử)
-3. [T3: Thao Tác Kỹ Thuật (CLI)](#t3-thao-tác-kỹ-thuật-cli)
-4. [T4: Bí Quyết & Best Practices](#t4-bí-quyết--best-practices)
+3. [T3: Code Examples](#t3-code-examples)
+4. [T4: Thao Tác Kỹ Thuật (CLI)](#t4-thao-tác-kỹ-thuật-cli)
+5. [T5: Bí Quyết & Best Practices](#t5-bí-quyết--best-practices)
 
 ---
 
@@ -65,14 +66,72 @@ Gồm các công cụ trợ lực rút ngắn pha **Arrange** (tránh mã lặp 
 - **Lớp học thuật:** Mô hình hành vi (Behavioral Testing).
 - **Giải thích:** SUT là Interface HTTP (như `UsersController`). Chúng ta **Tuyệt Đối Không Sử Dụng Database In-Memory ở chốt chặn này**! Thay vào đó, dùng `Moq` để bắt chước dữ liệu trả ra cho `IUserService`. Phản ứng mong đợi là Controller phải ép các lệnh theo phân trang chuẩn và sinh ra nhãn chuẩn HTTP *(Trả về 200 OK, Json Output cho DTO, hay từ chối bằng 400 Bad Request, 403 Forbidden)*.
 
-## 📁 4. Tầng Tích Hợp Gắn Kết Hệ Thống (Thư mục `Integration/`)
+---
 
-- **Ý nghĩa:** Integration Testing phá bỏ quy chuẩn độc lập (Unit), nó nối từ (Controller > Service > Repository). Giúp khảo nghiệm xem sự rành mạch giữa các khối trong hệ thống làm việc có hài hòa với nhau không khi đưa vào bối cảnh thật (Tất nhiên kết quả lưu vẫn đổ về RAM để phục vụ tốc độ Clean-up rác).
-- **Ví dụ:** Bài test `FriendshipWorkflow` chạy chu trình liền mạch giả lập một người dùng thật: Gọi nút Mời Kết bạn -> Hệ Thống Lưu Ghi nhận -> Hệ thống Nhận Thông báo Notification xác thực chéo.
+# T3: Code Examples
+
+Dưới đây là một số ví dụ minh họa cách viết Unit Test theo đúng cấu trúc `Given - When - Then` được sử dụng trong dự án.
+
+## 💻 1. Unit Test - Tầng Service (Kiểm tra logic)
+
+Đoạn code kiểm tra luồng gửi yêu cầu kết bạn. Bài test sử dụng `In-Memory Database` để lưu dữ liệu và dùng `Moq` để giả lập việc gửi Notification.
+
+```csharp
+[Fact]
+// Kiểm tra gửi yêu cầu thành công: Hệ thống tạo trạng thái Pending và gửi Noti cho bên B.
+public async Task SendFriendRequestAsync_ShouldCreatePendingAndNotifyReceiver()
+{
+    // given (Arrange)
+    using var context = TestDbContextFactory.Create();
+    var notificationMock = new Mock<INotificationService>();
+    notificationMock
+        .Setup(n => n.NotifyFriendRequestAsync("u2", "u1"))
+        .ReturnsAsync(new Notification { UserId = "u2", Type = NotificationType.FriendRequest });
+        
+    var service = new FriendshipService(context, notificationMock.Object);
+
+    // when (Act)
+    var friendship = await service.SendFriendRequestAsync("u1", "u2");
+
+    // then (Assert)
+    Assert.Equal(FriendshipStatus.Pending, friendship.Status);
+    notificationMock.Verify(n => n.NotifyFriendRequestAsync("u2", "u1"), Times.Once);
+}
+```
+
+## 💻 2. Unit Test - Tầng Controller (Kiểm tra HTTP Response)
+
+Đoạn code kiểm tra hành vi của Controller khi gặp một thao tác lỗi (chấp nhận lời mời kết bạn không tồn tại). Bài test dùng `Moq` để bắt Service ném ra Exception, sau đó kiểm tra xem Controller có trả về đúng mã lỗi `400 Bad Request` hay không.
+
+```csharp
+[Fact]
+// Kiểm tra Controller trả về 400 Bad Request khi Service ném lỗi InvalidOperationException
+public async Task AcceptFriendRequest_ShouldReturnBadRequest_WhenInvalidOperation()
+{
+    // given
+    var serviceMock = new Mock<IFriendshipService>();
+    serviceMock
+        .Setup(s => s.AcceptFriendRequestAsync(777))
+        .ThrowsAsync(new InvalidOperationException("Invalid request"));
+
+    var controller = new FriendshipsController(serviceMock.Object);
+    ControllerTestHelper.SetAnonymousUser(controller);
+
+    // when
+    var result = await controller.AcceptFriendRequest(777);
+
+    // then
+    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+    var response = Assert.IsType<ApiResponse>(badRequest.Value);
+    
+    Assert.False(response.Success);
+    Assert.Equal(400, badRequest.StatusCode);
+}
+```
 
 ---
 
-# T3: Thao Tác Kỹ Thuật (CLI)
+# T4: Thao Tác Kỹ Thuật (CLI)
 
 ## 🚀 1. Khởi động Bộ Kiểm Thử
 
@@ -98,7 +157,7 @@ dotnet test backend/InteractHub.Tests/InteractHub.Tests.csproj --collect:"XPlat 
 
 ---
 
-# T4: Bí Quyết & Best Practices
+# T5: Bí Quyết & Best Practices
 
 > **💡 CHÚ Ý: BÍ QUYẾT CHO CÁC KỸ SƯ (BEST PRACTICES)**
 > 

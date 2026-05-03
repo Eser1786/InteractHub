@@ -111,13 +111,36 @@ export default function GroupPage() {
               filteredGroups.map((group) => (
                 <div key={group.id} className="group-card">
                   <div className="group-images">
-                    {group.imageUrl ? (
-                      <img src={group.imageUrl} alt={group.name} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px' }} />
-                    ) : (
-                      group.images.map((_, idx) => (
-                        <div key={idx} className="group-image-placeholder"></div>
-                      ))
-                    )}
+                    {(() => {
+                      let parsedImages = null;
+                      try {
+                        if (group.imageUrl && group.imageUrl.startsWith('[')) {
+                          parsedImages = JSON.parse(group.imageUrl);
+                        } else if (group.imageUrl) {
+                          parsedImages = [group.imageUrl];
+                        }
+                      } catch (e) {}
+
+                      if (parsedImages && parsedImages.length > 0) {
+                        if (parsedImages.length >= 3) {
+                          return parsedImages.slice(0, 3).map((img, idx) => (
+                            <img key={idx} src={img} alt={`${group.name}-${idx}`} className="group-image-placeholder" style={{ objectFit: 'cover' }} />
+                          ));
+                        } else {
+                          return (
+                            <div style={{ display: 'flex', gap: '5px', width: '100%', height: '100px' }}>
+                              {parsedImages.map((img, idx) => (
+                                <img key={idx} src={img} alt={`${group.name}-${idx}`} style={{ flex: 1, objectFit: 'cover', borderRadius: '8px' }} />
+                              ))}
+                            </div>
+                          );
+                        }
+                      } else {
+                        return group.images.map((_, idx) => (
+                          <div key={idx} className="group-image-placeholder"></div>
+                        ));
+                      }
+                    })()}
                   </div>
 
                   <div className="group-info">

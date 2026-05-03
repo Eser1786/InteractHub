@@ -8,7 +8,7 @@ import '../styles/CreateGroupPage.css';
 export default function CreateGroupPage() {
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
-  const [coverImage, setCoverImage] = useState('');
+  const [coverImages, setCoverImages] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [friends, setFriends] = useState([]);
   const [selectedFriendIds, setSelectedFriendIds] = useState([]);
@@ -71,7 +71,7 @@ export default function CreateGroupPage() {
       await createGroup({
         name: groupName.trim(),
         description: description.trim(),
-        imageUrl: coverImage,
+        imageUrl: coverImages.length > 0 ? JSON.stringify(coverImages) : null,
         memberIds: selectedFriendIds
       });
       await refreshGroups();
@@ -91,22 +91,32 @@ export default function CreateGroupPage() {
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    if (coverImages.length + files.length > 3) {
+      alert('Chỉ được chọn tối đa 3 ảnh bìa.');
+      return;
+    }
+
+    files.forEach(file => {
       if (file.size > 5 * 1024 * 1024) {
-        alert('File quá lớn. Vui lòng chọn ảnh dưới 5MB.');
+        alert('Có file quá lớn. Vui lòng chọn ảnh dưới 5MB.');
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCoverImage(reader.result);
+        setCoverImages(prev => [...prev, reader.result]);
       };
       reader.readAsDataURL(file);
-    }
+    });
+    
+    // Clear the input so same files can be selected again if removed
+    e.target.value = null;
   };
 
-  const removeCoverImage = () => {
-    setCoverImage('');
+  const removeCoverImage = (index) => {
+    setCoverImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const selectedCount = useMemo(() => selectedFriendIds.length + 1, [selectedFriendIds]);
@@ -153,27 +163,50 @@ export default function CreateGroupPage() {
 
         <main className="create-group-main">
           {/* Cover Image Section */}
-          <div className="group-cover">
-            {coverImage ? (
-              <>
-                <img src={coverImage} alt="Cover Preview" />
-                <div style={{ position: 'absolute', display: 'flex', gap: '10px' }}>
-                  <label className="cover-file-button small">
-                    Đổi ảnh
-                    <input type="file" accept="image/*" onChange={handleImageChange} className="cover-file-input" />
-                  </label>
-                  <button onClick={removeCoverImage} className="cover-remove-button" style={{ padding: '8px 14px', fontSize: '12px' }}>
-                    Xóa
-                  </button>
-                </div>
-              </>
+          <div className="group-cover" style={{ height: 'auto', minHeight: '200px', display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '10px', background: coverImages.length > 0 ? 'transparent' : '' }}>
+            {coverImages.length > 0 ? (
+              <div style={{ display: 'flex', width: '100%', gap: '10px', position: 'relative' }}>
+                {coverImages.length >= 3 ? (
+                  coverImages.map((img, idx) => (
+                    <div key={idx} style={{ flex: 1, position: 'relative', height: '180px' }}>
+                      <img src={img} alt={`Cover Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                      <button onClick={() => removeCoverImage(idx)} className="cover-remove-button" style={{ position: 'absolute', top: '5px', right: '5px', padding: '4px 8px', fontSize: '12px' }}>X</button>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ width: '100%', position: 'relative', height: '200px' }}>
+                    <img src={coverImages[0]} alt="Cover Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                    <div style={{ position: 'absolute', display: 'flex', gap: '10px', bottom: '10px', right: '10px' }}>
+                      <button onClick={() => removeCoverImage(0)} className="cover-remove-button" style={{ padding: '8px 14px', fontSize: '12px' }}>Xóa</button>
+                    </div>
+                  </div>
+                )}
+                
+                {coverImages.length > 1 && coverImages.length < 3 && (
+                  <div style={{ width: '100%', position: 'relative', height: '200px' }}>
+                    <img src={coverImages[1]} alt="Cover Preview 2" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                    <div style={{ position: 'absolute', display: 'flex', gap: '10px', bottom: '10px', right: '10px' }}>
+                      <button onClick={() => removeCoverImage(1)} className="cover-remove-button" style={{ padding: '8px 14px', fontSize: '12px' }}>Xóa</button>
+                    </div>
+                  </div>
+                )}
+
+                {coverImages.length < 3 && (
+                  <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
+                    <label className="cover-file-button small">
+                      Thêm ảnh ({coverImages.length}/3)
+                      <input type="file" accept="image/*" multiple onChange={handleImageChange} className="cover-file-input" />
+                    </label>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="cover-placeholder">
                 <div className="cover-upload-controls">
-                  <span style={{ color: '#666', fontSize: '14px', marginBottom: '8px' }}>Ảnh bìa nhóm</span>
+                  <span style={{ color: '#666', fontSize: '14px', marginBottom: '8px' }}>Ảnh bìa nhóm (Tối đa 3 ảnh)</span>
                   <label className="cover-file-button">
                     Thêm ảnh bìa
-                    <input type="file" accept="image/*" onChange={handleImageChange} className="cover-file-input" />
+                    <input type="file" accept="image/*" multiple onChange={handleImageChange} className="cover-file-input" />
                   </label>
                 </div>
               </div>

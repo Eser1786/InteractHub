@@ -26,6 +26,26 @@ export const GroupsProvider = ({ children }) => {
 
   useEffect(() => {
     refreshGroups();
+
+    import('../utils/groupHubConnection').then(({ startConnection }) => {
+      startConnection();
+    });
+
+    const handleGroupCreated = () => {
+      refreshGroups();
+    };
+
+    const handleGroupUpdated = () => {
+      refreshGroups();
+    };
+
+    window.addEventListener("signalr:group-created", handleGroupCreated);
+    window.addEventListener("signalr:group-updated", handleGroupUpdated);
+
+    return () => {
+      window.removeEventListener("signalr:group-created", handleGroupCreated);
+      window.removeEventListener("signalr:group-updated", handleGroupUpdated);
+    };
   }, []);
 
   const joinGroup = async (groupId) => {

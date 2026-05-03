@@ -935,22 +935,80 @@ export default function HomePage() {
       );
     };
 
+    const normalizeHubComment = (c) => {
+      if (!c) return null;
+      const id = c.id ?? c.Id;
+      const postPid = c.postId ?? c.PostId;
+      const userPid = c.userId ?? c.UserId;
+      if (id == null || postPid == null) return null;
+      return {
+        id,
+        content: c.content ?? c.Content ?? '',
+        postId: postPid,
+        userId: userPid,
+        createdAt: c.createdAt ?? c.CreatedAt
+      };
+    };
+
+    const applyCommentsCount = (postId, count) => {
+      if (postId == null || typeof count !== 'number') return;
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.Id === postId) {
+            return { ...p, CommentsCount: count };
+          }
+          if (p.SharedPost?.Id === postId) {
+            return {
+              ...p,
+              SharedPost: { ...p.SharedPost, CommentsCount: count }
+            };
+          }
+          return p;
+        })
+      );
+    };
+
     const onCommentAdded = (data) => {
-      if (!data?.postId || data.comment == null) return;
+      if (!data?.postId) return;
+      const normalized = normalizeHubComment(data.comment);
+      if (normalized) {
+        setCommentsByPost((prev) => {
+          const list = prev[data.postId] || [];
+          if (list.some((item) => (item.id ?? item.Id) === normalized.id)) {
+            return prev;
+          }
+          return { ...prev, [data.postId]: [...list, normalized] };
+        });
+      }
+      if (typeof data.commentsCount === 'number') {
+        applyCommentsCount(data.postId, data.commentsCount);
+      }
+    };
+
+    const onCommentUpdated = (data) => {
+      if (data?.postId == null || data.commentId == null) return;
+      const cid = data.commentId;
+      const nextContent = data.content ?? '';
       setCommentsByPost((prev) => ({
         ...prev,
-        [data.postId]: [...(prev[data.postId] || []), data.comment]
+        [data.postId]: (prev[data.postId] || []).map((c) =>
+          (c.id ?? c.Id) === cid ? { ...c, content: nextContent } : c
+        )
       }));
     };
 
     const onCommentDeleted = (data) => {
       if (!data?.postId) return;
+      const cid = data.commentId;
       setCommentsByPost((prev) => ({
         ...prev,
         [data.postId]: (prev[data.postId] || []).filter(
-          (c) => (c.Id ?? c.id) !== data.commentId
+          (c) => (c.Id ?? c.id) !== cid
         )
       }));
+      if (typeof data.commentsCount === 'number') {
+        applyCommentsCount(data.postId, data.commentsCount);
+      }
     };
 
     (async () => {
@@ -960,6 +1018,7 @@ export default function HomePage() {
       connection.on('PostLiked', onPostLiked);
       connection.on('PostUnliked', onPostUnliked);
       connection.on('CommentAdded', onCommentAdded);
+      connection.on('CommentUpdated', onCommentUpdated);
       connection.on('CommentDeleted', onCommentDeleted);
     })();
 
@@ -969,6 +1028,7 @@ export default function HomePage() {
       conn.off('PostLiked', onPostLiked);
       conn.off('PostUnliked', onPostUnliked);
       conn.off('CommentAdded', onCommentAdded);
+      conn.off('CommentUpdated', onCommentUpdated);
       conn.off('CommentDeleted', onCommentDeleted);
     };
   }, []);

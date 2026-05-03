@@ -114,80 +114,93 @@ export default function CommentSection({ post, comments, onClose, onAddComment, 
   }, [commentList]);
 
   useEffect(() => {
-    let unsubscribeCreated = null;
-    let unsubscribeUpdated = null;
-    let unsubscribeDeleted = null;
+    if (postId == null) return undefined;
 
-    const initSignalR = async () => {
+    let cancelled = false;
+    const unsubscribes = [];
+
+    const setup = async () => {
       const token = localStorage.getItem('token');
-      if (!token || !postId) return;
+      if (!token) return;
 
       try {
         if (!commentHubConnection.isActive()) {
           await commentHubConnection.connect(token);
         }
+        if (cancelled) return;
 
         await commentHubConnection.joinPostGroup(postId);
+        if (cancelled) {
+          await commentHubConnection.leavePostGroup(postId).catch(() => {});
+          return;
+        }
+
+        unsubscribes.push(
+          commentHubConnection.onCommentCreated((comment) => {
+            if (!comment) return;
+            const incomingPostId = comment.PostId ?? comment.postId;
+            const incomingId = comment.Id ?? comment.id;
+
+            if (incomingPostId !== postId) return;
+
+            setCommentList((prev) => {
+              if (prev.some((item) => item.id === incomingId)) {
+                return prev;
+              }
+
+              return [{
+                ...comment,
+                id: incomingId,
+                postId: incomingPostId,
+                content: comment.Content ?? comment.content,
+                userId: comment.UserId ?? comment.userId,
+                userName: comment.UserName ?? comment.userName,
+                createdAt: comment.CreatedAt ?? comment.createdAt
+              }, ...prev];
+            });
+          })
+        );
+
+        unsubscribes.push(
+          commentHubConnection.onCommentUpdated((comment) => {
+            if (!comment) return;
+            const incomingPostId = comment.PostId ?? comment.postId;
+            const incomingId = comment.Id ?? comment.id;
+
+            if (incomingPostId !== postId) return;
+
+            setCommentList((prev) =>
+              prev.map((item) =>
+                item.id === incomingId ? { ...item, content: comment.Content ?? comment.content } : item
+              )
+            );
+          })
+        );
+
+        unsubscribes.push(
+          commentHubConnection.onCommentDeleted((payload) => {
+            if (!payload) return;
+            const incomingPostId = payload.PostId ?? payload.postId;
+            const incomingId = payload.Id ?? payload.id;
+
+            if (incomingPostId !== postId) return;
+
+            setCommentList((prev) => prev.filter((item) => item.id !== incomingId));
+          })
+        );
       } catch (err) {
-        console.error('CommentHub connection error:', err);
+        if (!cancelled) {
+          console.error('CommentHub connection error:', err);
+        }
       }
-
-      unsubscribeCreated = commentHubConnection.onCommentCreated((comment) => {
-        if (!comment) return;
-        const incomingPostId = comment.PostId ?? comment.postId;
-        const incomingId = comment.Id ?? comment.id;
-
-        if (incomingPostId !== postId) return;
-
-        setCommentList((prev) => {
-          if (prev.some((item) => item.id === incomingId)) {
-            return prev;
-          }
-
-          return [{
-            ...comment,
-            id: incomingId,
-            postId: incomingPostId,
-            content: comment.Content ?? comment.content,
-            userId: comment.UserId ?? comment.userId,
-            userName: comment.UserName ?? comment.userName,
-            createdAt: comment.CreatedAt ?? comment.createdAt
-          }, ...prev];
-        });
-      });
-
-      unsubscribeUpdated = commentHubConnection.onCommentUpdated((comment) => {
-        if (!comment) return;
-        const incomingPostId = comment.PostId ?? comment.postId;
-        const incomingId = comment.Id ?? comment.id;
-
-        if (incomingPostId !== postId) return;
-
-        setCommentList((prev) => prev.map((item) =>
-          item.id === incomingId ? { ...item, content: comment.Content ?? comment.content } : item
-        ));
-      });
-
-      unsubscribeDeleted = commentHubConnection.onCommentDeleted((payload) => {
-        if (!payload) return;
-        const incomingPostId = payload.PostId ?? payload.postId;
-        const incomingId = payload.Id ?? payload.id;
-
-        if (incomingPostId !== postId) return;
-
-        setCommentList((prev) => prev.filter((item) => item.id !== incomingId));
-      });
     };
 
-    initSignalR();
+    setup();
 
     return () => {
-      if (postId) {
-        commentHubConnection.leavePostGroup(postId).catch(() => {});
-      }
-      if (unsubscribeCreated) unsubscribeCreated();
-      if (unsubscribeUpdated) unsubscribeUpdated();
-      if (unsubscribeDeleted) unsubscribeDeleted();
+      cancelled = true;
+      unsubscribes.forEach((u) => u?.());
+      commentHubConnection.leavePostGroup(postId).catch(() => {});
     };
   }, [postId]);
 

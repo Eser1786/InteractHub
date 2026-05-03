@@ -4,6 +4,7 @@ import { getPostById, likePost, unlikePost, getCommentsByPost, createComment, up
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
+import { startConnection } from '../utils/postHubConnection';
 import '../styles/PostDetailPage.css';
 
 export default function PostDetailPage() {
@@ -114,6 +115,105 @@ export default function PostDetailPage() {
 
     loadComments();
   }, [activeCommentPostId]);
+
+  useEffect(() => {
+    if (!post?.Id) return undefined;
+
+    const mainId = post.Id;
+    const sharedNestedId = post.SharedPost?.Id;
+
+    let cancelled = false;
+    let conn;
+
+    const caresAbout = (pid) =>
+      pid != null && (pid === mainId || (sharedNestedId != null && pid === sharedNestedId));
+
+    const normalizeHubComment = (c) => {
+      if (!c) return null;
+      const id = c.id ?? c.Id;
+      const postPid = c.postId ?? c.PostId;
+      const userPid = c.userId ?? c.UserId;
+      if (id == null || postPid == null) return null;
+      return {
+        id,
+        content: c.content ?? c.Content ?? '',
+        postId: postPid,
+        userId: userPid,
+        createdAt: c.createdAt ?? c.CreatedAt
+      };
+    };
+
+    const applyCount = (pid, count) => {
+      if (typeof count !== 'number') return;
+      setPost((prev) => {
+        if (!prev) return prev;
+        if (prev.Id === pid) {
+          return { ...prev, CommentsCount: count };
+        }
+        if (prev.SharedPost?.Id === pid) {
+          return {
+            ...prev,
+            SharedPost: { ...prev.SharedPost, CommentsCount: count }
+          };
+        }
+        return prev;
+      });
+    };
+
+    const onCommentAdded = (data) => {
+      if (!data?.postId || !caresAbout(data.postId)) return;
+      const normalized = normalizeHubComment(data.comment);
+      if (normalized) {
+        setCommentsByPost((prev) => {
+          const list = prev[data.postId] || [];
+          if (list.some((item) => (item.id ?? item.Id) === normalized.id)) {
+            return prev;
+          }
+          return { ...prev, [data.postId]: [...list, normalized] };
+        });
+      }
+      applyCount(data.postId, data.commentsCount);
+    };
+
+    const onCommentUpdated = (data) => {
+      if (!data?.postId || !caresAbout(data.postId)) return;
+      const cid = data.commentId;
+      const nextContent = data.content ?? '';
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [data.postId]: (prev[data.postId] || []).map((c) =>
+          (c.id ?? c.Id) === cid ? { ...c, content: nextContent } : c
+        )
+      }));
+    };
+
+    const onCommentDeleted = (data) => {
+      if (!data?.postId || !caresAbout(data.postId)) return;
+      const cid = data.commentId;
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [data.postId]: (prev[data.postId] || []).filter((c) => (c.id ?? c.Id) !== cid)
+      }));
+      applyCount(data.postId, data.commentsCount);
+    };
+
+    (async () => {
+      const connection = await startConnection();
+      if (cancelled || !connection) return;
+      conn = connection;
+      connection.on('CommentAdded', onCommentAdded);
+      connection.on('CommentUpdated', onCommentUpdated);
+      connection.on('CommentDeleted', onCommentDeleted);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (!conn) return;
+      conn.off('CommentAdded', onCommentAdded);
+      conn.off('CommentUpdated', onCommentUpdated);
+      conn.off('CommentDeleted', onCommentDeleted);
+    };
+  }, [post]);
 
   const handleAddComment = async (commentPostId, content) => {
     try {

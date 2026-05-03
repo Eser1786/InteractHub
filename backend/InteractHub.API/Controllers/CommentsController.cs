@@ -21,17 +21,20 @@ public class CommentsController : ControllerBase
     private readonly IPostService _postService;
     private readonly INotificationService _notificationService;
     private readonly IHubContext<CommentHub> _commentHubContext;
+    private readonly IHubContext<PostHub> _postHubContext;
 
     public CommentsController(
         ICommentService commentService,
         IPostService postService,
         INotificationService notificationService,
-        IHubContext<CommentHub> commentHubContext)
+        IHubContext<CommentHub> commentHubContext,
+        IHubContext<PostHub> postHubContext)
     {
         _commentService = commentService;
         _postService = postService;
         _notificationService = notificationService;
         _commentHubContext = commentHubContext;
+        _postHubContext = postHubContext;
     }
 
     [HttpGet]
@@ -137,6 +140,23 @@ public class CommentsController : ControllerBase
             // Ignore real-time delivery failures.
         }
 
+        try
+        {
+            var refreshed = await _postService.GetByIdAsync(created.PostId);
+            var commentsCount = refreshed?.Comments?.Count ?? 0;
+            await _postHubContext.Clients.Group("feed")
+                .SendAsync("CommentAdded", new
+                {
+                    postId = created.PostId,
+                    commentsCount,
+                    comment = commentDto
+                });
+        }
+        catch
+        {
+            // Ignore real-time delivery failures.
+        }
+
         return this.CreatedResponse(commentDto, "Comment created successfully");
     }
 
@@ -160,17 +180,34 @@ public class CommentsController : ControllerBase
 
         await _commentService.UpdateAsync(comment);
 
+        var updatedDto = new CommentResponseDto
+        {
+            Id = comment.Id,
+            Content = comment.Content,
+            PostId = comment.PostId,
+            UserId = comment.UserId,
+            CreatedAt = comment.CreatedAt
+        };
+
         try
         {
             await _commentHubContext.Clients
                 .Group(GetPostGroupName(comment.PostId))
-                .SendAsync("ReceiveCommentUpdated", new CommentResponseDto
+                .SendAsync("ReceiveCommentUpdated", updatedDto);
+        }
+        catch
+        {
+            // Ignore real-time delivery failures.
+        }
+
+        try
+        {
+            await _postHubContext.Clients.Group("feed")
+                .SendAsync("CommentUpdated", new
                 {
-                    Id = comment.Id,
-                    Content = comment.Content,
-                    PostId = comment.PostId,
-                    UserId = comment.UserId,
-                    CreatedAt = comment.CreatedAt
+                    postId = comment.PostId,
+                    commentId = comment.Id,
+                    content = comment.Content
                 });
         }
         catch
@@ -205,6 +242,23 @@ public class CommentsController : ControllerBase
             await _commentHubContext.Clients
                 .Group(GetPostGroupName(comment.PostId))
                 .SendAsync("ReceiveCommentDeleted", new { Id = id, PostId = comment.PostId });
+        }
+        catch
+        {
+            // Ignore real-time delivery failures.
+        }
+
+        try
+        {
+            var refreshed = await _postService.GetByIdAsync(comment.PostId);
+            var commentsCount = refreshed?.Comments?.Count ?? 0;
+            await _postHubContext.Clients.Group("feed")
+                .SendAsync("CommentDeleted", new
+                {
+                    postId = comment.PostId,
+                    commentId = id,
+                    commentsCount
+                });
         }
         catch
         {

@@ -118,15 +118,13 @@ public class LikesController : ControllerBase
                     userId = created.UserId
                 });
         }
-        else
-        {
-            await _postHub.Clients.Group("feed")
-                .SendAsync("PostLiked", new {
-                    postId = created.PostId,
-                    likesCount = updatedPost?.Likes.Count ?? 0,
-                    userId = created.UserId
-                });
-        }
+
+        await _postHub.Clients.Group("feed")
+            .SendAsync("PostLiked", new {
+                postId = created.PostId,
+                likesCount = updatedPost?.Likes.Count ?? 0,
+                userId = created.UserId
+            });
 
         return this.CreatedResponse(likeDto, "Like created successfully");
     }
@@ -165,15 +163,13 @@ public class LikesController : ControllerBase
                         userId = like.UserId
                     });
             }
-            else
-            {
-                await _postHub.Clients.Group("feed")
-                    .SendAsync("PostUnliked", new {
-                        postId = like.PostId,
-                        likesCount = updatedPost?.Likes.Count ?? 0,
-                        userId = like.UserId
-                    });
-            }
+
+            await _postHub.Clients.Group("feed")
+                .SendAsync("PostUnliked", new {
+                    postId = like.PostId,
+                    likesCount = updatedPost?.Likes.Count ?? 0,
+                    userId = like.UserId
+                });
         }
 
         return this.SuccessResponse(message: "Like deleted successfully", statusCode: 200);
@@ -216,15 +212,13 @@ public class LikesController : ControllerBase
                         userId = userId
                     });
             }
-            else
-            {
-                await _postHub.Clients.Group("feed")
-                    .SendAsync("PostUnliked", new {
-                        postId = postId,
-                        likesCount = updatedPost?.Likes.Count ?? 0,
-                        userId = userId
-                    });
-            }
+
+            await _postHub.Clients.Group("feed")
+                .SendAsync("PostUnliked", new {
+                    postId = postId,
+                    likesCount = updatedPost?.Likes.Count ?? 0,
+                    userId = userId
+                });
         }
 
         return this.SuccessResponse(message: "Like deleted successfully", statusCode: 200);

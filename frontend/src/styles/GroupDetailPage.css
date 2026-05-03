@@ -680,3 +680,70 @@
   object-fit: cover;
   max-height: 220px;
 }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 600px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.modal-close-btn {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #666;
+}
+
+.share-modal-body {
+  padding: 20px;
+}
+
+.share-modal-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.share-modal-actions .btn-post,
+.share-modal-actions .btn-secondary {
+  flex: 1;
+}
+
+.btn-secondary {
+  border: none;
+  border-radius: 8px;
+  background: #d9d9d9;
+  color: #333;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 24px;
+}

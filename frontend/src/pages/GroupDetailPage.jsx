@@ -24,6 +24,10 @@ export default function GroupDetailPage() {
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const [postSearchQuery, setPostSearchQuery] = useState('');
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePostId, setSharePostId] = useState(null);
+  const [shareCaption, setShareCaption] = useState('');
+  const [sharePending, setSharePending] = useState(false);
   const navigate = useNavigate();
   const { groups, leaveGroup, joinGroup } = useGroups();
 
@@ -214,13 +218,37 @@ export default function GroupDetailPage() {
       if (!postId || !actorUserId) return;
 
       setPosts((prev) => prev.map((post) => {
-        if (post.id !== postId) return post;
-        const likedBy = post.likedBy || [];
-        return {
-          ...post,
-          likesCount: payload.likesCount ?? payload.LikesCount ?? post.likesCount,
-          likedBy: likedBy.includes(actorUserId) ? likedBy : [...likedBy, actorUserId]
-        };
+        if (post.id === postId) {
+          const likedBy = post.likedBy || [];
+          return {
+            ...post,
+            likesCount: payload.likesCount ?? payload.LikesCount ?? post.likesCount,
+            likedBy: likedBy.includes(actorUserId) ? likedBy : [...likedBy, actorUserId]
+          };
+        }
+        if ((post.sharedPost?.id || post.SharedPost?.Id) === postId) {
+          if (post.sharedPost) {
+            const nestedLikedBy = post.sharedPost.likedBy || [];
+            return {
+              ...post,
+              sharedPost: {
+                ...post.sharedPost,
+                likesCount: payload.likesCount ?? payload.LikesCount ?? post.sharedPost.likesCount,
+                likedBy: nestedLikedBy.includes(actorUserId) ? nestedLikedBy : [...nestedLikedBy, actorUserId]
+              }
+            };
+          }
+          const nestedLikedBy = post.SharedPost?.LikedByUserIds || [];
+          return {
+            ...post,
+            SharedPost: {
+              ...post.SharedPost,
+              LikesCount: payload.likesCount ?? payload.LikesCount ?? post.SharedPost?.LikesCount,
+              LikedByUserIds: nestedLikedBy.includes(actorUserId) ? nestedLikedBy : [...nestedLikedBy, actorUserId]
+            }
+          };
+        }
+        return post;
       }));
     };
 
@@ -234,12 +262,34 @@ export default function GroupDetailPage() {
       if (!postId || !actorUserId) return;
 
       setPosts((prev) => prev.map((post) => {
-        if (post.id !== postId) return post;
-        return {
-          ...post,
-          likesCount: payload.likesCount ?? payload.LikesCount ?? post.likesCount,
-          likedBy: (post.likedBy || []).filter((id) => id !== actorUserId)
-        };
+        if (post.id === postId) {
+          return {
+            ...post,
+            likesCount: payload.likesCount ?? payload.LikesCount ?? post.likesCount,
+            likedBy: (post.likedBy || []).filter((id) => id !== actorUserId)
+          };
+        }
+        if ((post.sharedPost?.id || post.SharedPost?.Id) === postId) {
+          if (post.sharedPost) {
+            return {
+              ...post,
+              sharedPost: {
+                ...post.sharedPost,
+                likesCount: payload.likesCount ?? payload.LikesCount ?? post.sharedPost.likesCount,
+                likedBy: (post.sharedPost.likedBy || []).filter((id) => id !== actorUserId)
+              }
+            };
+          }
+          return {
+            ...post,
+            SharedPost: {
+              ...post.SharedPost,
+              LikesCount: payload.likesCount ?? payload.LikesCount ?? post.SharedPost?.LikesCount,
+              LikedByUserIds: (post.SharedPost?.LikedByUserIds || []).filter((id) => id !== actorUserId)
+            }
+          };
+        }
+        return post;
       }));
     };
 
@@ -301,7 +351,7 @@ export default function GroupDetailPage() {
         newLikesCount += 1;
       }
 
-      const newPosts = posts.map(p => {
+      setPosts((prev) => prev.map((p) => {
         const normalizedId = p.id || p.Id;
         if (normalizedId === postId) {
           const nextLikedBy = isLiked
@@ -313,25 +363,60 @@ export default function GroupDetailPage() {
             likesCount: newLikesCount
           };
         }
+        if ((p.sharedPost?.id || p.SharedPost?.Id) === postId) {
+          const nested = p.sharedPost || p.SharedPost;
+          const nestedLikedBy = nested?.likedBy || nested?.LikedByUserIds || [];
+          const nextNestedLikedBy = isLiked
+            ? nestedLikedBy.filter((id) => id !== currentUser.Id)
+            : [...nestedLikedBy, currentUser.Id];
+          if (p.sharedPost) {
+            return {
+              ...p,
+              sharedPost: {
+                ...p.sharedPost,
+                likedBy: nextNestedLikedBy,
+                likesCount: newLikesCount
+              }
+            };
+          }
+          return {
+            ...p,
+            SharedPost: {
+              ...p.SharedPost,
+              LikedByUserIds: nextNestedLikedBy,
+              LikesCount: newLikesCount
+            }
+          };
+        }
         return p;
-      });
-      setPosts(newPosts);
+      }));
       console.log('Like/Unlike successful');
     } catch (err) {
       console.error('Error liking post:', err);
     }
   };
 
-  const handleShare = async (post) => {
-    const caption = window.prompt('Nhập chú thích cho bài chia sẻ (có thể để trống):', '') ?? '';
+  const handleShare = (post) => {
+    setSharePostId(post.id);
+    setShareCaption('');
+    setShowShareModal(true);
+  };
+
+  const handleSubmitShare = async () => {
+    if (!sharePostId) return;
     try {
-      await sharePost(post.id, { content: caption });
+      setSharePending(true);
+      await sharePost(sharePostId, { content: shareCaption || '' });
       window.dispatchEvent(new Event('postShared'));
       setError('');
-      alert('Đã chia sẻ bài viết ra trang chủ');
+      setShowShareModal(false);
+      setSharePostId(null);
+      setShareCaption('');
     } catch (err) {
       console.error('Error sharing group post:', err);
       setError('Không thể chia sẻ bài viết lúc này');
+    } finally {
+      setSharePending(false);
     }
   };
 
@@ -778,6 +863,50 @@ export default function GroupDetailPage() {
           </section>
         </main>
       </div>
+
+      {showShareModal && (
+        <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Chia sẻ bài viết</h2>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowShareModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="share-modal-body">
+              <textarea
+                value={shareCaption}
+                onChange={(e) => setShareCaption(e.target.value)}
+                placeholder="Thêm chú thích cho bài viết của bạn..."
+                className="post-textarea"
+                rows="4"
+              />
+
+              <div className="share-modal-actions">
+                <button
+                  type="button"
+                  className="btn-post"
+                  onClick={handleSubmitShare}
+                  disabled={sharePending}
+                >
+                  {sharePending ? 'Đang chia sẻ...' : 'Chia sẻ'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowShareModal(false)}
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

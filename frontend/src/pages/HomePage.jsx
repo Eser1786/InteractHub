@@ -978,18 +978,36 @@ export default function HomePage() {
     const onPostLiked = (data) => {
       if (!data?.postId) return;
       setPosts((prev) =>
-        prev.map((p) =>
-          p.Id === data.postId ? { ...p, LikesCount: data.likesCount } : p
-        )
+        prev.map((p) => {
+          if (p.Id === data.postId) {
+            return { ...p, LikesCount: data.likesCount };
+          }
+          if (p.SharedPost?.Id === data.postId) {
+            return {
+              ...p,
+              SharedPost: { ...p.SharedPost, LikesCount: data.likesCount }
+            };
+          }
+          return p;
+        })
       );
     };
 
     const onPostUnliked = (data) => {
       if (!data?.postId) return;
       setPosts((prev) =>
-        prev.map((p) =>
-          p.Id === data.postId ? { ...p, LikesCount: data.likesCount } : p
-        )
+        prev.map((p) => {
+          if (p.Id === data.postId) {
+            return { ...p, LikesCount: data.likesCount };
+          }
+          if (p.SharedPost?.Id === data.postId) {
+            return {
+              ...p,
+              SharedPost: { ...p.SharedPost, LikesCount: data.likesCount }
+            };
+          }
+          return p;
+        })
       );
     };
 

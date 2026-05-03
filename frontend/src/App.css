@@ -151,6 +151,52 @@ body {
   color: #333;
 }
 
+/* Password Requirements */
+.password-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 8px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.requirement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  height: 20px;
+  min-height: 20px;
+  line-height: 1;
+}
+
+.requirement.error {
+  color: #dc3545;
+}
+
+.requirement.error i {
+  color: #dc3545;
+  font-size: 12px;
+  width: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.requirement.success {
+  color: #28a745;
+}
+
+.requirement.success i {
+  color: #28a745;
+  font-size: 12px;
+  width: 14px;
+  display: flex;
+  justify-content: center;
+}
+
 /* Form Rows (for Register page) */
 .form-row {
   display: grid;

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getLikedPostsForUser, getUserData, updateUserData } from '../utils/userDataManager';
 import { useGroups } from '../contexts/GroupsContext';
 import { getPostsByGroup, createPost, deletePost, getCommentsByPost, createComment, updateComment, deleteComment } from '../api';
+import { joinGroupChannel, leaveGroupChannel } from '../utils/postHubConnection';
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import '../styles/GroupDetailPage.css';
@@ -23,6 +24,7 @@ export default function GroupDetailPage() {
   const [error, setError] = useState('');
   const [activePostMenuId, setActivePostMenuId] = useState(null);
   const [showGroupMenu, setShowGroupMenu] = useState(false);
+  const [postSearchQuery, setPostSearchQuery] = useState('');
   const navigate = useNavigate();
   const { groups, leaveGroup, joinGroup } = useGroups();
 
@@ -39,6 +41,15 @@ export default function GroupDetailPage() {
     likesCount: post.likesCount ?? post.LikesCount ?? 0,
     commentsCount: post.commentsCount ?? post.CommentsCount ?? 0,
     likedBy: post.likedBy || post.LikedByUserIds || []
+  });
+
+  const filteredPosts = posts.filter((post) => {
+    const query = postSearchQuery.trim().toLowerCase();
+    if (!query) return true;
+
+    const content = (post.content || '').toLowerCase();
+    const author = (post.username || '').toLowerCase();
+    return content.includes(query) || author.includes(query);
   });
 
   useEffect(() => {
@@ -98,6 +109,119 @@ export default function GroupDetailPage() {
 
     loadComments();
   }, [activeCommentPostId]);
+
+  useEffect(() => {
+    if (!group?.id) {
+      return;
+    }
+
+    joinGroupChannel(group.id).catch((err) => {
+      console.error('Cannot join group realtime channel:', err);
+    });
+
+    const handleGroupPostCreated = (event) => {
+      const payload = event.detail || {};
+      const payloadGroupId = payload.groupId ?? payload.GroupId;
+      if (payloadGroupId !== group.id) return;
+
+      const normalized = normalizePost(payload);
+      setPosts((prev) => {
+        const exists = prev.some((p) => p.id === normalized.id);
+        if (exists) {
+          return prev.map((p) => (p.id === normalized.id ? { ...p, ...normalized } : p));
+        }
+        return [{ ...normalized, likedBy: normalized.likedBy || [] }, ...prev];
+      });
+    };
+
+    const handleGroupPostDeleted = (event) => {
+      const payload = event.detail || {};
+      const payloadGroupId = payload.groupId ?? payload.GroupId;
+      if (payloadGroupId !== group.id) return;
+
+      const postId = payload.postId ?? payload.PostId;
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      setCommentsByPost((prev) => {
+        if (!(postId in prev)) return prev;
+        const next = { ...prev };
+        delete next[postId];
+        return next;
+      });
+    };
+
+    const handleGroupCommentAdded = (event) => {
+      const payload = event.detail || {};
+      const payloadGroupId = payload.groupId ?? payload.GroupId;
+      if (payloadGroupId !== group.id) return;
+
+      const postId = payload.postId ?? payload.PostId;
+      const comment = payload.comment ?? payload.Comment;
+      if (!postId || !comment) return;
+
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: mergeCommentIntoList(prev[postId] || [], comment, { prepend: true })
+      }));
+      setPosts((prev) => prev.map((post) =>
+        post.id === postId
+          ? { ...post, commentsCount: payload.commentsCount ?? payload.CommentsCount ?? (post.commentsCount ?? 0) + 1 }
+          : post
+      ));
+    };
+
+    const handleGroupCommentUpdated = (event) => {
+      const payload = event.detail || {};
+      const payloadGroupId = payload.groupId ?? payload.GroupId;
+      if (payloadGroupId !== group.id) return;
+
+      const postId = payload.postId ?? payload.PostId;
+      const comment = payload.comment ?? payload.Comment;
+      if (!postId || !comment) return;
+      const commentId = comment.id ?? comment.Id;
+
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).map((item) =>
+          item.id === commentId ? { ...item, ...comment } : item
+        )
+      }));
+    };
+
+    const handleGroupCommentDeleted = (event) => {
+      const payload = event.detail || {};
+      const payloadGroupId = payload.groupId ?? payload.GroupId;
+      if (payloadGroupId !== group.id) return;
+
+      const postId = payload.postId ?? payload.PostId;
+      const commentId = payload.commentId ?? payload.CommentId;
+      if (!postId || !commentId) return;
+
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).filter((comment) => comment.id !== commentId)
+      }));
+      setPosts((prev) => prev.map((post) =>
+        post.id === postId
+          ? { ...post, commentsCount: payload.commentsCount ?? payload.CommentsCount ?? Math.max(0, (post.commentsCount ?? 1) - 1) }
+          : post
+      ));
+    };
+
+    window.addEventListener('signalr:group-post-created', handleGroupPostCreated);
+    window.addEventListener('signalr:group-post-deleted', handleGroupPostDeleted);
+    window.addEventListener('signalr:group-comment-added', handleGroupCommentAdded);
+    window.addEventListener('signalr:group-comment-updated', handleGroupCommentUpdated);
+    window.addEventListener('signalr:group-comment-deleted', handleGroupCommentDeleted);
+
+    return () => {
+      leaveGroupChannel(group.id).catch(() => {});
+      window.removeEventListener('signalr:group-post-created', handleGroupPostCreated);
+      window.removeEventListener('signalr:group-post-deleted', handleGroupPostDeleted);
+      window.removeEventListener('signalr:group-comment-added', handleGroupCommentAdded);
+      window.removeEventListener('signalr:group-comment-updated', handleGroupCommentUpdated);
+      window.removeEventListener('signalr:group-comment-deleted', handleGroupCommentDeleted);
+    };
+  }, [group?.id]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -210,26 +334,6 @@ export default function GroupDetailPage() {
     navigate(`/user-profile/${userId}`);
   };
 
-  useEffect(() => {
-    if (!activeCommentPostId) {
-      return;
-    }
-
-    const loadComments = async () => {
-      try {
-        const comments = await getCommentsByPost(activeCommentPostId);
-        setCommentsByPost((prev) => ({
-          ...prev,
-          [activeCommentPostId]: comments
-        }));
-      } catch (err) {
-        console.error('Error loading comments for post:', activeCommentPostId, err);
-      }
-    };
-
-    loadComments();
-  }, [activeCommentPostId]);
-
   const handleCreatePost = async (e) => {
     e.preventDefault();
     if (!newPostContent.trim() && !postImagePreview) {
@@ -249,14 +353,12 @@ export default function GroupDetailPage() {
       });
 
       if (createdPost) {
-        // Add the created post to the list and normalize keys for this page
         const normalized = normalizePost(createdPost);
-        const newPost = {
-          ...normalized,
-          likedBy: [],
-          commentsCount: 0
-        };
-        setPosts([newPost, ...posts]);
+        setPosts((prev) => {
+          const exists = prev.some((p) => p.id === normalized.id);
+          if (exists) return prev;
+          return [{ ...normalized, likedBy: normalized.likedBy || [], commentsCount: normalized.commentsCount ?? 0 }, ...prev];
+        });
       }
 
       setNewPostContent('');
@@ -528,10 +630,21 @@ export default function GroupDetailPage() {
           ) : null}
 
           <section className="posts-feed">
-            {posts.length === 0 ? (
+            <div className="search-wrapper" style={{ marginBottom: '12px' }}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm bài viết trong nhóm"
+                className="search-input"
+                value={postSearchQuery}
+                onChange={(e) => setPostSearchQuery(e.target.value)}
+              />
+              <span className="search-icon"><i className="fa-solid fa-magnifying-glass"></i></span>
+            </div>
+
+            {filteredPosts.length === 0 ? (
               <p className="no-posts">Chưa có bài viết nào trong nhóm</p>
             ) : (
-              posts.map((post) => (
+              filteredPosts.map((post) => (
                 <div key={post.id} className="post-card">
                   <div className="post-header">
                     <div className="post-user-info post-user-clickable" onClick={() => handleOpenUserProfile(post.userId || post.UserId)}>

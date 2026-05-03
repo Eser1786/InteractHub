@@ -11,4 +11,9 @@ public class PostHub : Hub
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"group_{groupId}");
     }
+
+    public async Task LeaveGroup(int groupId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"group_{groupId}");
+    }
 }

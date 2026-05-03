@@ -206,8 +206,16 @@ public class PostsController : ControllerBase
 
         var postDto = MapToPostResponseDto(createdWithUser);
 
-        await _postHub.Clients.Group("feed")
-            .SendAsync("PostCreated", postDto);
+        if (createdWithUser.GroupId.HasValue)
+        {
+            await _postHub.Clients.Group($"group_{createdWithUser.GroupId.Value}")
+                .SendAsync("GroupPostCreated", postDto);
+        }
+        else
+        {
+            await _postHub.Clients.Group("feed")
+                .SendAsync("PostCreated", postDto);
+        }
 
         if (createdWithUser.GroupId == null && createdWithUser.SharedPostId == null)
         {
@@ -253,8 +261,16 @@ public class PostsController : ControllerBase
 
         var postDto = MapToPostResponseDto(createdWithData);
 
-        await _postHub.Clients.Group("feed")
-            .SendAsync("PostCreated", postDto);
+        if (createdWithData.GroupId.HasValue)
+        {
+            await _postHub.Clients.Group($"group_{createdWithData.GroupId.Value}")
+                .SendAsync("GroupPostCreated", postDto);
+        }
+        else
+        {
+            await _postHub.Clients.Group("feed")
+                .SendAsync("PostCreated", postDto);
+        }
 
         await _notificationService.NotifyOriginalAuthorPostSharedAsync(originalPost.UserId, userId, createdWithData.Id);
 
@@ -279,6 +295,16 @@ public class PostsController : ControllerBase
         var result = await _postService.DeleteAsync(id);
         if (!result)
             return this.NotFoundResponse("Post not found");
+
+        if (post.GroupId.HasValue)
+        {
+            await _postHub.Clients.Group($"group_{post.GroupId.Value}")
+                .SendAsync("GroupPostDeleted", new
+                {
+                    postId = id,
+                    groupId = post.GroupId.Value
+                });
+        }
 
         return this.SuccessResponse(message: "Post deleted successfully", statusCode: 200);
     }

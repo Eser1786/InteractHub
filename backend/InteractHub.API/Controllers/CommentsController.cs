@@ -151,6 +151,18 @@ public class CommentsController : ControllerBase
                     commentsCount,
                     comment = commentDto
                 });
+
+            if (post?.GroupId != null)
+            {
+                await _postHubContext.Clients.Group($"group_{post.GroupId.Value}")
+                    .SendAsync("GroupCommentAdded", new
+                    {
+                        groupId = post.GroupId.Value,
+                        postId = created.PostId,
+                        commentsCount,
+                        comment = commentDto
+                    });
+            }
         }
         catch
         {
@@ -202,6 +214,7 @@ public class CommentsController : ControllerBase
 
         try
         {
+            var post = await _postService.GetByIdAsync(comment.PostId);
             await _postHubContext.Clients.Group("feed")
                 .SendAsync("CommentUpdated", new
                 {
@@ -209,6 +222,17 @@ public class CommentsController : ControllerBase
                     commentId = comment.Id,
                     content = comment.Content
                 });
+
+            if (post?.GroupId != null)
+            {
+                await _postHubContext.Clients.Group($"group_{post.GroupId.Value}")
+                    .SendAsync("GroupCommentUpdated", new
+                    {
+                        groupId = post.GroupId.Value,
+                        postId = comment.PostId,
+                        comment = updatedDto
+                    });
+            }
         }
         catch
         {
@@ -259,6 +283,18 @@ public class CommentsController : ControllerBase
                     commentId = id,
                     commentsCount
                 });
+
+            if (refreshed?.GroupId != null)
+            {
+                await _postHubContext.Clients.Group($"group_{refreshed.GroupId.Value}")
+                    .SendAsync("GroupCommentDeleted", new
+                    {
+                        groupId = refreshed.GroupId.Value,
+                        postId = comment.PostId,
+                        commentId = id,
+                        commentsCount
+                    });
+            }
         }
         catch
         {

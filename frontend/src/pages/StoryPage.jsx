@@ -8,6 +8,13 @@ import { normalizeStoryPayload, isStoryActive } from '../utils/storyRealtime';
 export default function StoryPage() {
   const [story, setStory] = useState(null);
   const [storiesList, setStoriesList] = useState([]);
+  const sortStoriesByNewest = (list = []) => {
+    return [...list].sort(
+      (a, b) =>
+        new Date(b?.CreatedAt ?? b?.createdAt ?? 0) -
+        new Date(a?.CreatedAt ?? a?.createdAt ?? 0)
+    );
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [messageInput, setMessageInput] = useState('');
@@ -35,10 +42,7 @@ export default function StoryPage() {
         let activeStories = (storiesData || []).filter((s) => {
           return !s.ExpireAt || new Date(s.ExpireAt) > new Date();
         });
-        activeStories = [...activeStories].sort(
-          (a, b) =>
-            new Date(b.CreatedAt ?? b.createdAt) - new Date(a.CreatedAt ?? a.createdAt)
-        );
+        activeStories = sortStoriesByNewest(activeStories);
         setStoriesList(activeStories);
 
         // URL /story/user/:userId (không có storyId): mặc định xem tin mới nhất — trừ khi vừa xóa tin (state.skipAutoStory).
@@ -94,7 +98,7 @@ export default function StoryPage() {
           const activeStories = (data || []).filter((s) => {
             return !s.ExpireAt || new Date(s.ExpireAt) > new Date();
           });
-          setStoriesList(activeStories);
+          setStoriesList(sortStoriesByNewest(activeStories));
         })
         .catch(() => {});
     };
@@ -108,7 +112,7 @@ export default function StoryPage() {
         setStoriesList((prev) => {
           const sid = s.Id ?? s.id;
           if (prev.some((x) => (x.Id ?? x.id) === sid)) return prev;
-          return [s, ...prev];
+          return sortStoriesByNewest([s, ...prev]);
         });
         return;
       }
@@ -225,7 +229,7 @@ export default function StoryPage() {
         throw new Error('Tạo tin thất bại');
       }
 
-      setStoriesList((prev) => [createdStory, ...prev]);
+      setStoriesList((prev) => sortStoriesByNewest([createdStory, ...prev]));
       setStory(createdStory);
       setNewStoryContent('');
       setNewStoryFile(null);

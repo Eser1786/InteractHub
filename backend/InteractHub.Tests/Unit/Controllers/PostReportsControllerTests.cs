@@ -14,7 +14,7 @@ public class PostReportsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnAllReports_WhenReportsExist()
     {
-        // given
+        // Arrange
         var reports = new List<PostReport>
         {
             new PostReport { Id = 1, UserId = "u1", PostId = 1, Reason = "spam", CreatedAt = DateTime.UtcNow },
@@ -25,10 +25,10 @@ public class PostReportsControllerTests
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // when
+        // Act
         var result = await controller.GetAll();
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -39,17 +39,17 @@ public class PostReportsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenNoReportsExist()
     {
-        // given
+        // Arrange
         var reports = new List<PostReport>();
         var serviceMock = new Mock<IPostReportService>();
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(reports);
         var controller = new PostReportsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // when
+        // Act
         var result = await controller.GetAll();
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);

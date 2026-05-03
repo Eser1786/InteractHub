@@ -7,33 +7,61 @@ namespace InteractHub.Tests.Unit.Services;
 public class CommentServiceTests
 {
     [Fact]
-    // Kiểm tra tính năng tạo bình luận: Sau khi tạo thì DB phải lưu lại thành công và sinh Id mới.
-    public async Task CreateAsync_ShouldPersistComment()
+    public async Task CreateAsync_ShouldPersistComment_WithValidData()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new CommentService(context);
+        var comment = new Comment 
+        { 
+            Content = "test comment", 
+            PostId = 1, 
+            UserId = "u1",
+            CreatedAt = DateTime.UtcNow
+        };
 
-        // when
-        var created = await service.CreateAsync(new Comment { Content = "c1", PostId = 1, UserId = "u1" });
+        // Act
+        var created = await service.CreateAsync(comment);
 
-        // then
+        // Assert
         Assert.NotEqual(0, created.Id);
         Assert.Single(context.Comments);
+        Assert.Equal("test comment", created.Content);
     }
 
     [Fact]
-    // Kiểm tra tính năng xoá bình luận: Trả về False nếu bình luận không tồn tại.
-    public async Task DeleteAsync_ShouldReturnFalse_WhenCommentMissing()
+    public async Task DeleteAsync_ShouldReturnFalse_WhenCommentNotFound()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new CommentService(context);
 
-        // when
+        // Act
         var deleted = await service.DeleteAsync(999);
 
-        // then
+        // Assert
         Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldRemoveComment_WhenCommentExists()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new CommentService(context);
+        var comment = await service.CreateAsync(new Comment 
+        { 
+            Content = "test comment", 
+            PostId = 1, 
+            UserId = "u1",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        // Act
+        var deleted = await service.DeleteAsync(comment.Id);
+
+        // Assert
+        Assert.True(deleted);
+        Assert.Empty(context.Comments);
     }
 }

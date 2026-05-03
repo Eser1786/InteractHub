@@ -17,7 +17,7 @@ public class AdminControllerTests
     [Fact]
     public async Task GetAllUsersWithRoles_ShouldReturnAllUsersWithRoles_WhenUsersExist()
     {
-        // given
+        // Arrange
         var users = new List<User>
         {
             new User { Id = "u1", UserName = "user1", FullName = "User One", Email = "user1@mail.com" },
@@ -32,10 +32,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // when
+        // Act
         var result = await controller.GetAllUsersWithRoles();
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -45,7 +45,7 @@ public class AdminControllerTests
     [Fact]
     public async Task GetAllUsersWithRoles_ShouldReturnEmpty_WhenNoUsersExist()
     {
-        // given
+        // Arrange
         var users = new List<User>();
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.Users).Returns(users.AsQueryable());
@@ -54,10 +54,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // when
+        // Act
         var result = await controller.GetAllUsersWithRoles();
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -67,7 +67,7 @@ public class AdminControllerTests
     [Fact]
     public async Task AssignRoleToUser_ShouldReturnSuccess_WhenInputIsValid()
     {
-        // given
+        // Arrange
         var user = new User { Id = "u1", UserName = "test-user", FullName = "Test User", Email = "test@mail.com" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("u1")).ReturnsAsync(user);
@@ -82,10 +82,10 @@ public class AdminControllerTests
         var controller = new AdminController(userManagerMock.Object, roleManagerMock.Object);
         ControllerTestHelper.SetUser(controller, "admin");
 
-        // when
+        // Act
         var result = await controller.AssignRoleToUser(new AssignRoleDto { UserId = "u1", Role = RoleConstants.User });
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
     }
@@ -94,7 +94,7 @@ public class AdminControllerTests
     [Fact]
     public async Task AssignRoleToUser_ShouldReturnNotFound_WhenUserMissing()
     {
-        // given
+        // Arrange
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByIdAsync("missing")).ReturnsAsync((User?)null);
         var roleManagerMock = IdentityMockFactory.CreateRoleManagerMock();

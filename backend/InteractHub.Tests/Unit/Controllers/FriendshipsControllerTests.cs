@@ -11,41 +11,58 @@ namespace InteractHub.Tests.Unit.Controllers;
 
 public class FriendshipsControllerTests
 {
+    private FriendshipsController CreateController(
+        Mock<IFriendshipService> friendshipMock,
+        Mock<IMessageService> messageMock,
+        Mock<IUserPresenceService> presenceMock)
+    {
+        return new FriendshipsController(
+            friendshipMock.Object,
+            messageMock.Object,
+            presenceMock.Object);
+    }
+
     // GetById tests - trả về friendship khi tồn tại
     [Fact]
     public async Task GetById_ShouldReturnFriendship_WhenFriendshipExists()
     {
-        // given
+        // Arrange
         var friendship = new Friendship { Id = 1, UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted, CreatedAt = DateTime.UtcNow };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(friendship);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(friendship);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetById(1);
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetByIdAsync(1), Times.Once);
+        friendshipMock.Verify(s => s.GetByIdAsync(1), Times.Once);
     }
 
     // GetById tests - trả về 404 khi friendship không tồn tại
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenFriendshipMissing()
     {
-        // given
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Friendship?)null);
-        var controller = new FriendshipsController(serviceMock.Object);
+        // Arrange
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Friendship?)null);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetById(999);
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }

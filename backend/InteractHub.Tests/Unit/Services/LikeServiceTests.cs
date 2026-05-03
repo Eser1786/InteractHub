@@ -7,35 +7,49 @@ namespace InteractHub.Tests.Unit.Services;
 public class LikeServiceTests
 {
     [Fact]
-    // Kiểm tra đếm lượt thả tim (Like): Tổng số đếm phải chuẩn xác và tách biệt cho từng bài đăng.
-    public async Task GetLikeCountAsync_ShouldReturnCorrectCountForPost()
+    public async Task GetLikeCountAsync_ShouldReturnCorrectCount_ForPost()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new LikeService(context);
         await service.CreateAsync(new Like { PostId = 10, UserId = "u1" });
         await service.CreateAsync(new Like { PostId = 10, UserId = "u2" });
         await service.CreateAsync(new Like { PostId = 11, UserId = "u3" });
 
-        // when
+        // Act
         var count = await service.GetLikeCountAsync(10);
 
-        // then
+        // Assert
         Assert.Equal(2, count);
     }
 
     [Fact]
-    // Kiểm tra hủy thả tim (Unlike): Nếu thao tác trên một bản ghi không tồn tại thì báo lỗi (Trả False).
-    public async Task DeleteAsync_ShouldReturnFalse_WhenLikeMissing()
+    public async Task DeleteAsync_ShouldReturnFalse_WhenLikeNotFound()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new LikeService(context);
 
-        // when
+        // Act
         var deleted = await service.DeleteAsync(99);
 
-        // then
+        // Assert
         Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldCreateLike_WithValidData()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new LikeService(context);
+        var like = new Like { PostId = 1, UserId = "u1" };
+
+        // Act
+        var created = await service.CreateAsync(like);
+
+        // Assert
+        Assert.NotNull(created);
+        Assert.Single(context.Likes);
     }
 }

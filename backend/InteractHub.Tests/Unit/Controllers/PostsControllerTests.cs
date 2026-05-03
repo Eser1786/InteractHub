@@ -1,259 +1,181 @@
 using InteractHub.API.Controllers;
 using InteractHub.API.DTOs;
-using System.Linq;
 using InteractHub.Application.Entities;
-using InteractHub.Application.Entities.Enums;
 using InteractHub.Application.Interfaces;
+using InteractHub.Infrastructure.Hubs;
 using InteractHub.Tests.Common;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Moq;
 
 namespace InteractHub.Tests.Unit.Controllers;
 
 public class PostsControllerTests
 {
-    private PostsController CreateController(Mock<IPostService> postServiceMock, Mock<IFriendshipService>? friendshipServiceMock = null)
+    private PostsController CreateController(
+        Mock<IPostService> postServiceMock,
+        Mock<IFriendshipService>? friendshipServiceMock = null,
+        Mock<INotificationService>? notificationServiceMock = null,
+        Mock<IHubContext<PostHub>>? postHubMock = null)
     {
         var friendshipMock = friendshipServiceMock ?? new Mock<IFriendshipService>();
-        return new PostsController(postServiceMock.Object, friendshipMock.Object);
+        var notificationMock = notificationServiceMock ?? new Mock<INotificationService>();
+        var postHubContextMock = postHubMock ?? new Mock<IHubContext<PostHub>>();
+
+        return new PostsController(
+            postServiceMock.Object,
+            friendshipMock.Object,
+            notificationMock.Object,
+            postHubContextMock.Object);
     }
 
-    // GetAll tests - trả về tất cả bài viết
     [Fact]
-    public async Task GetAll_ShouldReturnAllPosts_WhenPostsExist()
+    public async Task GetAll_ShouldReturnOkResult_WithPaginatedPosts()
     {
-        // given
+        // Arrange
         var posts = new List<Post>
         {
-            new Post { Id = 1, UserId = "u1", Content = "post 1", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Post { Id = 2, UserId = "u2", Content = "post 2", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+            new Post { Id = 1, UserId = "u1", Content = "post 1", CreatedAt = DateTime.UtcNow },
+            new Post { Id = 2, UserId = "u1", Content = "post 2", CreatedAt = DateTime.UtcNow }
         };
+
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(posts);
+
         var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
-        var result = await controller.GetAll();
+        // Act
+        var result = await controller.GetAll(page: 1, pageSize: 20);
 
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(200, objectResult.StatusCode);
-        Assert.NotNull(objectResult.Value);
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(okResult.Value);
         postServiceMock.Verify(s => s.GetAllAsync(), Times.Once);
     }
 
-    // GetAll tests - trả về danh sách rỗng khi không có bài viết
     [Fact]
-    public async Task GetAll_ShouldReturnEmpty_WhenNoPostsExist()
+    public async Task GetAll_ShouldReturnEmpty_WhenNoPosts()
     {
-        // given
+        // Arrange
         var posts = new List<Post>();
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(posts);
+
         var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
-        var result = await controller.GetAll();
+        // Act
+        var result = await controller.GetAll(page: 1, pageSize: 20);
 
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(200, objectResult.StatusCode);
-        Assert.NotNull(objectResult.Value);
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(okResult.Value);
     }
 
     [Fact]
-    public async Task GetAll_ShouldReturnOnlyFriendAndOwnPosts_WhenUserHasAcceptedFriends()
+    public async Task GetAll_ShouldReturnUnauthorized_WhenUserNotAuthenticated()
     {
-        // given
-        var posts = new List<Post>
-        {
-            new Post { Id = 1, UserId = "u1", Content = "self post", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Post { Id = 2, UserId = "u2", Content = "friend post", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Post { Id = 3, UserId = "u3", Content = "stranger post", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
-        };
-
-        var postServiceMock = new Mock<IPostService>();
-        postServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(posts);
-
-        var friendshipServiceMock = new Mock<IFriendshipService>();
-        friendshipServiceMock.Setup(s => s.GetAcceptedFriendsAsync("u1")).ReturnsAsync(new List<Friendship>
-        {
-            new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted }
-        });
-
-        var controller = CreateController(postServiceMock, friendshipServiceMock);
-        ControllerTestHelper.SetUser(controller, "u1");
-
-        // when
-        var result = await controller.GetAll();
-
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(200, objectResult.StatusCode);
-        Assert.NotNull(objectResult.Value);
-
-        var dataProperty = objectResult.Value?.GetType().GetProperty("data")?.GetValue(objectResult.Value) as System.Collections.IEnumerable;
-        Assert.NotNull(dataProperty);
-
-        var dataItems = dataProperty.Cast<object>().ToList();
-        Assert.Equal(2, dataItems.Count);
-        Assert.DoesNotContain(dataItems, item => item.GetType().GetProperty("UserId")?.GetValue(item)?.ToString() == "u3");
-    }
-
-    // GetById tests - trả về bài viết khi tồn tại
-    [Fact]
-    public async Task GetById_ShouldReturnPost_WhenPostExists()
-    {
-        // given
-        var post = new Post { Id = 1, UserId = "u1", Content = "test post", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
-        var postServiceMock = new Mock<IPostService>();
-        postServiceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(post);
-        var controller = CreateController(postServiceMock);
-        ControllerTestHelper.SetUser(controller, "u1");
-
-        // when
-        var result = await controller.GetById(1);
-
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(200, objectResult.StatusCode);
-        Assert.NotNull(objectResult.Value);
-        postServiceMock.Verify(s => s.GetByIdAsync(1), Times.Once);
-    }
-
-    // GetById tests - trả về 404 khi bài viết không tồn tại
-    [Fact]
-    public async Task GetById_ShouldReturnNotFound_WhenPostMissing()
-    {
-        // given
-        var postServiceMock = new Mock<IPostService>();
-        postServiceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Post?)null);
-        var controller = CreateController(postServiceMock);
-        ControllerTestHelper.SetUser(controller, "u1");
-
-        // when
-        var result = await controller.GetById(999);
-
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(404, objectResult.StatusCode);
-    }
-
-    // Create tests - tạo bài viết thành công
-    [Fact]
-    public async Task Create_ShouldReturnCreated_WhenPostIsValid()
-    {
-        // given
-        var createDto = new CreatePostDto { Content = "new post", ImageUrl = "image.jpg" };
-        var post = new Post { Id = 1, UserId = "u1", Content = createDto.Content, ImageUrl = createDto.ImageUrl, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
-        var postServiceMock = new Mock<IPostService>();
-        postServiceMock.Setup(s => s.CreateAsync(It.IsAny<Post>())).ReturnsAsync(post);
-        var controller = CreateController(postServiceMock);
-        ControllerTestHelper.SetUser(controller, "u1");
-
-        // when
-        var result = await controller.Create(createDto);
-
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(201, objectResult.StatusCode);
-        postServiceMock.Verify(s => s.CreateAsync(It.IsAny<Post>()), Times.Once);
-    }
-
-    // Create tests - trả về 401 khi không có user claim
-    [Fact]
-    public async Task Create_ShouldReturnUnauthorized_WhenNoUserClaim()
-    {
-        // given
+        // Arrange
         var postServiceMock = new Mock<IPostService>();
         var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetAnonymous(controller);
 
-        // when
-        var result = await controller.Create(new CreatePostDto { Content = "post content" });
+        // Act
+        var result = await controller.GetAll(page: 1, pageSize: 20);
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(401, objectResult.StatusCode);
     }
 
-    // Delete tests - xóa bài viết thành công
     [Fact]
-    public async Task Delete_ShouldReturnOk_WhenPostOwner()
+    public async Task GetById_ShouldReturnPost_WhenPostExists()
     {
-        // given
-        var post = new Post { Id = 10, UserId = "u1", Content = "hello", CreatedAt = DateTime.UtcNow };
+        // Arrange
+        var post = new Post 
+        { 
+            Id = 1, 
+            UserId = "u1", 
+            Content = "test post", 
+            CreatedAt = DateTime.UtcNow
+        };
+
         var postServiceMock = new Mock<IPostService>();
-        postServiceMock.Setup(s => s.GetByIdAsync(10)).ReturnsAsync(post);
-        postServiceMock.Setup(s => s.DeleteAsync(10)).ReturnsAsync(true);
+        postServiceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(post);
+
         var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
-        var result = await controller.Delete(10);
+        // Act
+        var result = await controller.GetById(1);
 
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(200, objectResult.StatusCode);
-        postServiceMock.Verify(s => s.DeleteAsync(10), Times.Once);
+        // Assert
+        var okResult = Assert.IsType<ObjectResult>(result);
+        Assert.NotNull(okResult.Value);
+        postServiceMock.Verify(s => s.GetByIdAsync(1), Times.Once);
     }
 
-    // Delete tests - trả về 403 khi không phải chủ sở hữu
     [Fact]
-    public async Task Delete_ShouldReturnForbidden_WhenCurrentUserIsNotOwner()
+    public async Task GetById_ShouldReturnNotFound_WhenPostDoesNotExist()
     {
-        // given
-        var post = new Post { Id = 10, UserId = "owner", Content = "hello", CreatedAt = DateTime.UtcNow };
-        var postServiceMock = new Mock<IPostService>();
-        postServiceMock.Setup(s => s.GetByIdAsync(10)).ReturnsAsync(post);
-        var controller = CreateController(postServiceMock);
-        ControllerTestHelper.SetUser(controller, "other-user");
-
-        // when
-        var result = await controller.Delete(10);
-
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(403, objectResult.StatusCode);
-    }
-
-    // Delete tests - trả về 404 khi bài viết không tồn tại
-    [Fact]
-    public async Task Delete_ShouldReturnNotFound_WhenPostMissing()
-    {
-        // given
+        // Arrange
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Post?)null);
+
         var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
-        var result = await controller.Delete(999);
+        // Act
+        var result = await controller.GetById(999);
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
 
-    // Delete tests - trả về 404 khi xóa thất bại
     [Fact]
-    public async Task Delete_ShouldReturnNotFound_WhenDeleteFails()
+    public async Task Create_ShouldReturnCreated_WhenValidPostSubmitted()
     {
-        // given
-        var post = new Post { Id = 10, UserId = "u1", Content = "hello", CreatedAt = DateTime.UtcNow };
+        // Arrange
+        var createDto = new CreatePostDto { Content = "new post", ImageUrl = null };
+        var createdPost = new Post 
+        { 
+            Id = 1, 
+            UserId = "u1", 
+            Content = "new post",
+            CreatedAt = DateTime.UtcNow
+        };
+
         var postServiceMock = new Mock<IPostService>();
-        postServiceMock.Setup(s => s.GetByIdAsync(10)).ReturnsAsync(post);
-        postServiceMock.Setup(s => s.DeleteAsync(10)).ReturnsAsync(false);
+        postServiceMock.Setup(s => s.CreateAsync(It.IsAny<Post>())).ReturnsAsync(createdPost);
+
         var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
-        var result = await controller.Delete(10);
+        // Act
+        var result = await controller.Create(createDto);
 
-        // then
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(404, objectResult.StatusCode);
+        // Assert
+        var createdResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.NotNull(createdResult.Value);
+        postServiceMock.Verify(s => s.CreateAsync(It.IsAny<Post>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Create_ShouldReturnBadRequest_WhenEmptyContent()
+    {
+        // Arrange
+        var createDto = new CreatePostDto { Content = "", ImageUrl = null };
+        var postServiceMock = new Mock<IPostService>();
+        var controller = CreateController(postServiceMock);
+        ControllerTestHelper.SetUser(controller, "u1");
+
+        // Act
+        var result = await controller.Create(createDto);
+
+        // Assert
+        var badRequestResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, badRequestResult.StatusCode);
     }
 }

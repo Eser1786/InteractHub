@@ -7,82 +7,123 @@ namespace InteractHub.Tests.Unit.Services;
 public class PostServiceTests
 {
     [Fact]
-    // Kiểm tra chức năng Tạo bài viết: Xác nhận việc lưu xuống Database thành công và được cấp Id.
-    public async Task CreateAsync_ShouldPersistPost()
+    public async Task CreateAsync_ShouldPersistPost_WithValidData()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new PostService(context);
-        var post = new Post { Content = "first post", UserId = "u1" };
+        var post = new Post 
+        { 
+            Content = "first post", 
+            UserId = "u1",
+            CreatedAt = DateTime.UtcNow
+        };
 
-        // when
+        // Act
         var created = await service.CreateAsync(post);
 
-        // then
+        // Assert
         Assert.NotEqual(0, created.Id);
         Assert.Single(context.Posts);
+        Assert.Equal("first post", created.Content);
     }
 
     [Fact]
-    // Kiểm tra tìm kiếm bài viết theo Id: Phải trả về giá trị Null nếu bài không tồn tại.
-    public async Task GetByIdAsync_ShouldReturnNull_WhenMissing()
+    public async Task GetByIdAsync_ShouldReturnNull_WhenPostNotFound()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new PostService(context);
 
-        // when
+        // Act
         var result = await service.GetByIdAsync(12345);
 
-        // then
+        // Assert
         Assert.Null(result);
     }
 
     [Fact]
-    // Kiểm tra lấy danh sách bài viết: Trả về chính xác tổng số lượng bài đã đăng.
-    public async Task GetAllAsync_ShouldReturnAllPosts()
+    public async Task GetByIdAsync_ShouldReturnPost_WhenPostExists()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new PostService(context);
-        await service.CreateAsync(new Post { Content = "p1", UserId = "u1" });
-        await service.CreateAsync(new Post { Content = "p2", UserId = "u2" });
+        var createdPost = await service.CreateAsync(new Post 
+        { 
+            Content = "test post", 
+            UserId = "u1",
+            CreatedAt = DateTime.UtcNow
+        });
 
-        // when
+        // Act
+        var result = await service.GetByIdAsync(createdPost.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("test post", result.Content);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ShouldReturnAllPosts_WithCorrectCount()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new PostService(context);
+        await service.CreateAsync(new Post { Content = "p1", UserId = "u1", CreatedAt = DateTime.UtcNow });
+        await service.CreateAsync(new Post { Content = "p2", UserId = "u2", CreatedAt = DateTime.UtcNow });
+
+        // Act
         var posts = await service.GetAllAsync();
 
-        // then
+        // Assert
         Assert.Equal(2, posts.Count);
     }
 
     [Fact]
-    // Kiểm tra xoá bài viết: Trả về False và đảm bảo an toàn thao tác nếu bài viết gốc không có.
-    public async Task DeleteAsync_ShouldReturnFalse_WhenPostDoesNotExist()
+    public async Task GetAllAsync_ShouldReturnEmptyList_WhenNoPosts()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new PostService(context);
 
-        // when
+        // Act
+        var posts = await service.GetAllAsync();
+
+        // Assert
+        Assert.Empty(posts);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldReturnFalse_WhenPostDoesNotExist()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new PostService(context);
+
+        // Act
         var result = await service.DeleteAsync(55);
 
-        // then
+        // Assert
         Assert.False(result);
     }
 
     [Fact]
-    // Kiểm tra thao tác xoá bài: Trả về True và dọn dẹp sạch sẽ khỏi Database nếu thành công.
     public async Task DeleteAsync_ShouldRemovePost_WhenPostExists()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new PostService(context);
-        var post = await service.CreateAsync(new Post { Content = "delete me", UserId = "u1" });
+        var post = await service.CreateAsync(new Post 
+        { 
+            Content = "delete me", 
+            UserId = "u1",
+            CreatedAt = DateTime.UtcNow
+        });
 
-        // when
+        // Act
         var deleted = await service.DeleteAsync(post.Id);
 
-        // then
+        // Assert
         Assert.True(deleted);
         Assert.Empty(context.Posts);
     }

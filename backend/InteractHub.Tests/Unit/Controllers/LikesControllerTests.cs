@@ -2,49 +2,72 @@ using InteractHub.API.Controllers;
 using InteractHub.API.DTOs;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Interfaces;
+using InteractHub.Infrastructure.Hubs;
 using InteractHub.Tests.Common;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Moq;
 
 namespace InteractHub.Tests.Unit.Controllers;
 
 public class LikesControllerTests
 {
+    private LikesController CreateController(
+        Mock<ILikeService> likeMock,
+        Mock<IPostService> postMock,
+        Mock<INotificationService> notificationMock,
+        Mock<IHubContext<PostHub>> postHubMock)
+    {
+        return new LikesController(
+            likeMock.Object,
+            postMock.Object,
+            notificationMock.Object,
+            postHubMock.Object);
+    }
+
     // GetById tests - trả về like khi tồn tại
     [Fact]
     public async Task GetById_ShouldReturnLike_WhenLikeExists()
     {
-        // given
+        // Arrange
         var like = new Like { Id = 1, PostId = 1, UserId = "u1" };
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(like);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(like);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetById(1);
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetByIdAsync(1), Times.Once);
+        likeMock.Verify(s => s.GetByIdAsync(1), Times.Once);
     }
 
     // GetById tests - trả về 404 khi like không tồn tại
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenLikeMissing()
     {
-        // given
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Like?)null);
-        var controller = new LikesController(serviceMock.Object);
+        // Arrange
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Like?)null);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetById(999);
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }

@@ -7,35 +7,56 @@ namespace InteractHub.Tests.Unit.Services;
 public class StoryServiceTests
 {
     [Fact]
-    // Kiểm tra lấy chuỗi Tin 24h: Chỉ được phép trả về những Tin của đúng User đang yêu cầu, bỏ tin người lạ.
-    public async Task GetByUserIdAsync_ShouldReturnOnlyStoriesOfRequestedUser()
+    public async Task GetByUserIdAsync_ShouldReturnOnlyUserStories()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new StoryService(context);
-        await service.CreateAsync(new Story { UserId = "u1", Content = "s1", ExpireAt = DateTime.UtcNow.AddDays(1) });
-        await service.CreateAsync(new Story { UserId = "u1", Content = "s2", ExpireAt = DateTime.UtcNow.AddDays(1) });
-        await service.CreateAsync(new Story { UserId = "u2", Content = "s3", ExpireAt = DateTime.UtcNow.AddDays(1) });
+        var expireDate = DateTime.UtcNow.AddDays(1);
+        await service.CreateAsync(new Story { UserId = "u1", Content = "s1", ExpireAt = expireDate, CreatedAt = DateTime.UtcNow });
+        await service.CreateAsync(new Story { UserId = "u1", Content = "s2", ExpireAt = expireDate, CreatedAt = DateTime.UtcNow });
+        await service.CreateAsync(new Story { UserId = "u2", Content = "s3", ExpireAt = expireDate, CreatedAt = DateTime.UtcNow });
 
-        // when
+        // Act
         var stories = await service.GetByUserIdAsync("u1");
 
-        // then
+        // Assert
         Assert.Equal(2, stories.Count);
     }
 
     [Fact]
-    // Kiểm tra hệ thống xoá Tin: Phải cản lỗi ngoại lệ và chỉ trả về False nếu Id ảo.
-    public async Task DeleteAsync_ShouldReturnFalse_WhenStoryMissing()
+    public async Task DeleteAsync_ShouldReturnFalse_WhenStoryNotFound()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new StoryService(context);
 
-        // when
+        // Act
         var deleted = await service.DeleteAsync(123);
 
-        // then
+        // Assert
         Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldCreateStory_WithValidData()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new StoryService(context);
+        var story = new Story 
+        { 
+            UserId = "u1", 
+            Content = "test story", 
+            ExpireAt = DateTime.UtcNow.AddDays(1),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        // Act
+        var created = await service.CreateAsync(story);
+
+        // Assert
+        Assert.NotNull(created);
+        Assert.NotEqual(0, created.Id);
     }
 }

@@ -2,54 +2,81 @@ using InteractHub.API.Controllers;
 using InteractHub.API.DTOs;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Interfaces;
+using InteractHub.Infrastructure.Hubs;
 using InteractHub.Tests.Common;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Moq;
 
 namespace InteractHub.Tests.Unit.Controllers;
 
 public class CommentsControllerTests
 {
+    private CommentsController CreateController(
+        Mock<ICommentService> commentMock,
+        Mock<IPostService> postMock,
+        Mock<INotificationService> notificationMock,
+        Mock<IHubContext<CommentHub>> commentHubMock,
+        Mock<IHubContext<PostHub>> postHubMock)
+    {
+        return new CommentsController(
+            commentMock.Object,
+            postMock.Object,
+            notificationMock.Object,
+            commentHubMock.Object,
+            postHubMock.Object);
+    }
+
     // GetAll tests - trả về tất cả comments
     [Fact]
     public async Task GetAll_ShouldReturnAllComments_WhenCommentsExist()
     {
-        // given
+        // Arrange
         var comments = new List<Comment>
         {
             new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "comment 1", CreatedAt = DateTime.UtcNow },
             new Comment { Id = 2, UserId = "u2", PostId = 1, Content = "comment 2", CreatedAt = DateTime.UtcNow }
         };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(comments);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetAllAsync()).ReturnsAsync(comments);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetAll();
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetAllAsync(), Times.Once);
+        commentMock.Verify(s => s.GetAllAsync(), Times.Once);
     }
 
     // GetAll tests - trả về danh sách rỗng khi không có comments
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenNoCommentsExist()
     {
-        // given
+        // Arrange
         var comments = new List<Comment>();
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(comments);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetAllAsync()).ReturnsAsync(comments);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetAll();
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);

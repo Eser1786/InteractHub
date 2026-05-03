@@ -15,42 +15,51 @@ public class UsersControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenUserMissing()
     {
+        // Arrange
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetByIdAsync("missing")).ReturnsAsync((User?)null);
         var controller = new UsersController(userServiceMock.Object);
 
+        // Act
         var result = await controller.GetById("missing");
 
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }
+
     // GetById tests trường hợp người dùng tồn tại
     [Fact]
     public async Task GetById_ShouldReturnUser_WhenUserExists()
     {
+        // Arrange
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetByIdAsync("u1"))
         .ReturnsAsync(new User { Id = "u1"});
         var controller = new UsersController(userServiceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
+        // Act
         var result = await controller.GetById("u1");
 
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
     }
-
 
     // Update tests trường hợp người dùng cố gắng cập nhật thông tin của người khác
     [Fact]
     public async Task Update_ShouldReturnForbidden_WhenUserIdDoesNotMatchCurrentUser()
     {
+        // Arrange
         var userServiceMock = new Mock<IUserService>();
         var controller = new UsersController(userServiceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
+        // Act
         var result = await controller.Update("u2", new UpdateUserDto { FullName = "Changed" });
 
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
     }

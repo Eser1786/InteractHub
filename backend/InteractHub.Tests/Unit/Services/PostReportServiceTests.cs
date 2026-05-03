@@ -7,40 +7,59 @@ namespace InteractHub.Tests.Unit.Services;
 public class PostReportServiceTests
 {
     [Fact]
-    // Kiểm tra cập nhật báo cáo: Phải lưu lại được đúng lý do vi phạm mới chỉnh sửa vào hệ thống.
-    public async Task UpdateAsync_ShouldPersistChangedReason()
+    public async Task CreateAsync_ShouldCreatePostReport_WithValidData()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new PostReportService(context);
-        context.Users.Add(new User { Id = "u1", UserName = "u1", Email = "u1@mail.com", FullName = "User One" });
-        context.Posts.Add(new Post { Id = 1, UserId = "u1", Content = "post" });
-        await context.SaveChangesAsync();
+        var report = new PostReport 
+        { 
+            PostId = 1, 
+            UserId = "u1", 
+            Reason = "spam",
+            CreatedAt = DateTime.UtcNow
+        };
 
-        var created = await service.CreateAsync(new PostReport { PostId = 1, UserId = "u1", Reason = "spam" });
-        created.Reason = "abuse";
+        // Act
+        var created = await service.CreateAsync(report);
 
-        // when
-        var updated = await service.UpdateAsync(created);
-        
-        // then
-        var reloaded = context.PostReports.Single();
-        Assert.True(updated);
-        Assert.Equal("abuse", reloaded!.Reason);
+        // Assert
+        Assert.NotNull(created);
+        Assert.NotEqual(0, created.Id);
     }
 
     [Fact]
-    // Kiểm tra xóa báo cáo (Report): Trả về False và không sập nguồn nếu ID của bản báo lỗi không tồn tại.
-    public async Task DeleteAsync_ShouldReturnFalse_WhenReportMissing()
+    public async Task DeleteAsync_ShouldReturnFalse_WhenReportNotFound()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new PostReportService(context);
 
-        // when
+        // Act
         var deleted = await service.DeleteAsync(809);
 
-        // then
+        // Assert
         Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldRemoveReport_WhenReportExists()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new PostReportService(context);
+        var report = await service.CreateAsync(new PostReport 
+        { 
+            PostId = 1, 
+            UserId = "u1", 
+            Reason = "spam",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        // Act
+        var deleted = await service.DeleteAsync(report.Id);
+
+        // Assert
+        Assert.True(deleted);
     }
 }

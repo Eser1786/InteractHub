@@ -7,34 +7,106 @@ namespace InteractHub.Tests.Unit.Services;
 public class UserServiceTests
 {
     [Fact]
-    // Kiểm tra tra cứu User: Nhập đúng Email thì phải tìm lại được profile nguyên vẹn của tài khoản.
-    public async Task GetByEmailAsync_ShouldReturnUser_WhenExists()
+    public async Task GetByEmailAsync_ShouldReturnUser_WhenUserExists()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new UserService(context);
-        await service.CreateAsync(new User { Id = "u1", UserName = "u1", Email = "u1@mail.com", FullName = "User One" });
+        var user = new User 
+        { 
+            Id = "u1", 
+            UserName = "u1", 
+            Email = "u1@mail.com", 
+            FullName = "User One",
+            NormalizedEmail = "U1@MAIL.COM",
+            NormalizedUserName = "U1"
+        };
+        await service.CreateAsync(user);
 
-        // when
-        var user = await service.GetByEmailAsync("u1@mail.com");
+        // Act
+        var result = await service.GetByEmailAsync("u1@mail.com");
 
-        // then
-        Assert.NotNull(user);
-        Assert.Equal("u1", user!.Id);
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("u1", result!.Id);
+        Assert.Equal("User One", result.FullName);
     }
 
     [Fact]
-    // Kiểm tra xoá User an toàn: Truyền dữ liệu rỗng (Null) thì hàm phải chặn đứng (Trả False) ngay lập tức.
-    public async Task DeleteAsync_ShouldReturnFalse_WhenUserIsNull()
+    public async Task GetByEmailAsync_ShouldReturnNull_WhenUserNotFound()
     {
-        // given
+        // Arrange
         using var context = TestDbContextFactory.Create();
         var service = new UserService(context);
 
-        // when
+        // Act
+        var result = await service.GetByEmailAsync("nonexistent@mail.com");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldCreateUser_WithValidData()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new UserService(context);
+        var user = new User 
+        { 
+            Id = "u1", 
+            UserName = "testuser", 
+            Email = "test@mail.com", 
+            FullName = "Test User",
+            NormalizedEmail = "TEST@MAIL.COM",
+            NormalizedUserName = "TESTUSER"
+        };
+
+        // Act
+        var created = await service.CreateAsync(user);
+
+        // Assert
+        Assert.NotNull(created);
+        Assert.Equal("u1", created.Id);
+        Assert.Single(context.Users);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldReturnFalse_WhenUserIsNull()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new UserService(context);
+
+        // Act
         var deleted = await service.DeleteAsync(null!);
 
-        // then
+        // Assert
         Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldRemoveUser_WhenUserExists()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var service = new UserService(context);
+        var user = new User 
+        { 
+            Id = "u1", 
+            UserName = "testuser", 
+            Email = "test@mail.com", 
+            FullName = "Test User",
+            NormalizedEmail = "TEST@MAIL.COM",
+            NormalizedUserName = "TESTUSER"
+        };
+        await service.CreateAsync(user);
+
+        // Act
+        var deleted = await service.DeleteAsync(user);
+
+        // Assert
+        Assert.True(deleted);
+        Assert.Empty(context.Users);
     }
 }

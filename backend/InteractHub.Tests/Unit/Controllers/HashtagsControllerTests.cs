@@ -14,7 +14,7 @@ public class HashtagsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnAllHashtags_WhenHashtagsExist()
     {
-        // given
+        // Arrange
         var hashtags = new List<Hashtag>
         {
             new Hashtag { Id = 1, Name = "#csharp" },
@@ -25,10 +25,10 @@ public class HashtagsControllerTests
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetAll();
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -39,17 +39,17 @@ public class HashtagsControllerTests
     [Fact]
     public async Task GetAll_ShouldReturnEmpty_WhenNoHashtagsExist()
     {
-        // given
+        // Arrange
         var hashtags = new List<Hashtag>();
         var serviceMock = new Mock<IHashtagService>();
         serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(hashtags);
         var controller = new HashtagsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetAll();
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);

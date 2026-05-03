@@ -15,17 +15,17 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotification_WhenNotificationExists()
     {
-        // given
+        // Arrange
         var notification = new Notification { Id = 1, UserId = "u1", Content = "New like", Type = NotificationType.Like, IsRead = false, CreatedAt = DateTime.UtcNow };
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(notification);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetById(1);
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
@@ -36,16 +36,16 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenNotificationMissing()
     {
-        // given
+        // Arrange
         var serviceMock = new Mock<INotificationService>();
         serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Notification?)null);
         var controller = new NotificationsController(serviceMock.Object);
         ControllerTestHelper.SetUser(controller, "u1");
 
-        // when
+        // Act
         var result = await controller.GetById(999);
 
-        // then
+        // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, objectResult.StatusCode);
     }

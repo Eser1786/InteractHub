@@ -25,6 +25,27 @@ public class MessageService : IMessageService
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Message>> GetMessagesBetweenUsersAsync(string userId1, string userId2, int page = 1, int pageSize = 50)
+    {
+        return await _context.Messages
+            .Where(m => (m.SenderId == userId1 && m.ReceiverId == userId2) ||
+                        (m.SenderId == userId2 && m.ReceiverId == userId1))
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .OrderBy(m => m.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<int> GetConversationMessagesCountAsync(string userId1, string userId2)
+    {
+        return await _context.Messages
+            .Where(m => (m.SenderId == userId1 && m.ReceiverId == userId2) ||
+                        (m.SenderId == userId2 && m.ReceiverId == userId1))
+            .CountAsync();
+    }
+
     public async Task<Message> SendMessageAsync(string senderId, string receiverId, string content)
     {
         var message = new Message
@@ -96,6 +117,13 @@ public class MessageService : IMessageService
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
+    }
+
+    public async Task<int> GetGroupMessagesCountAsync(int groupId)
+    {
+        return await _context.Messages
+            .Where(m => m.GroupId == groupId)
+            .CountAsync();
     }
 
     public async Task<Message?> GetLatestMessageAsync(string userId1, string userId2)

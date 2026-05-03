@@ -34,8 +34,55 @@ public class MessagesController : ControllerBase
         _messageHubContext = messageHubContext;
     }
 
+    [HttpGet("conversation/{userId}")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetConversationMessages(string userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return Unauthorized();
+
+        if (currentUserId == userId)
+            return BadRequest("Cannot view conversation with yourself");
+
+        // Ensure valid pagination
+        page = Math.Max(1, page);
+        pageSize = Math.Max(1, Math.Min(pageSize, 100));
+
+        // Get total count of messages
+        var totalCount = await _messageService.GetConversationMessagesCountAsync(currentUserId, userId);
+
+        // Get paginated messages (already sorted ASC in service)
+        var messages = await _messageService.GetMessagesBetweenUsersAsync(currentUserId, userId, page, pageSize);
+
+        var messageDtos = messages.Select(m => new MessageResponseDto
+        {
+            Id = m.Id,
+            Content = m.Content,
+            CreatedAt = m.CreatedAt,
+            SenderId = m.SenderId,
+            SenderName = m.Sender?.UserName ?? "Unknown",
+            ReceiverId = m.ReceiverId,
+            ReceiverName = m.Receiver?.UserName ?? "Unknown",
+            IsRead = m.IsRead
+        }).ToList();
+
+        return this.SuccessResponse(new
+        {
+            messages = messageDtos,
+            pagination = new
+            {
+                page,
+                pageSize,
+                totalCount,
+                totalPages = (totalCount + pageSize - 1) / pageSize,
+                hasMore = page * pageSize < totalCount
+            }
+        });
+    }
+
     [HttpGet("group/{groupId}")]
-    [ProducesResponseType(typeof(ApiResponse<List<MessageResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetGroupMessages(int groupId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -54,25 +101,13 @@ public class MessagesController : ControllerBase
         page = Math.Max(1, page);
         pageSize = Math.Max(1, Math.Min(pageSize, 100)); // Cap pageSize at 100
 
+        // Get total count of messages
+        var totalCount = await _messageService.GetGroupMessagesCountAsync(groupId);
+
+        // Get paginated messages (already sorted ASC in service)
         var messages = await _messageService.GetGroupMessagesAsync(groupId, page, pageSize);
 
-        // Sort by CreatedAt ASCENDING (oldest first for display top to bottom)
-        var sortedMessagesDesc = messages
-            .OrderByDescending(m => m.CreatedAt)
-            .ToList();
-
-        // Apply pagination
-        var totalCount = sortedMessagesDesc.Count;
-        var pagedMessagesDesc = sortedMessagesDesc
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        var pagedMessages = pagedMessagesDesc
-            .OrderBy(m => m.CreatedAt)
-            .ToList();
-
-        var messageDtos = pagedMessages.Select(m => new MessageResponseDto
+        var messageDtos = messages.Select(m => new MessageResponseDto
         {
             Id = m.Id,
             Content = m.Content,
@@ -84,11 +119,10 @@ public class MessagesController : ControllerBase
             IsRead = m.IsRead
         }).ToList();
 
-        // Add pagination metadata to response
-        var response = new 
+        return this.SuccessResponse(new
         {
-            data = messageDtos,
-            pagination = new 
+            messages = messageDtos,
+            pagination = new
             {
                 page,
                 pageSize,
@@ -96,9 +130,7 @@ public class MessagesController : ControllerBase
                 totalPages = (totalCount + pageSize - 1) / pageSize,
                 hasMore = page * pageSize < totalCount
             }
-        };
-
-        return Ok(new { success = true, message = "Group messages retrieved successfully", data = messageDtos, pagination = response.pagination });
+        });
     }
 
     [HttpPost]

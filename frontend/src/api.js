@@ -421,9 +421,12 @@ export async function getConversationMessages(friendId, page = 1, pageSize = 50)
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const data = await handleResponse(response);
+  
+  // Handle the new response structure: { Data: { messages: [...], pagination: {...} } }
+  const responseData = data?.Data || {};
   return {
-    messages: data?.Data || data?.data || [],
-    pagination: data?.Pagination || data?.pagination || { page, pageSize, totalCount: 0, totalPages: 0, hasMore: false }
+    messages: responseData?.messages || [],
+    pagination: responseData?.pagination || { page, pageSize, totalCount: 0, totalPages: 0, hasMore: false }
   };
 }
 
@@ -433,9 +436,12 @@ export async function getGroupMessages(groupId, page = 1, pageSize = 50) {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const data = await handleResponse(response);
+  
+  // Handle the new response structure: { Data: { messages: [...], pagination: {...} } }
+  const responseData = data?.Data || {};
   return {
-    messages: data?.Data || data?.data || [],
-    pagination: data?.Pagination || data?.pagination || { page, pageSize, totalCount: 0, totalPages: 0, hasMore: false }
+    messages: responseData?.messages || [],
+    pagination: responseData?.pagination || { page, pageSize, totalCount: 0, totalPages: 0, hasMore: false }
   };
 }
 

@@ -25,6 +25,20 @@ module.exports = {
         rewrite: (path) => path,
         logLevel: 'debug'
       },
+      '/postHub': {
+        target: 'http://localhost:5142',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path,
+        logLevel: 'debug'
+      },
+      '/commentHub': {
+        target: 'http://localhost:5142',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path,
+        logLevel: 'debug'
+      },
     },
   },
 };

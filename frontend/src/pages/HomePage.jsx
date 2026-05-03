@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
 import '../styles/HomePage.css';
+import { startConnection } from '../utils/postHubConnection';
 
 export default function HomePage() {
   const [posts, setPosts] = useState([]);
@@ -226,13 +227,18 @@ export default function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('[HomePage] 🏠 Starting to load data...');
         const userDataJson = localStorage.getItem('user');
         if (!userDataJson) {
+          console.error('[HomePage] ❌ No user data in localStorage');
           throw new Error('User data not found. Please login again.');
         }
 
         const userData = JSON.parse(userDataJson);
+        console.log('[HomePage] ✅ User data loaded:', userData);
         setCurrentUser(userData);
+        
+        console.log('[HomePage] 📢 Loading notifications...');
         await loadNotifications(userData);
         
         // Debug logging for avatar
@@ -243,6 +249,7 @@ export default function HomePage() {
           profilePictureUrl: userData.profilePictureUrl
         });
 
+        console.log('[HomePage] 📝 Loading posts, friends, requests, stories...');
         const loadPostsPromise = loadPosts(userData);
         const [friendsData, requestsData, storyData] = await Promise.all([
           getAcceptedFriends(userData.Id, 1, 10),
@@ -262,6 +269,8 @@ export default function HomePage() {
 
         await loadFriendAndRequesterInfo(friendsData || [], requestsData || []);
         await loadPostsPromise;
+        
+        console.log('[HomePage] ✅ All data loaded successfully');
       } catch (err) {
         console.error('Error loading data:', err);
         setError(err.message || 'Failed to load data');
@@ -411,7 +420,7 @@ export default function HomePage() {
     };
 
     loadInfoForFriends();
-  }, [friends, pendingRequests, friendsInfo, requestersInfo]);
+  }, [friends, pendingRequests]);
 
   useEffect(() => {
     if (selectedNav !== 'add-friends') return;
@@ -904,6 +913,66 @@ export default function HomePage() {
     ? posts.filter(post => hasHashtag(post.Content || '', hashtagSearch))
     : posts;
 
+  useEffect(() => {
+    let cancelled = false;
+    let conn;
+
+    const onPostLiked = (data) => {
+      if (!data?.postId) return;
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.Id === data.postId ? { ...p, LikesCount: data.likesCount } : p
+        )
+      );
+    };
+
+    const onPostUnliked = (data) => {
+      if (!data?.postId) return;
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.Id === data.postId ? { ...p, LikesCount: data.likesCount } : p
+        )
+      );
+    };
+
+    const onCommentAdded = (data) => {
+      if (!data?.postId || data.comment == null) return;
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [data.postId]: [...(prev[data.postId] || []), data.comment]
+      }));
+    };
+
+    const onCommentDeleted = (data) => {
+      if (!data?.postId) return;
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [data.postId]: (prev[data.postId] || []).filter(
+          (c) => (c.Id ?? c.id) !== data.commentId
+        )
+      }));
+    };
+
+    (async () => {
+      const connection = await startConnection();
+      if (cancelled || !connection) return;
+      conn = connection;
+      connection.on('PostLiked', onPostLiked);
+      connection.on('PostUnliked', onPostUnliked);
+      connection.on('CommentAdded', onCommentAdded);
+      connection.on('CommentDeleted', onCommentDeleted);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (!conn) return;
+      conn.off('PostLiked', onPostLiked);
+      conn.off('PostUnliked', onPostUnliked);
+      conn.off('CommentAdded', onCommentAdded);
+      conn.off('CommentDeleted', onCommentDeleted);
+    };
+  }, []);
+
   if (loading) {
     return <div className="home-container"><p>Đang tải...</p></div>;
   }
@@ -915,7 +984,7 @@ export default function HomePage() {
   console.log('Current user:', currentUser);
   console.log('Friends:', friends);
 
-const filteredUsers = searchQuery.trim() ?
+  const filteredUsers = searchQuery.trim() ?
     allUsers.filter(u => {
       const userText = `${u.FullName || u.fullName || ''} ${u.UserName || u.userName || ''}`;
       return (

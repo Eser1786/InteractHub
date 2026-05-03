@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 import StoryPage from './pages/StoryPage';
 import UserProfilePage from './pages/UserProfilePage';
 import PostDetailPage from './pages/PostDetailPage';
+import { startConnection } from './utils/postHubConnection';
 
 // Helper function to check if JWT token is valid (not expired)
 function isTokenValid(token) {
@@ -67,11 +68,24 @@ function App() {
   });
 
   useEffect(() => {
+    if (!token) return;
+    startConnection().catch((err) => {
+      console.error('Failed to start PostHub connection:', err);
+    });
+  }, [token]);
+
+  useEffect(() => {
     // Listen for storage changes (when token is saved from another tab or in this tab)
-    const handleStorageChange = () => {
+    const handleStorageChange = async () => {
       const savedToken = localStorage.getItem('token');
       if (savedToken && isTokenValid(savedToken)) {
         setToken(savedToken);
+        try {
+          await startConnection();
+        } catch (err) {
+          console.error('Failed to start PostHub connection:', err);
+          // App still works without PostHub, just won't have real-time updates
+        }
       } else {
         setToken(null);
       }

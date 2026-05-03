@@ -347,20 +347,38 @@ export default function MessagePage() {
       } else {
         sentMessage = await sendMessage(selectedConversation.id, newMessage.trim());
       }
+      
+      console.log('[MessagePage] 📤 API Response:', { 
+        Id: sentMessage?.Id, 
+        Content: sentMessage?.Content,
+        CreatedAt: sentMessage?.CreatedAt 
+      });
+      
       const nextMessage = {
         id: sentMessage?.Id || sentMessage?.id || messages.length + 1,
         senderId: sentMessage?.SenderId || sentMessage?.senderId || currentUser?.Id || currentUser?.id,
         text: sentMessage?.Content || sentMessage?.content || newMessage.trim(),
         timestamp: new Date(sentMessage?.CreatedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        createdAt: new Date(sentMessage?.CreatedAt || Date.now()) // ✅ THÊM DÒNG NÀY
+        createdAt: new Date(sentMessage?.CreatedAt || Date.now())
       };
+      
+      console.log('[MessagePage] 🎯 Adding message to state:', { id: nextMessage.id, text: nextMessage.text });
       
       // Add message to display
       setMessages((prev) => {
-        const exists = prev.some(m => m.id === nextMessage.id);
-        if (exists) return prev;
+        const exists = prev.some(m => {
+          const match = String(m.id) === String(nextMessage.id);
+          if (match) console.log(`[MessagePage] 🔍 Duplicate detected: ${m.id} === ${nextMessage.id}`);
+          return match;
+        });
+        
+        if (exists) {
+          console.log('[MessagePage] ⚠️ Message already exists, skipping');
+          return prev;
+        }
 
         const updated = [...prev, nextMessage];
+        console.log('[MessagePage] ✅ Message added, total messages:', updated.length);
 
         return updated.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       });

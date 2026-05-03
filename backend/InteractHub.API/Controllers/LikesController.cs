@@ -7,6 +7,7 @@ using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
 using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR;
 
 namespace InteractHub.API.Controllers;
 
@@ -18,12 +19,14 @@ public class LikesController : ControllerBase
     private readonly ILikeService _likeService;
     private readonly IPostService _postService;
     private readonly INotificationService _notificationService;
+    private readonly IHubContext<PostHub> _postHub;
 
-    public LikesController(ILikeService likeService, IPostService postService, INotificationService notificationService)
+    public LikesController(ILikeService likeService, IPostService postService, INotificationService notificationService, IHubContext<PostHub> postHub)
     {
         _likeService = likeService;
         _postService = postService;
         _notificationService = notificationService;
+        _postHub = postHub;
     }
 
     [HttpGet("{id}")]
@@ -102,6 +105,15 @@ public class LikesController : ControllerBase
             UserId = created.UserId
         };
 
+        var updatedPost = await _postService.GetByIdAsync(created.PostId);
+
+        await _postHub.Clients.Group("feed")
+            .SendAsync("PostLiked", new {
+                postId = created.PostId,
+                likesCount = updatedPost?.Likes.Count ?? 0,
+                userId = created.UserId
+            });
+
         return this.CreatedResponse(likeDto, "Like created successfully");
     }
 
@@ -123,6 +135,18 @@ public class LikesController : ControllerBase
         var result = await _likeService.DeleteAsync(id);
         if (!result)
             return this.NotFoundResponse("Like not found");
+
+        if (result)
+        {
+            var updatedPost = await _postService.GetByIdAsync(like.PostId);
+
+            await _postHub.Clients.Group("feed")
+                .SendAsync("PostUnliked", new {
+                    postId = like.PostId,
+                    likesCount = updatedPost?.Likes.Count ?? 0,
+                    userId = like.UserId
+                });
+        }
 
         return this.SuccessResponse(message: "Like deleted successfully", statusCode: 200);
     }
@@ -148,6 +172,18 @@ public class LikesController : ControllerBase
         var result = await _likeService.DeleteAsync(likeToDelete.Id);
         if (!result)
             return this.NotFoundResponse("Failed to delete like");
+
+        if (result)
+        {
+            var updatedPost = await _postService.GetByIdAsync(postId);
+
+            await _postHub.Clients.Group("feed")
+                .SendAsync("PostUnliked", new {
+                    postId = postId,
+                    likesCount = updatedPost?.Likes.Count ?? 0,
+                    userId = userId
+                });
+        }
 
         return this.SuccessResponse(message: "Like deleted successfully", statusCode: 200);
     }

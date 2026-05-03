@@ -8,6 +8,7 @@ using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
 using System.Security.Claims;
 using System.Linq;
+using Microsoft.AspNetCore.SignalR;
 
 namespace InteractHub.API.Controllers;
 
@@ -18,11 +19,13 @@ public class PostsController : ControllerBase
 {
     private readonly IPostService _postService;
     private readonly IFriendshipService _friendshipService;
+    private readonly IHubContext<PostHub> _postHub;
 
-    public PostsController(IPostService postService, IFriendshipService friendshipService)
+    public PostsController(IPostService postService, IFriendshipService friendshipService, IHubContext<PostHub> postHub)
     {
         _postService = postService;
         _friendshipService = friendshipService;
+        _postHub = postHub;
     }
 
     /// <summary>
@@ -197,6 +200,9 @@ public class PostsController : ControllerBase
 
         var postDto = MapToPostResponseDto(createdWithUser);
 
+        await _postHub.Clients.Group("feed")
+            .SendAsync("PostCreated", postDto);
+
         return this.CreatedResponse(postDto, "Post created successfully");
     }
 
@@ -235,6 +241,9 @@ public class PostsController : ControllerBase
             return this.ErrorResponse("Failed to retrieve created shared post", statusCode: 500);
 
         var postDto = MapToPostResponseDto(createdWithData);
+
+        await _postHub.Clients.Group("feed")
+            .SendAsync("PostCreated", postDto);
 
         return this.CreatedResponse(postDto, "Post shared successfully");
     }

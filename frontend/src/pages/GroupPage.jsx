@@ -126,9 +126,13 @@ export default function GroupPage() {
                           return parsedImages.slice(0, 3).map((img, idx) => (
                             <img key={idx} src={img} alt={`${group.name}-${idx}`} className="group-image-placeholder" style={{ objectFit: 'cover' }} />
                           ));
+                        } else if (parsedImages.length === 1) {
+                          return (
+                            <img src={parsedImages[0]} alt={`${group.name}-0`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', gridColumn: 'span 3' }} />
+                          );
                         } else {
                           return (
-                            <div style={{ display: 'flex', gap: '5px', width: '100%', height: '100px' }}>
+                            <div style={{ display: 'flex', gap: '5px', width: '100%', height: '50%', gridColumn: 'span 3' }}>
                               {parsedImages.map((img, idx) => (
                                 <img key={idx} src={img} alt={`${group.name}-${idx}`} style={{ flex: 1, objectFit: 'cover', borderRadius: '8px' }} />
                               ))}

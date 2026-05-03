@@ -166,33 +166,15 @@ export default function CreateGroupPage() {
           <div className="group-cover" style={{ height: 'auto', minHeight: '200px', display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '10px', background: coverImages.length > 0 ? 'transparent' : '' }}>
             {coverImages.length > 0 ? (
               <div style={{ display: 'flex', width: '100%', gap: '10px', position: 'relative' }}>
-                {coverImages.length >= 3 ? (
-                  coverImages.map((img, idx) => (
-                    <div key={idx} style={{ flex: 1, position: 'relative', height: '180px' }}>
-                      <img src={img} alt={`Cover Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
-                      <button onClick={() => removeCoverImage(idx)} className="cover-remove-button" style={{ position: 'absolute', top: '5px', right: '5px', padding: '4px 8px', fontSize: '12px' }}>X</button>
-                    </div>
-                  ))
-                ) : (
-                  <div style={{ width: '100%', position: 'relative', height: '200px' }}>
-                    <img src={coverImages[0]} alt="Cover Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
-                    <div style={{ position: 'absolute', display: 'flex', gap: '10px', bottom: '10px', right: '10px' }}>
-                      <button onClick={() => removeCoverImage(0)} className="cover-remove-button" style={{ padding: '8px 14px', fontSize: '12px' }}>Xóa</button>
-                    </div>
+                {coverImages.map((img, idx) => (
+                  <div key={idx} style={{ flex: 1, position: 'relative', height: '200px' }}>
+                    <img src={img} alt={`Cover Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                    <button onClick={() => removeCoverImage(idx)} className="cover-remove-button" style={{ position: 'absolute', top: '10px', right: '10px', padding: '6px 10px', fontSize: '12px' }}>Xóa</button>
                   </div>
-                )}
-                
-                {coverImages.length > 1 && coverImages.length < 3 && (
-                  <div style={{ width: '100%', position: 'relative', height: '200px' }}>
-                    <img src={coverImages[1]} alt="Cover Preview 2" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
-                    <div style={{ position: 'absolute', display: 'flex', gap: '10px', bottom: '10px', right: '10px' }}>
-                      <button onClick={() => removeCoverImage(1)} className="cover-remove-button" style={{ padding: '8px 14px', fontSize: '12px' }}>Xóa</button>
-                    </div>
-                  </div>
-                )}
+                ))}
 
                 {coverImages.length < 3 && (
-                  <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
+                  <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 10 }}>
                     <label className="cover-file-button small">
                       Thêm ảnh ({coverImages.length}/3)
                       <input type="file" accept="image/*" multiple onChange={handleImageChange} className="cover-file-input" />

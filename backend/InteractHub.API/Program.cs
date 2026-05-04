@@ -187,7 +187,7 @@ using (var scope = app.Services.CreateScope())
     try 
     {
         var context = services.GetRequiredService<AppDbContext>();
-        await context.Database.MigrateAsync();
+        //await context.Database.MigrateAsync();
         await DbInitializer.SeedRolesAndAdmin(services);
         
         // 🌱 Seed Test Data (5 users, 3 posts each, 3 groups)

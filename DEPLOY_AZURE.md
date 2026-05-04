@@ -3,7 +3,7 @@
 **Dự án:** InteractHub - Social Media Application  
 **Nền tảng:** Microsoft Azure (App Service & SQL Database)  
 **Mô hình:** SPA Integration (React + .NET trên cùng domain)  
-**Link Demo:** [https://interacthub123.azurewebsites.net/home](https://interacthub123.azurewebsites.net/home)  
+**Link Demo:** [https://interacthub-demo.azurewebsites.net/home](https://interacthub-demo.azurewebsites.net/home)  
 **Cập nhật:** May 02, 2026
 
 ---

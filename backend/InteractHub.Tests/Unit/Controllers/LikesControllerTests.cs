@@ -83,9 +83,12 @@ public class LikesControllerTests
             new Like { Id = 1, PostId = postId, UserId = "u1" },
             new Like { Id = 2, PostId = postId, UserId = "u2" }
         };
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(likes);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(likes);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -95,7 +98,7 @@ public class LikesControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetByPostIdAsync(postId), Times.Once);
+        likeMock.Verify(s => s.GetByPostIdAsync(postId), Times.Once);
     }
 
     // GetByPostId tests - trả về danh sách rỗng khi không có likes
@@ -105,9 +108,12 @@ public class LikesControllerTests
         // given
         var postId = 5;
         var likes = new List<Like>();
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(likes);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(likes);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -126,9 +132,12 @@ public class LikesControllerTests
         // given
         var postId = 5;
         var count = 10;
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetLikeCountAsync(postId)).ReturnsAsync(count);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetLikeCountAsync(postId)).ReturnsAsync(count);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -138,7 +147,7 @@ public class LikesControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetLikeCountAsync(postId), Times.Once);
+        likeMock.Verify(s => s.GetLikeCountAsync(postId), Times.Once);
     }
 
     // GetLikeCount tests - trả về 0 khi không có likes
@@ -148,9 +157,12 @@ public class LikesControllerTests
         // given
         var postId = 5;
         var count = 0;
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetLikeCountAsync(postId)).ReturnsAsync(count);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetLikeCountAsync(postId)).ReturnsAsync(count);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -169,9 +181,12 @@ public class LikesControllerTests
         // given
         var createDto = new CreateLikeDto { PostId = 10 };
         var like = new Like { Id = 1, PostId = 10, UserId = "u1" };
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.CreateAsync(It.IsAny<Like>())).ReturnsAsync(like);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.CreateAsync(It.IsAny<Like>())).ReturnsAsync(like);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -180,7 +195,7 @@ public class LikesControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
-        serviceMock.Verify(s => s.CreateAsync(It.IsAny<Like>()), Times.Once);
+        likeMock.Verify(s => s.CreateAsync(It.IsAny<Like>()), Times.Once);
     }
 
     // Create tests - trả về 401 khi không có user claim
@@ -188,8 +203,11 @@ public class LikesControllerTests
     public async Task Create_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
         // given
-        var serviceMock = new Mock<ILikeService>();
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -206,10 +224,13 @@ public class LikesControllerTests
     {
         // given
         var like = new Like { Id = 6, PostId = 2, UserId = "u1" };
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
-        serviceMock.Setup(s => s.DeleteAsync(6)).ReturnsAsync(true);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
+        likeMock.Setup(s => s.DeleteAsync(6)).ReturnsAsync(true);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -218,7 +239,7 @@ public class LikesControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
-        serviceMock.Verify(s => s.DeleteAsync(6), Times.Once);
+        likeMock.Verify(s => s.DeleteAsync(6), Times.Once);
     }
 
     // Delete tests - trả về 404 khi like không tồn tại
@@ -226,9 +247,12 @@ public class LikesControllerTests
     public async Task Delete_ShouldReturnNotFound_WhenLikeMissing()
     {
         // given
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Like?)null);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Like?)null);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -245,9 +269,12 @@ public class LikesControllerTests
     {
         // given
         var like = new Like { Id = 6, PostId = 2, UserId = "owner" };
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "other");
 
         // when
@@ -264,10 +291,13 @@ public class LikesControllerTests
     {
         // given
         var like = new Like { Id = 6, PostId = 2, UserId = "u1" };
-        var serviceMock = new Mock<ILikeService>();
-        serviceMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
-        serviceMock.Setup(s => s.DeleteAsync(6)).ReturnsAsync(false);
-        var controller = new LikesController(serviceMock.Object);
+        var likeMock = new Mock<ILikeService>();
+        likeMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
+        likeMock.Setup(s => s.DeleteAsync(6)).ReturnsAsync(false);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -278,3 +308,4 @@ public class LikesControllerTests
         Assert.Equal(404, objectResult.StatusCode);
     }
 }
+

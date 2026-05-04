@@ -27,7 +27,12 @@ public class FriendshipServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        context.Friendships.Add(new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Pending });
+        var user1 = new User { Id = "u1", UserName = "user1", Email = "user1@example.com", FullName = "User One" };
+        var user2 = new User { Id = "u2", UserName = "user2", Email = "user2@example.com", FullName = "User Two" };
+        context.Users.AddRange(user1, user2);
+        await context.SaveChangesAsync();
+        
+        context.Friendships.Add(new Friendship { UserId = "u1", FriendId = "u2", Id = 1, Status = FriendshipStatus.Pending });
         await context.SaveChangesAsync();
 
         var notificationMock = new Mock<INotificationService>();
@@ -43,6 +48,11 @@ public class FriendshipServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
+        var user1 = new User { Id = "u1", UserName = "user1", Email = "user1@example.com", FullName = "User One" };
+        var user2 = new User { Id = "u2", UserName = "user2", Email = "user2@example.com", FullName = "User Two" };
+        context.Users.AddRange(user1, user2);
+        await context.SaveChangesAsync();
+        
         var notificationMock = new Mock<INotificationService>();
         notificationMock
             .Setup(n => n.NotifyFriendRequestAsync(It.IsAny<string>(), It.IsAny<string>()))
@@ -62,14 +72,20 @@ public class FriendshipServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        context.Friendships.Add(new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted });
+        var user1 = new User { Id = "u1", UserName = "user1", Email = "user1@example.com", FullName = "User One" };
+        var user2 = new User { Id = "u2", UserName = "user2", Email = "user2@example.com", FullName = "User Two" };
+        context.Users.AddRange(user1, user2);
+        await context.SaveChangesAsync();
+        
+        var friendship = new Friendship { Id = 1, UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted };
+        context.Friendships.Add(friendship);
         await context.SaveChangesAsync();
 
         var notificationMock = new Mock<INotificationService>();
         var service = new FriendshipService(context, notificationMock.Object);
 
         // Act
-        var result = await service.DeclineFriendRequestAsync("u2", "u1");
+        var result = await service.DeclineFriendRequestAsync(friendship.Id, "u2");
 
         // Assert
         Assert.False(result);
@@ -80,7 +96,12 @@ public class FriendshipServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        context.Friendships.Add(new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted });
+        var user1 = new User { Id = "u1", UserName = "user1", Email = "user1@example.com", FullName = "User One" };
+        var user2 = new User { Id = "u2", UserName = "user2", Email = "user2@example.com", FullName = "User Two" };
+        context.Users.AddRange(user1, user2);
+        await context.SaveChangesAsync();
+        
+        context.Friendships.Add(new Friendship { UserId = "u1", FriendId = "u2", Id = 1, Status = FriendshipStatus.Accepted });
         await context.SaveChangesAsync();
 
         var notificationMock = new Mock<INotificationService>();
@@ -98,10 +119,17 @@ public class FriendshipServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
+        var user1 = new User { Id = "u1", UserName = "user1", Email = "user1@example.com", FullName = "User One" };
+        var user2 = new User { Id = "u2", UserName = "user2", Email = "user2@example.com", FullName = "User Two" };
+        var user3 = new User { Id = "u3", UserName = "user3", Email = "user3@example.com", FullName = "User Three" };
+        var user4 = new User { Id = "u4", UserName = "user4", Email = "user4@example.com", FullName = "User Four" };
+        context.Users.AddRange(user1, user2, user3, user4);
+        await context.SaveChangesAsync();
+        
         context.Friendships.AddRange(
-            new Friendship { UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Accepted },
-            new Friendship { UserId = "u1", FriendId = "u3", Status = FriendshipStatus.Pending },
-            new Friendship { UserId = "u1", FriendId = "u4", Status = FriendshipStatus.Accepted }
+            new Friendship { UserId = "u1", FriendId = "u2", Id = 1, Status = FriendshipStatus.Accepted },
+            new Friendship { UserId = "u1", FriendId = "u3", Id = 2, Status = FriendshipStatus.Pending },
+            new Friendship { UserId = "u1", FriendId = "u4", Id = 3, Status = FriendshipStatus.Accepted }
         );
         await context.SaveChangesAsync();
 
@@ -116,3 +144,4 @@ public class FriendshipServiceTests
         Assert.Equal(2, friends.Count);
     }
 }
+

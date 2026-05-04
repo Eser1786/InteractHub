@@ -79,9 +79,11 @@ public class FriendshipsControllerTests
             new Friendship { Id = 2, UserId = userId, FriendId = "u3", Status = FriendshipStatus.Accepted, CreatedAt = DateTime.UtcNow }
         };
         var metadata = new InteractHub.Application.Helpers.PaginationMetadata { TotalCount = 2, PageNumber = 1, PageSize = 20, TotalPages = 1 };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.GetAcceptedFriendsPaginatedAsync(userId, 1, 20)).ReturnsAsync((Friends: friends, Metadata: metadata));
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.GetAcceptedFriendsPaginatedAsync(userId, 1, 20)).ReturnsAsync((Friends: friends, Metadata: metadata));
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -91,7 +93,7 @@ public class FriendshipsControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetAcceptedFriendsPaginatedAsync(userId, 1, 20), Times.Once);
+        friendshipMock.Verify(s => s.GetAcceptedFriendsPaginatedAsync(userId, 1, 20), Times.Once);
     }
 
     // GetAcceptedFriends tests - trả về danh sách rỗng khi không có bạn bè
@@ -102,9 +104,11 @@ public class FriendshipsControllerTests
         var userId = "u1";
         var friends = new List<Friendship>();
         var metadata = new InteractHub.Application.Helpers.PaginationMetadata { TotalCount = 0, PageNumber = 1, PageSize = 20, TotalPages = 0 };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.GetAcceptedFriendsPaginatedAsync(userId, 1, 20)).ReturnsAsync((Friends: friends, Metadata: metadata));
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.GetAcceptedFriendsPaginatedAsync(userId, 1, 20)).ReturnsAsync((Friends: friends, Metadata: metadata));
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -128,9 +132,11 @@ public class FriendshipsControllerTests
             new Friendship { Id = 2, UserId = "u3", FriendId = userId, Status = FriendshipStatus.Pending, CreatedAt = DateTime.UtcNow }
         };
         var metadata = new InteractHub.Application.Helpers.PaginationMetadata { TotalCount = 2, PageNumber = 1, PageSize = 20, TotalPages = 1 };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.GetPendingRequestsPaginatedAsync(userId, 1, 20)).ReturnsAsync((Requests: requests, Metadata: metadata));
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.GetPendingRequestsPaginatedAsync(userId, 1, 20)).ReturnsAsync((Requests: requests, Metadata: metadata));
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, userId);
 
         // when
@@ -140,7 +146,7 @@ public class FriendshipsControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetPendingRequestsPaginatedAsync(userId, 1, 20), Times.Once);
+        friendshipMock.Verify(s => s.GetPendingRequestsPaginatedAsync(userId, 1, 20), Times.Once);
     }
 
     // GetPendingRequests tests - trả về 403 khi user cố xem lời mời của người khác
@@ -148,8 +154,10 @@ public class FriendshipsControllerTests
     public async Task GetPendingRequests_ShouldReturnForbidden_WhenUserId_NotMatchCurrentUser()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -168,9 +176,11 @@ public class FriendshipsControllerTests
         var userId = "u1";
         var requests = new List<Friendship>();
         var metadata = new InteractHub.Application.Helpers.PaginationMetadata { TotalCount = 0, PageNumber = 1, PageSize = 20, TotalPages = 0 };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.GetPendingRequestsPaginatedAsync(userId, 1, 20)).ReturnsAsync((Requests: requests, Metadata: metadata));
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.GetPendingRequestsPaginatedAsync(userId, 1, 20)).ReturnsAsync((Requests: requests, Metadata: metadata));
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, userId);
 
         // when
@@ -189,9 +199,11 @@ public class FriendshipsControllerTests
         // given
         var requestDto = new SendFriendRequestDto { FriendId = "u2" };
         var friendship = new Friendship { Id = 1, UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Pending, CreatedAt = DateTime.UtcNow };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.SendFriendRequestAsync("u1", "u2")).ReturnsAsync(friendship);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.SendFriendRequestAsync("u1", "u2")).ReturnsAsync(friendship);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -200,7 +212,7 @@ public class FriendshipsControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
-        serviceMock.Verify(s => s.SendFriendRequestAsync("u1", "u2"), Times.Once);
+        friendshipMock.Verify(s => s.SendFriendRequestAsync("u1", "u2"), Times.Once);
     }
 
     // SendFriendRequest tests - trả về 401 khi không có user claim
@@ -208,8 +220,10 @@ public class FriendshipsControllerTests
     public async Task SendFriendRequest_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -226,9 +240,11 @@ public class FriendshipsControllerTests
     {
         // given
         var requestDto = new SendFriendRequestDto { FriendId = "u2" };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.SendFriendRequestAsync("u1", "u2")).ThrowsAsync(new InvalidOperationException("Already friends"));
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.SendFriendRequestAsync("u1", "u2")).ThrowsAsync(new InvalidOperationException("Already friends"));
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -245,9 +261,11 @@ public class FriendshipsControllerTests
     {
         // given
         var friendship = new Friendship { Id = 1, UserId = "u2", FriendId = "u1", Status = FriendshipStatus.Accepted, CreatedAt = DateTime.UtcNow };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.AcceptFriendRequestAsync(1)).ReturnsAsync(friendship);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.AcceptFriendRequestAsync(1, "u1")).ReturnsAsync(friendship);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -256,7 +274,7 @@ public class FriendshipsControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
-        serviceMock.Verify(s => s.AcceptFriendRequestAsync(1), Times.Once);
+        friendshipMock.Verify(s => s.AcceptFriendRequestAsync(1, "u1"), Times.Once);
     }
 
     // AcceptFriendRequest tests - trả về 400 khi lời mời không hợp lệ
@@ -264,9 +282,11 @@ public class FriendshipsControllerTests
     public async Task AcceptFriendRequest_ShouldReturnBadRequest_WhenRequestInvalid()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.AcceptFriendRequestAsync(999)).ThrowsAsync(new InvalidOperationException("Request not found"));
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.AcceptFriendRequestAsync(999, "u1")).ThrowsAsync(new InvalidOperationException("Request not found"));
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -282,9 +302,11 @@ public class FriendshipsControllerTests
     public async Task DeclineFriendRequest_ShouldReturnOk_WhenRequestIsValid()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.DeclineFriendRequestAsync(22)).ReturnsAsync(true);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.DeclineFriendRequestAsync(22, "u1")).ReturnsAsync(true);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -293,7 +315,7 @@ public class FriendshipsControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
-        serviceMock.Verify(s => s.DeclineFriendRequestAsync(22), Times.Once);
+        friendshipMock.Verify(s => s.DeclineFriendRequestAsync(22, "u1"), Times.Once);
     }
 
     // DeclineFriendRequest tests - trả về 400 khi từ chối thất bại
@@ -301,9 +323,11 @@ public class FriendshipsControllerTests
     public async Task DeclineFriendRequest_ShouldReturnBadRequest_WhenServiceReturnsFalse()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.DeclineFriendRequestAsync(22)).ReturnsAsync(false);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.DeclineFriendRequestAsync(22, "u1")).ReturnsAsync(false);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -319,9 +343,11 @@ public class FriendshipsControllerTests
     public async Task RemoveFriend_ShouldReturnOk_WhenFriendExists()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.RemoveFriendAsync("u1", "u2")).ReturnsAsync(true);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.RemoveFriendAsync("u1", "u2")).ReturnsAsync(true);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -330,7 +356,7 @@ public class FriendshipsControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
-        serviceMock.Verify(s => s.RemoveFriendAsync("u1", "u2"), Times.Once);
+        friendshipMock.Verify(s => s.RemoveFriendAsync("u1", "u2"), Times.Once);
     }
 
     // RemoveFriend tests - trả về 404 khi bạn không tồn tại
@@ -338,9 +364,11 @@ public class FriendshipsControllerTests
     public async Task RemoveFriend_ShouldReturnNotFound_WhenFriendDoesNotExist()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.RemoveFriendAsync("u1", "u999")).ReturnsAsync(false);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.RemoveFriendAsync("u1", "u999")).ReturnsAsync(false);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -356,8 +384,10 @@ public class FriendshipsControllerTests
     public async Task RemoveFriend_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -374,9 +404,11 @@ public class FriendshipsControllerTests
     {
         // given
         var friendship = new Friendship { Id = 1, UserId = "u1", FriendId = "u2", Status = FriendshipStatus.Blocked, CreatedAt = DateTime.UtcNow };
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.BlockUserAsync("u1", "u2")).ReturnsAsync(friendship);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.BlockUserAsync("u1", "u2")).ReturnsAsync(friendship);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -385,7 +417,7 @@ public class FriendshipsControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
-        serviceMock.Verify(s => s.BlockUserAsync("u1", "u2"), Times.Once);
+        friendshipMock.Verify(s => s.BlockUserAsync("u1", "u2"), Times.Once);
     }
 
     // BlockUser tests - trả về 401 khi không có user claim
@@ -393,8 +425,10 @@ public class FriendshipsControllerTests
     public async Task BlockUser_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -410,9 +444,11 @@ public class FriendshipsControllerTests
     public async Task CheckFriendshipStatus_ShouldReturnStatus_WhenStatusExists()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.CheckFriendshipStatusAsync("u1", "u2")).ReturnsAsync(FriendshipStatus.Accepted);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.CheckFriendshipStatusAsync("u1", "u2")).ReturnsAsync(FriendshipStatus.Accepted);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -422,7 +458,7 @@ public class FriendshipsControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.CheckFriendshipStatusAsync("u1", "u2"), Times.Once);
+        friendshipMock.Verify(s => s.CheckFriendshipStatusAsync("u1", "u2"), Times.Once);
     }
 
     // CheckFriendshipStatus tests - trả về None khi không có kết bạn
@@ -430,9 +466,11 @@ public class FriendshipsControllerTests
     public async Task CheckFriendshipStatus_ShouldReturnNone_WhenStatusDoesNotExist()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        serviceMock.Setup(s => s.CheckFriendshipStatusAsync("u1", "u999")).ReturnsAsync((FriendshipStatus?)null);
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        friendshipMock.Setup(s => s.CheckFriendshipStatusAsync("u1", "u999")).ReturnsAsync((FriendshipStatus?)null);
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -449,8 +487,10 @@ public class FriendshipsControllerTests
     public async Task CheckFriendshipStatus_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
         // given
-        var serviceMock = new Mock<IFriendshipService>();
-        var controller = new FriendshipsController(serviceMock.Object);
+        var friendshipMock = new Mock<IFriendshipService>();
+        var messageMock = new Mock<IMessageService>();
+        var presenceMock = new Mock<IUserPresenceService>();
+        var controller = CreateController(friendshipMock, messageMock, presenceMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -461,3 +501,4 @@ public class FriendshipsControllerTests
         Assert.Equal(401, objectResult.StatusCode);
     }
 }
+

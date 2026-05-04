@@ -1,7 +1,10 @@
 using InteractHub.Application.Entities;
 using InteractHub.Application.Entities.Enums;
 using InteractHub.Infrastructure.Service;
+using InteractHub.Infrastructure.Hubs;
 using InteractHub.Tests.Common;
+using Microsoft.AspNetCore.SignalR;
+using Moq;
 
 namespace InteractHub.Tests.Unit.Services;
 
@@ -12,7 +15,8 @@ public class NotificationServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        var service = new NotificationService(context);
+        var hubContextMock = new Mock<IHubContext<NotificationHub>>();
+        var service = new NotificationService(context, hubContextMock.Object);
 
         // Act
         var notification = await service.CreateNotificationAsync(
@@ -34,7 +38,8 @@ public class NotificationServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        var service = new NotificationService(context);
+        var hubContextMock = new Mock<IHubContext<NotificationHub>>();
+        var service = new NotificationService(context, hubContextMock.Object);
 
         // Act
         var result = await service.MarkAsReadAsync(9999);
@@ -48,7 +53,8 @@ public class NotificationServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        var service = new NotificationService(context);
+        var hubContextMock = new Mock<IHubContext<NotificationHub>>();
+        var service = new NotificationService(context, hubContextMock.Object);
         await service.CreateNotificationAsync("user-1", "n1", NotificationType.System);
         await service.CreateNotificationAsync("user-1", "n2", NotificationType.System);
         await service.CreateNotificationAsync("user-2", "n3", NotificationType.System);

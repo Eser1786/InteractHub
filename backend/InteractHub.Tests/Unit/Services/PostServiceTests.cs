@@ -47,6 +47,10 @@ public class PostServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
+        var user = new User { Id = "u1", UserName = "testuser", Email = "test@example.com", FullName = "Test User" };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+        
         var service = new PostService(context);
         var createdPost = await service.CreateAsync(new Post 
         { 
@@ -68,9 +72,14 @@ public class PostServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
+        var user1 = new User { Id = "u1", UserName = "user1", Email = "user1@example.com", FullName = "User One" };
+        var user2 = new User { Id = "u2", UserName = "user2", Email = "user2@example.com", FullName = "User Two" };
+        context.Users.AddRange(user1, user2);
+        await context.SaveChangesAsync();
+        
         var service = new PostService(context);
-        await service.CreateAsync(new Post { Content = "p1", UserId = "u1", CreatedAt = DateTime.UtcNow });
-        await service.CreateAsync(new Post { Content = "p2", UserId = "u2", CreatedAt = DateTime.UtcNow });
+        await service.CreateAsync(new Post { Content = "p1", Id = 1, UserId = "u1", CreatedAt = DateTime.UtcNow });
+        await service.CreateAsync(new Post { Content = "p2", Id = 2, UserId = "u2", CreatedAt = DateTime.UtcNow });
 
         // Act
         var posts = await service.GetAllAsync();
@@ -128,3 +137,4 @@ public class PostServiceTests
         Assert.Empty(context.Posts);
     }
 }
+

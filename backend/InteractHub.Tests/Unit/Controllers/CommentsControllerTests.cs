@@ -88,9 +88,13 @@ public class CommentsControllerTests
     {
         // given
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "test comment", CreatedAt = DateTime.UtcNow };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -100,7 +104,7 @@ public class CommentsControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetByIdAsync(1), Times.Once);
+        commentMock.Verify(s => s.GetByIdAsync(1), Times.Once);
     }
 
     // GetById tests - trả về 404 khi comment không tồn tại
@@ -108,9 +112,13 @@ public class CommentsControllerTests
     public async Task GetById_ShouldReturnNotFound_WhenCommentMissing()
     {
         // given
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(44)).ReturnsAsync((Comment?)null);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(44)).ReturnsAsync((Comment?)null);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -132,9 +140,13 @@ public class CommentsControllerTests
             new Comment { Id = 1, UserId = "u1", PostId = postId, Content = "comment 1", CreatedAt = DateTime.UtcNow },
             new Comment { Id = 2, UserId = "u2", PostId = postId, Content = "comment 2", CreatedAt = DateTime.UtcNow }
         };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(comments);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(comments);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -144,7 +156,7 @@ public class CommentsControllerTests
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
         Assert.NotNull(objectResult.Value);
-        serviceMock.Verify(s => s.GetByPostIdAsync(postId), Times.Once);
+        commentMock.Verify(s => s.GetByPostIdAsync(postId), Times.Once);
     }
 
     // GetByPostId tests - trả về danh sách rỗng khi không có comments cho bài viết
@@ -154,9 +166,13 @@ public class CommentsControllerTests
         // given
         var postId = 5;
         var comments = new List<Comment>();
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(comments);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(comments);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -175,9 +191,13 @@ public class CommentsControllerTests
         // given
         var createDto = new CreateCommentDto { PostId = 1, Content = "new comment" };
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = createDto.Content, CreatedAt = DateTime.UtcNow };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.CreateAsync(It.IsAny<Comment>())).ReturnsAsync(comment);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.CreateAsync(It.IsAny<Comment>())).ReturnsAsync(comment);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -186,7 +206,7 @@ public class CommentsControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, objectResult.StatusCode);
-        serviceMock.Verify(s => s.CreateAsync(It.IsAny<Comment>()), Times.Once);
+        commentMock.Verify(s => s.CreateAsync(It.IsAny<Comment>()), Times.Once);
     }
 
     // Create tests - trả về 401 khi không có user claim
@@ -194,8 +214,12 @@ public class CommentsControllerTests
     public async Task Create_ShouldReturnUnauthorized_WhenNoUserClaim()
     {
         // given
-        var serviceMock = new Mock<ICommentService>();
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -213,10 +237,14 @@ public class CommentsControllerTests
         // given
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "old", CreatedAt = DateTime.UtcNow };
         var updateDto = new UpdateCommentDto { Content = "updated" };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
-        serviceMock.Setup(s => s.UpdateAsync(It.IsAny<Comment>())).ReturnsAsync(true);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
+        commentMock.Setup(s => s.UpdateAsync(It.IsAny<Comment>())).ReturnsAsync(true);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -225,7 +253,7 @@ public class CommentsControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
-        serviceMock.Verify(s => s.UpdateAsync(It.IsAny<Comment>()), Times.Once);
+        commentMock.Verify(s => s.UpdateAsync(It.IsAny<Comment>()), Times.Once);
     }
 
     // Update tests - trả về 404 khi comment không tồn tại
@@ -233,9 +261,13 @@ public class CommentsControllerTests
     public async Task Update_ShouldReturnNotFound_WhenCommentMissing()
     {
         // given
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Comment?)null);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Comment?)null);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -252,9 +284,13 @@ public class CommentsControllerTests
     {
         // given
         var comment = new Comment { Id = 1, UserId = "owner", PostId = 1, Content = "old" };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "other");
 
         // when
@@ -271,10 +307,14 @@ public class CommentsControllerTests
     {
         // given
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "test", CreatedAt = DateTime.UtcNow };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
-        serviceMock.Setup(s => s.DeleteAsync(1)).ReturnsAsync(true);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
+        commentMock.Setup(s => s.DeleteAsync(1)).ReturnsAsync(true);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -283,7 +323,7 @@ public class CommentsControllerTests
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(200, objectResult.StatusCode);
-        serviceMock.Verify(s => s.DeleteAsync(1), Times.Once);
+        commentMock.Verify(s => s.DeleteAsync(1), Times.Once);
     }
 
     // Delete tests - trả về 404 khi comment không tồn tại
@@ -291,9 +331,13 @@ public class CommentsControllerTests
     public async Task Delete_ShouldReturnNotFound_WhenCommentMissing()
     {
         // given
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Comment?)null);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Comment?)null);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -310,9 +354,13 @@ public class CommentsControllerTests
     {
         // given
         var comment = new Comment { Id = 1, UserId = "owner", PostId = 1, Content = "test" };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "other");
 
         // when
@@ -329,10 +377,14 @@ public class CommentsControllerTests
     {
         // given
         var comment = new Comment { Id = 1, UserId = "u1", PostId = 1, Content = "test", CreatedAt = DateTime.UtcNow };
-        var serviceMock = new Mock<ICommentService>();
-        serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
-        serviceMock.Setup(s => s.DeleteAsync(1)).ReturnsAsync(false);
-        var controller = new CommentsController(serviceMock.Object);
+        var commentMock = new Mock<ICommentService>();
+        commentMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(comment);
+        commentMock.Setup(s => s.DeleteAsync(1)).ReturnsAsync(false);
+        var postMock = new Mock<IPostService>();
+        var notificationMock = new Mock<INotificationService>();
+        var commentHubMock = new Mock<IHubContext<CommentHub>>();
+        var postHubMock = new Mock<IHubContext<PostHub>>();
+        var controller = CreateController(commentMock, postMock, notificationMock, commentHubMock, postHubMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -343,3 +395,4 @@ public class CommentsControllerTests
         Assert.Equal(404, objectResult.StatusCode);
     }
 }
+

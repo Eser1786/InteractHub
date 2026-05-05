@@ -20,7 +20,7 @@ public class PostsControllerTests
     {
         var friendshipMock = friendshipServiceMock ?? new Mock<IFriendshipService>();
         var notificationMock = notificationServiceMock ?? new Mock<INotificationService>();
-        var postHubContextMock = postHubMock ?? new Mock<IHubContext<PostHub>>();
+        var postHubContextMock = postHubMock ?? SignalRMockFactory.CreatePostHubMock();
 
         return new PostsController(
             postServiceMock.Object,
@@ -149,6 +149,7 @@ public class PostsControllerTests
 
         var postServiceMock = new Mock<IPostService>();
         postServiceMock.Setup(s => s.CreateAsync(It.IsAny<Post>())).ReturnsAsync(createdPost);
+        postServiceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(createdPost);
 
         var controller = CreateController(postServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
@@ -157,8 +158,9 @@ public class PostsControllerTests
         var result = await controller.Create(createDto);
 
         // Assert
-        var createdResult = Assert.IsType<CreatedAtActionResult>(result);
-        Assert.NotNull(createdResult.Value);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(201, objectResult.StatusCode);
+        Assert.NotNull(objectResult.Value);
         postServiceMock.Verify(s => s.CreateAsync(It.IsAny<Post>()), Times.Once);
     }
 

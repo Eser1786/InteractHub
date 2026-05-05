@@ -183,6 +183,9 @@ public class PostsController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return this.UnauthorizedResponse("User not authenticated");
 
+        if (string.IsNullOrWhiteSpace(createPostDto.Content))
+            return this.BadRequestResponse(new List<ApiError> { new ApiError("Content is required and cannot be empty", code: "EMPTY_CONTENT") });
+
         var post = new Post
         {
             Content = createPostDto.Content,

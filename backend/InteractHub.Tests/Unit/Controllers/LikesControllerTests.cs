@@ -16,13 +16,15 @@ public class LikesControllerTests
         Mock<ILikeService> likeMock,
         Mock<IPostService> postMock,
         Mock<INotificationService> notificationMock,
-        Mock<IHubContext<PostHub>> postHubMock)
+        Mock<IHubContext<PostHub>>? postHubMock = null)
     {
+        var postHubContextMock = postHubMock ?? SignalRMockFactory.CreatePostHubMock();
+        
         return new LikesController(
             likeMock.Object,
             postMock.Object,
             notificationMock.Object,
-            postHubMock.Object);
+            postHubContextMock.Object);
     }
 
     // GetById tests - trả về like khi tồn tại
@@ -35,9 +37,8 @@ public class LikesControllerTests
         likeMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(like);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
         
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // Act
@@ -59,9 +60,8 @@ public class LikesControllerTests
         likeMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Like?)null);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
         
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // Act
@@ -112,8 +112,7 @@ public class LikesControllerTests
         likeMock.Setup(s => s.GetByPostIdAsync(postId)).ReturnsAsync(likes);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -136,8 +135,7 @@ public class LikesControllerTests
         likeMock.Setup(s => s.GetLikeCountAsync(postId)).ReturnsAsync(count);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -161,8 +159,7 @@ public class LikesControllerTests
         likeMock.Setup(s => s.GetLikeCountAsync(postId)).ReturnsAsync(count);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -185,8 +182,7 @@ public class LikesControllerTests
         likeMock.Setup(s => s.CreateAsync(It.IsAny<Like>())).ReturnsAsync(like);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -206,8 +202,7 @@ public class LikesControllerTests
         var likeMock = new Mock<ILikeService>();
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetAnonymous(controller);
 
         // when
@@ -229,8 +224,7 @@ public class LikesControllerTests
         likeMock.Setup(s => s.DeleteAsync(6)).ReturnsAsync(true);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -251,8 +245,7 @@ public class LikesControllerTests
         likeMock.Setup(s => s.GetByIdAsync(999)).ReturnsAsync((Like?)null);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -273,8 +266,7 @@ public class LikesControllerTests
         likeMock.Setup(s => s.GetByIdAsync(6)).ReturnsAsync(like);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "other");
 
         // when
@@ -296,8 +288,7 @@ public class LikesControllerTests
         likeMock.Setup(s => s.DeleteAsync(6)).ReturnsAsync(false);
         var postMock = new Mock<IPostService>();
         var notificationMock = new Mock<INotificationService>();
-        var postHubMock = new Mock<IHubContext<PostHub>>();
-        var controller = CreateController(likeMock, postMock, notificationMock, postHubMock);
+        var controller = CreateController(likeMock, postMock, notificationMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when

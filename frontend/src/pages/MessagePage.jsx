@@ -618,7 +618,7 @@ export default function MessagePage() {
                     <p className="message-header-status">
                       {selectedConversation.isActive
                         ? '🟢 Đang hoạt động'
-                        : `⚫ ${formatLastSeen(selectedConversation.lastSeenAt)}`
+                        : `${formatLastSeen(selectedConversation.lastSeenAt)}`
                       }
                     </p>
                   </div>

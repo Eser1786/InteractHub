@@ -70,7 +70,7 @@ export default function GroupPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="group-search-input"
             />
-            <span className="group-search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <span className="group-search-icon"><i className="fa-solid fa-magnifying-glass"></i></span>
           </div>
 
           <nav className="group-nav">
@@ -78,14 +78,14 @@ export default function GroupPage() {
               className={`group-nav-item ${selectedNav === 'my-groups' ? 'active' : ''}`}
               onClick={() => setSelectedNav('my-groups')}
             >
-              <span className="group-nav-icon"><i class="fa-solid fa-users"></i></span>
+              <span className="group-nav-icon"><i className="fa-solid fa-users"></i></span>
               <span>Nhóm của bạn</span>
             </div>
             <div 
               className={`group-nav-item ${selectedNav === 'discover' ? 'active' : ''}`}
               onClick={() => setSelectedNav('discover')}
             >
-              <span className="group-nav-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+              <span className="group-nav-icon"><i className="fa-solid fa-magnifying-glass"></i></span>
               <span>Khám phá</span>
             </div>
             <div 

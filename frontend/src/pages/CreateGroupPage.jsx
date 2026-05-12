@@ -127,6 +127,28 @@ export default function CreateGroupPage() {
       
       <div className="create-group-container">
         <aside className="create-group-sidebar">
+          <button 
+            onClick={() => navigate(-1)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              marginBottom: '16px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <i className="fa-solid fa-arrow-left"></i>
+            <span>Quay lại</span>
+          </button>
+          
           <div className="sidebar-section">
             <h3 className="sidebar-title">Tạo Nhóm</h3>
           </div>

@@ -16,14 +16,19 @@ public class PostReportService : IPostReportService
 
     public async Task<List<PostReport>> GetAllAsync()
     {
-        return await _context.PostReports.Include(pr => pr.Post).Include(pr => pr.User).ToListAsync();
+        return await _context.PostReports
+            .Include(pr => pr.Post)
+            .Include(pr => pr.ReporterUser)
+            .Include(pr => pr.ReviewedByAdmin)
+            .ToListAsync();
     }
 
     public async Task<PostReport?> GetByIdAsync(int id)
     {
         return await _context.PostReports
             .Include(pr => pr.Post)
-            .Include(pr => pr.User)
+            .Include(pr => pr.ReporterUser)
+            .Include(pr => pr.ReviewedByAdmin)
             .FirstOrDefaultAsync(pr => pr.Id == id);
     }
 

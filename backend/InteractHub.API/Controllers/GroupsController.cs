@@ -108,8 +108,18 @@ public class GroupsController : ControllerBase
         if (!joined)
             return this.NotFoundResponse("Group not found");
 
-        // Notify all clients to update member count
-        await _groupHub.Clients.All.SendAsync("GroupUpdated", id);
+        // Get updated group to get new member count
+        var group = await _groupService.GetByIdAsync(id);
+        var memberCount = group?.Memberships.Count ?? 0;
+
+        // 🔔 Emit member count updated event via SignalR
+        await _groupHub.Clients.All.SendAsync("GroupMemberCountUpdated", new
+        {
+            groupId = id,
+            memberCount = memberCount
+        });
+
+        Console.WriteLine($"[GroupsController] 📡 Emitted GroupMemberCountUpdated for group {id}, members: {memberCount}");
 
         return this.SuccessResponse(message: "Joined group successfully");
     }
@@ -127,8 +137,18 @@ public class GroupsController : ControllerBase
         if (!left)
             return this.NotFoundResponse("Group membership not found");
 
-        // Notify all clients to update member count
-        await _groupHub.Clients.All.SendAsync("GroupUpdated", id);
+        // Get updated group to get new member count
+        var group = await _groupService.GetByIdAsync(id);
+        var memberCount = group?.Memberships.Count ?? 0;
+
+        // 🔔 Emit member count updated event via SignalR
+        await _groupHub.Clients.All.SendAsync("GroupMemberCountUpdated", new
+        {
+            groupId = id,
+            memberCount = memberCount
+        });
+
+        Console.WriteLine($"[GroupsController] 📡 Emitted GroupMemberCountUpdated for group {id}, members: {memberCount}");
 
         return this.SuccessResponse(message: "Left group successfully");
     }

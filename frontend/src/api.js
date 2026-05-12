@@ -24,7 +24,8 @@ async function handleResponse(response) {
   }
 
   if (!response.ok) {
-    const errorMessage = data?.message || data?.error || `HTTP ${response.status}: ${response.statusText}`;
+    // Try to get the error message from the response in various formats
+    const errorMessage = data?.Message || data?.message || data?.error || `HTTP ${response.status}: ${response.statusText}`;
     console.error('API Error:', {
       status: response.status,
       message: errorMessage,
@@ -140,6 +141,15 @@ export async function getPosts(page = 1, pageSize = 20) {
 
 export async function getPostById(postId) {
   const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/posts/${postId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function getPostByIdAsAdmin(postId) {
+  const token = localStorage.getItem('adminToken');
   const response = await fetch(`${API_BASE}/posts/${postId}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
@@ -567,6 +577,110 @@ export async function checkFriendshipStatus(friendId) {
   const response = await fetch(`${API_BASE}/friendships/status/${friendId}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+// ===== ADMIN API FUNCTIONS =====
+
+export async function adminLogin({ userName, password }) {
+  const response = await fetch(`${API_BASE}/admin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userName, password })
+  });
+
+  const data = await handleResponse(response);
+  const token = data?.Data?.Token || data?.Data?.token;
+  const admin = data?.Data?.Admin || data?.Data?.admin;
+
+  if (!token || !admin) {
+    throw new Error('Invalid response from server - missing Token or Admin');
+  }
+
+  return { token, admin };
+}
+
+export async function getAdminInfo() {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/admin/me`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+// POST REPORTS - User side
+export async function createPostReport(postId, reason, detail) {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE}/postreports/create`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ PostId: postId, Reason: reason, Detail: detail })
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+// POST REPORTS - Admin side
+export async function getPendingReports() {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/postreports/pending`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
+export async function getAllReports(page = 1, pageSize = 20) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/postreports?page=${page}&pageSize=${pageSize}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || [];
+}
+
+export async function getReportById(reportId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/postreports/${reportId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function approveReport(reportId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/postreports/${reportId}/approve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
+  const data = await handleResponse(response);
+  return data?.Data || null;
+}
+
+export async function rejectReport(reportId) {
+  const token = localStorage.getItem('adminToken');
+  const response = await fetch(`${API_BASE}/postreports/${reportId}/reject`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
   const data = await handleResponse(response);
   return data?.Data || null;
 }

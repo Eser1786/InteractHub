@@ -120,6 +120,17 @@ export default function GroupDetailPage() {
       console.error('Cannot join group realtime channel:', err);
     });
 
+    const handleGroupMemberCountUpdated = (event) => {
+      const payload = event.detail || {};
+      const payloadGroupId = payload.groupId ?? payload.GroupId;
+      if (payloadGroupId !== group.id) return;
+
+      const memberCount = payload.memberCount ?? payload.MemberCount;
+      console.log('[GroupDetailPage] 📊 Member count updated:', memberCount);
+      
+      setGroup((prev) => (prev ? { ...prev, memberCount } : prev));
+    };
+
     const handleGroupPostCreated = (event) => {
       const payload = event.detail || {};
       const payloadGroupId = payload.groupId ?? payload.GroupId;
@@ -300,6 +311,7 @@ export default function GroupDetailPage() {
     window.addEventListener('signalr:group-comment-deleted', handleGroupCommentDeleted);
     window.addEventListener('signalr:group-post-liked', handleGroupPostLiked);
     window.addEventListener('signalr:group-post-unliked', handleGroupPostUnliked);
+    window.addEventListener('signalr:group-member-count-updated', handleGroupMemberCountUpdated);
 
     return () => {
       leaveGroupChannel(group.id).catch(() => {});
@@ -310,6 +322,7 @@ export default function GroupDetailPage() {
       window.removeEventListener('signalr:group-comment-deleted', handleGroupCommentDeleted);
       window.removeEventListener('signalr:group-post-liked', handleGroupPostLiked);
       window.removeEventListener('signalr:group-post-unliked', handleGroupPostUnliked);
+      window.removeEventListener('signalr:group-member-count-updated', handleGroupMemberCountUpdated);
     };
   }, [group?.id]);
 

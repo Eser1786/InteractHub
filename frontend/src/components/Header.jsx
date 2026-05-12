@@ -128,7 +128,7 @@ export default function Header({ onLogout, showControls = true, onSearch, search
                 onClick={() => navigate('/home')}
                 title="Home"
               >
-                <span className="icon-home"><i class="fa-regular fa-house"></i></span>
+                <span className="icon-home"><i className="fa-regular fa-house"></i></span>
               </button>
               <button 
                 className={`header-icon-btn ${location.pathname === '/group' ? 'active' : ''}`}

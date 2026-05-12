@@ -178,7 +178,7 @@ export default function RegisterPage() {
                   className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  <i class="fa-solid fa-eye"></i>
+                  <i className="fa-solid fa-eye"></i>
                 </button>
               </div>
               <div className="password-requirements">
@@ -223,7 +223,7 @@ export default function RegisterPage() {
                   className="password-toggle"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  <i class="fa-solid fa-eye"></i>
+                  <i className="fa-solid fa-eye"></i>
                 </button>
               </div>
             </div>

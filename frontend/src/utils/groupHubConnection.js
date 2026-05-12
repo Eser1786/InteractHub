@@ -13,6 +13,10 @@ function bindRealtimeHandlers(conn) {
   conn.on("GroupUpdated", (groupId) => {
     window.dispatchEvent(new CustomEvent("signalr:group-updated", { detail: groupId }));
   });
+  conn.on("GroupMemberCountUpdated", (payload) => {
+    console.log("[GroupHub] 📊 GroupMemberCountUpdated received:", payload);
+    window.dispatchEvent(new CustomEvent("signalr:group-member-count-updated", { detail: payload }));
+  });
 }
 
 export const startConnection = async () => {

@@ -12,9 +12,14 @@ import ProfilePage from './pages/ProfilePage';
 import StoryPage from './pages/StoryPage';
 import UserProfilePage from './pages/UserProfilePage';
 import PostDetailPage from './pages/PostDetailPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminReportsPage from './pages/AdminReportsPage';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
 import { startConnection, resetPostHubConnection } from './utils/postHubConnection';
 import { startStoryConnection, resetStoryHubConnection } from './utils/storyHubConnection';
 import { startConnection as startGroupConnection, resetGroupHubConnection } from './utils/groupHubConnection';
+import { startConnection as startUserConnection, resetUserHubConnection } from './utils/userHubConnection';
+import { startConnection as startNotificationConnection, resetConnection as resetNotificationConnection } from './utils/notificationHubConnection';
 import NotificationHubBridge from './components/NotificationHubBridge';
 
 // Helper function to check if JWT token is valid (not expired)
@@ -75,6 +80,8 @@ function App() {
       resetStoryHubConnection();
       resetPostHubConnection();
       resetGroupHubConnection();
+      resetUserHubConnection();
+      resetNotificationConnection();
       return;
     }
     startConnection().catch((err) => {
@@ -85,6 +92,12 @@ function App() {
     });
     startGroupConnection().catch((err) => {
       console.error('Failed to start GroupHub connection:', err);
+    });
+    startUserConnection().catch((err) => {
+      console.error('Failed to start UserHub connection:', err);
+    });
+    startNotificationConnection().catch((err) => {
+      console.error('Failed to start NotificationHub connection:', err);
     });
   }, [token]);
 
@@ -98,7 +111,6 @@ function App() {
           await startConnection();
         } catch (err) {
           console.error('Failed to start PostHub connection:', err);
-          // App still works without PostHub, just won't have real-time updates
         }
         try {
           await startStoryConnection();
@@ -109,6 +121,16 @@ function App() {
           await startGroupConnection();
         } catch (err) {
           console.error('Failed to start GroupHub connection:', err);
+        }
+        try {
+          await startUserConnection();
+        } catch (err) {
+          console.error('Failed to start UserHub connection:', err);
+        }
+        try {
+          await startNotificationConnection();
+        } catch (err) {
+          console.error('Failed to start NotificationHub connection:', err);
         }
       } else {
         setToken(null);
@@ -144,6 +166,8 @@ function App() {
           <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/user-profile/:userId" element={token ? <UserProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/post/:postId" element={token ? <PostDetailPage /> : <Navigate to="/login" replace />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/reports" element={<AdminProtectedRoute><AdminReportsPage /></AdminProtectedRoute>} />
           <Route path="/" element={token ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />} />
         </Routes>
       </Router>

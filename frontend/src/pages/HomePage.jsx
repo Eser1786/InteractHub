@@ -4,6 +4,7 @@ import { getPosts, getAcceptedFriends, getAllUsers, createPost, createStory, get
 import Header from '../components/Header';
 import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
+import ReportPostModal from '../components/ReportPostModal';
 import '../styles/HomePage.css';
 import { startConnection } from '../utils/postHubConnection';
 import { mergeCommentIntoList, sameCommentId } from '../utils/commentNormalize';
@@ -50,6 +51,8 @@ export default function HomePage() {
   const [sharePostId, setSharePostId] = useState(null);
   const [shareCaption, setShareCaption] = useState('');
   const [sharePending, setSharePending] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportPostId, setReportPostId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const postsEndRef = useRef(null);
@@ -420,13 +423,112 @@ export default function HomePage() {
       setUnreadMessageCount((prev) => prev + 1);
     };
 
+    const onUserProfileUpdated = (e) => {
+      const updatedUser = e.detail;
+      if (!updatedUser || !updatedUser.Id) return;
+      
+      console.log('[HomePage] 🔄 User profile updated:', updatedUser);
+      
+      // Update friends info if this user is in our friends list
+      setFriendsInfo((prev) => ({
+        ...prev,
+        [updatedUser.Id]: updatedUser
+      }));
+      
+      // Update requesters info if this user is in our pending requests
+      setRequestersInfo((prev) => ({
+        ...prev,
+        [updatedUser.Id]: updatedUser
+      }));
+      
+      // Update suggested users if this user is in the list
+      setAllUsers((prev) =>
+        prev.map((u) => u.Id === updatedUser.Id ? updatedUser : u)
+      );
+      
+      // Update current user if it's us
+      if (currentUser && currentUser.Id === updatedUser.Id) {
+        const updatedCurrentUser = { ...currentUser, ...updatedUser };
+        setCurrentUser(updatedCurrentUser);
+        localStorage.setItem('user', JSON.stringify(updatedCurrentUser));
+      }
+      
+      // Update posts that have this user as author
+      setPosts((prev) =>
+        prev.map((post) => {
+          if (post.UserId === updatedUser.Id) {
+            return {
+              ...post,
+              UserFullName: updatedUser.FullName || updatedUser.UserName,
+              UserName: updatedUser.UserName,
+              UserProfilePictureUrl: updatedUser.ProfilePictureUrl
+            };
+          }
+          if (post.SharedPost?.UserId === updatedUser.Id) {
+            return {
+              ...post,
+              SharedPost: {
+                ...post.SharedPost,
+                UserFullName: updatedUser.FullName || updatedUser.UserName,
+                UserName: updatedUser.UserName,
+                UserProfilePictureUrl: updatedUser.ProfilePictureUrl
+              }
+            };
+          }
+          return post;
+        })
+      );
+    };
+
+    const onFriendRequestReceived = async (e) => {
+      const friendRequest = e.detail;
+      if (!friendRequest || !friendRequest.Id) return;
+      
+      console.log('[HomePage] 📬 Friend request received:', friendRequest);
+      
+      // Reload pending requests
+      if (!currentUser?.Id) return;
+      try {
+        const requestsData = await getPendingRequests(currentUser.Id, 1, 20);
+        setPendingRequests(requestsData || []);
+        // Clear cache to reload user info
+        setRequestersInfo({});
+      } catch (err) {
+        console.error('[HomePage] Error reloading pending requests:', err);
+      }
+    };
+
+    const onFriendRequestAccepted = async (e) => {
+      const friendRequest = e.detail;
+      if (!friendRequest || !friendRequest.UserId) return;
+      
+      console.log('[HomePage] ✅ Friend request accepted:', friendRequest);
+      
+      // Reload friends list since we're now friends with this user
+      if (!currentUser?.Id) return;
+      try {
+        const friendsData = await getAcceptedFriends(currentUser.Id, 1, 10);
+        setFriends(friendsData || []);
+        setFriendsInfo({});
+      } catch (err) {
+        console.error('[HomePage] Error reloading friends:', err);
+      }
+    };
+
     window.addEventListener('signalr:notification', onRealtimeNotification);
     window.addEventListener('signalr:message-unread', onMessageUnread);
+    window.addEventListener('signalr:user-profile-updated', onUserProfileUpdated);
+    window.addEventListener('signalr:friend-request-received', onFriendRequestReceived);
+    window.addEventListener('signalr:friend-request-accepted', onFriendRequestAccepted);
+    
     return () => {
       window.removeEventListener('signalr:notification', onRealtimeNotification);
       window.removeEventListener('signalr:message-unread', onMessageUnread);
+      window.removeEventListener('signalr:user-profile-updated', onUserProfileUpdated);
+      window.removeEventListener('signalr:friend-request-received', onFriendRequestReceived);
+      window.removeEventListener('signalr:friend-request-accepted', onFriendRequestAccepted);
     };
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     const loadInfoForFriends = async () => {
@@ -699,13 +801,21 @@ export default function HomePage() {
           prev.map(p => {
             // If this is the liked/unliked post
             if (p.Id === post.Id) {
-              return updatedPost;
+              // IMPORTANT: Preserve SharedPost structure if this is a shared post
+              return {
+                ...updatedPost,
+                SharedPost: p.SharedPost // Keep original SharedPost if exists
+              };
             }
             // If this post shares the liked/unliked post, update the shared post data
             if (p.SharedPost?.Id === post.Id) {
               return {
                 ...p,
-                SharedPost: updatedPost
+                SharedPost: {
+                  ...p.SharedPost,
+                  ...updatedPost, // Merge new data
+                  LikesCount: updatedPost.LikesCount ?? p.SharedPost.LikesCount
+                }
               };
             }
             return p;
@@ -903,8 +1013,28 @@ export default function HomePage() {
       // Reload friends list
       const friendsData = await getAcceptedFriends(currentUser.Id, 1, 10);
       setFriends(friendsData || []);
-      // Clear cache
-      setFriendsInfo({});
+      
+      // 🔄 Preload new friend's info instead of clearing cache
+      if (friendsData && friendsData.length > 0) {
+        // Find newly accepted friend ID
+        const newlyAcceptedFriendId = friendsData[0]?.FriendId || friendsData[0]?.friendId;
+        
+        if (newlyAcceptedFriendId) {
+          try {
+            const newFriendData = await getUser(newlyAcceptedFriendId);
+            if (newFriendData) {
+              setFriendsInfo((prev) => ({
+                ...prev,
+                [newlyAcceptedFriendId]: newFriendData
+              }));
+              console.log(`[HomePage] ✅ Preloaded new friend info: ${newlyAcceptedFriendId}`);
+            }
+          } catch (err) {
+            console.error('[HomePage] Error preloading new friend info:', err);
+          }
+        }
+      }
+      
       setError('');
       
       // Emit event to notify other components
@@ -1358,14 +1488,28 @@ export default function HomePage() {
                       >
                         ⋯
                       </button>
-                      {activePostMenuId === post.Id && currentUser?.Id === post.UserId && (
+                      {activePostMenuId === post.Id && (
                         <div className="post-menu-dropdown">
-                          <button 
-                            className="menu-item"
-                            onClick={() => handleDeletePost(post)}
-                          >
-                            <i className="fa-solid fa-trash"></i> Xóa bài viết
-                          </button>
+                          {currentUser?.Id === post.UserId && (
+                            <button 
+                              className="menu-item"
+                              onClick={() => handleDeletePost(post)}
+                            >
+                              <i className="fa-solid fa-trash"></i> Xóa bài viết
+                            </button>
+                          )}
+                          {currentUser?.Id !== post.UserId && (
+                            <button 
+                              className="menu-item menu-item-report"
+                              onClick={() => {
+                                setReportPostId(post.Id);
+                                setShowReportModal(true);
+                                setActivePostMenuId(null);
+                              }}
+                            >
+                              <i className="fa-solid fa-flag"></i> Báo cáo bài viết
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1909,6 +2053,19 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      <ReportPostModal 
+        open={showReportModal} 
+        postId={reportPostId}
+        onClose={() => {
+          setShowReportModal(false);
+          setReportPostId(null);
+        }}
+        onSuccess={() => {
+          setShowReportModal(false);
+          setReportPostId(null);
+        }}
+      />
     </div>
   );
 }

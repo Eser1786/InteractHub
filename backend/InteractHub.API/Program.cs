@@ -33,11 +33,15 @@ builder.Services.AddScoped<IStoryService, StoryService>();
 builder.Services.AddScoped<IFriendshipService, FriendshipService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPostReportService, PostReportService>();
+builder.Services.AddScoped<IPostDeletionLogService, PostDeletionLogService>();
 builder.Services.AddScoped<IHashtagService, HashtagService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IFileService, CloudinaryService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddSingleton<IUserPresenceService, UserPresenceService>();
+
+// Add AutoMapper
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -228,6 +232,7 @@ app.MapHub<CommentHub>("/commentHub");
 app.MapHub<PostHub>("/postHub").RequireAuthorization();
 app.MapHub<StoryHub>("/storyHub");
 app.MapHub<GroupHub>("/groupHub");
+app.MapHub<UserHub>("/userHub");
 
 // ✅ Chuyển hướng các đường dẫn (Router) của React về trang chủ index.html
 app.MapFallbackToFile("index.html");

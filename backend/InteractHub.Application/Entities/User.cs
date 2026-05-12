@@ -6,6 +6,7 @@ public class User : IdentityUser
     public string FullName {get; set;}
     public string? ProfilePictureUrl {get; set;}
     public string? Bio {get; set;}
+    public DateTime? LastActiveAt { get; set; }
 
     public ICollection<Post> Posts {get; set;}
     public ICollection<Like> Likes {get; set;}

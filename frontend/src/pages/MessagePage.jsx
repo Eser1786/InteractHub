@@ -486,6 +486,73 @@ export default function MessagePage() {
     };
   }, [selectedConversation, currentUser, scrollToBottom]);
 
+  // 🟢 Listener for UserOnline/UserOffline events to track user presence
+  useEffect(() => {
+    const handleUserOnline = (event) => {
+      const payload = event.detail || {};
+      const userId = payload.userId;
+      console.log('[MessagePage] 🟢 User went online:', userId);
+
+      setConversations((prev) => {
+        const updated = prev.map((conv) => {
+          if (conv.id === userId) {
+            console.log(`[MessagePage] ✅ Marking ${conv.name} as online`);
+            return { ...conv, isActive: true, lastSeenAt: null };
+          }
+          return conv;
+        });
+
+        // Update online friends list
+        const online = updated.filter(c => c.isActive && !c.isGroup);
+        setOnlineFriends(online);
+
+        return updated;
+      });
+    };
+
+    const handleUserOffline = (event) => {
+      const payload = event.detail || {};
+      const userId = payload.userId;
+      const lastActiveAt = payload.lastActiveAt;
+      console.log('[MessagePage] 🔴 User went offline:', userId, 'Last active:', lastActiveAt);
+
+      setConversations((prev) => {
+        const updated = prev.map((conv) => {
+          if (conv.id === userId) {
+            console.log(`[MessagePage] ✅ Marking ${conv.name} as offline, lastSeenAt: ${lastActiveAt}`);
+            return { ...conv, isActive: false, lastSeenAt: lastActiveAt || new Date().toISOString() };
+          }
+          return conv;
+        });
+
+        // Update online friends list
+        const online = updated.filter(c => c.isActive && !c.isGroup);
+        setOnlineFriends(online);
+
+        return updated;
+      });
+    };
+
+    window.addEventListener('signalr:user-online', handleUserOnline);
+    window.addEventListener('signalr:user-offline', handleUserOffline);
+
+    return () => {
+      window.removeEventListener('signalr:user-online', handleUserOnline);
+      window.removeEventListener('signalr:user-offline', handleUserOffline);
+    };
+  }, []);
+
+  // ⏰ Refresh the display every minute to update "X minutes ago" text
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Force a re-render by triggering a dummy state update
+      // This updates the formatLastSeen() output for all conversations
+      setConversations(prev => [...prev]);
+    }, 60000); // Update every 60 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   // 📜 Debounced scroll handler for lazy loading
   const handleMessagesScroll = useCallback((e) => {
     const element = e.target;

@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using InteractHub.Application.Interfaces;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Helpers;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
+using InteractHub.Infrastructure.Hubs;
 using System.Security.Claims;
 
 namespace InteractHub.API.Controllers;
@@ -17,10 +19,12 @@ namespace InteractHub.API.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IHubContext<UserHub> _userHub;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IHubContext<UserHub> userHub)
     {
         _userService = userService;
+        _userHub = userHub;
     }
 
     /// <summary>
@@ -142,6 +146,21 @@ public class UsersController : ControllerBase
 
         await _userService.UpdateAsync(user);
 
+        // 🔔 Emit profile update event via SignalR
+        // This will notify all clients about this user's profile change
+        var userDto = new UserResponseDto
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            Email = user.Email,
+            FullName = user.FullName,
+            ProfilePictureUrl = user.ProfilePictureUrl,
+            Bio = user.Bio
+        };
+
+        await _userHub.Clients.All.SendAsync("UserProfileUpdated", userDto);
+        Console.WriteLine($"[UsersController] 📡 Emitted UserProfileUpdated for user {id}");
+
         return this.SuccessResponse(message: "User updated successfully", statusCode: 200);
     }
 
@@ -207,6 +226,10 @@ public class UsersController : ControllerBase
                     ProfilePictureUrl = user.ProfilePictureUrl,
                     Bio = user.Bio
                 };
+
+                // 🔔 Emit profile update event via SignalR
+                await _userHub.Clients.All.SendAsync("UserProfileUpdated", userDto);
+                Console.WriteLine($"[UsersController] 📡 Emitted UserProfileUpdated for user {id} (profile picture)");
 
                 return this.SuccessResponse(userDto, "Profile picture uploaded successfully", 200);
             }

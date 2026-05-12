@@ -1,10 +1,10 @@
-const react = require('@vitejs/plugin-react');
+import react from '@vitejs/plugin-react';
 
 // Dùng 127.0.0.1 thay vì localhost để tránh IPv6 (::1) gây lỗi proxy kiểu "Parse Error: Data after Connection: close" với một số bản Node/Kestrel.
 const API_ORIGIN = 'http://127.0.0.1:5142';
 
 /** @type {import('vite').UserConfig} */
-module.exports = {
+export default {
   plugins: [react()],
   server: {
     port: 3000,

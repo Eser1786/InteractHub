@@ -140,7 +140,7 @@ public class AuthController : ControllerBase
         return this.CreatedResponse(authData, "Registration successful");
     }
 
-    // ✅ POST /api/auth/login
+    // ✅ POST /api/auth/login (User Login ONLY - Admin must use /api/admin/login)
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
@@ -151,6 +151,11 @@ public class AuthController : ControllerBase
         var user = await _userManager.FindByNameAsync(loginDto.UserName);
         if (user == null)
             return this.UnauthorizedResponse("Invalid username or password");
+
+        // 🔒 SECURITY: Prevent admin users from logging in via regular endpoint
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Contains(RoleConstants.Admin))
+            return this.UnauthorizedResponse("Admin users must use admin login endpoint");
 
         // 2️⃣ Kiểm tra password
         var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);

@@ -489,6 +489,14 @@
   color: #dc3545;
 }
 
+.menu-item-report {
+  color: #dc3545;
+}
+
+.menu-item-report:hover {
+  background: #ffe6e6;
+}
+
 .post-content {
   padding: 16px;
 }

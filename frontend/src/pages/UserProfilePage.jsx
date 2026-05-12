@@ -6,6 +6,7 @@ import CommentSection from '../components/CommentSection';
 import HashtagContent from '../components/HashtagContent';
 import '../styles/ProfilePage.css';
 import { mergeCommentIntoList } from '../utils/commentNormalize';
+import { normalizeFeedPostFromRealtime } from '../utils/postRealtime';
 
 export default function UserProfilePage() {
   const { userId } = useParams();
@@ -91,6 +92,100 @@ export default function UserProfilePage() {
 
     loadComments();
   }, [activeCommentPostId]);
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    // 🔔 Listener for realtime post created by this user
+    const handlePostCreated = (event) => {
+      const payload = event.detail || {};
+      const postUserId = payload.userId ?? payload.UserId;
+      
+      // Only add if post is by this profile user
+      if (postUserId !== userId) return;
+
+      const normalized = normalizeFeedPostFromRealtime(payload);
+      console.log(`[UserProfilePage] 📝 Post created by user ${userId}:`, normalized.Id);
+      setPosts((prev) => {
+        const exists = prev.some((p) => p.id === normalized.Id || p.Id === normalized.Id);
+        if (exists) return prev;
+        return [{ ...normalized, likedBy: normalized.likedBy || [] }, ...prev];
+      });
+    };
+
+    // 🔔 Listener for realtime post deleted by this user
+    const handlePostDeleted = (event) => {
+      const payload = event.detail || {};
+      const postUserId = payload.userId ?? payload.UserId;
+      
+      // Only process if post was by this profile user
+      if (postUserId !== userId) return;
+
+      const postId = payload.postId ?? payload.PostId;
+      console.log(`[UserProfilePage] 🗑️ Post deleted from user ${userId}:`, postId);
+      setPosts((prev) => prev.filter((p) => p.id !== postId && p.Id !== postId));
+      setCommentsByPost((prev) => {
+        if (!(postId in prev)) return prev;
+        const next = { ...prev };
+        delete next[postId];
+        return next;
+      });
+    };
+
+    // 🔔 Listener for post liked
+    const handlePostLiked = (event) => {
+      const payload = event.detail || {};
+      const postId = payload.postId ?? payload.PostId;
+      const actorUserId = payload.userId ?? payload.UserId;
+      
+      if (!postId || !actorUserId) return;
+
+      setPosts((prev) => prev.map((post) => {
+        if (post.id === postId || post.Id === postId) {
+          return {
+            ...post,
+            likesCount: payload.likesCount ?? payload.LikesCount ?? (post.likesCount || post.LikesCount || 0),
+            LikedByUserIds: Array.isArray(payload.LikedByUserIds) ? payload.LikedByUserIds : (post.LikedByUserIds || [])
+          };
+        }
+        return post;
+      }));
+    };
+
+    // 🔔 Listener for post unliked
+    const handlePostUnliked = (event) => {
+      const payload = event.detail || {};
+      const postId = payload.postId ?? payload.PostId;
+      const actorUserId = payload.userId ?? payload.UserId;
+      
+      if (!postId || !actorUserId) return;
+
+      setPosts((prev) => prev.map((post) => {
+        if (post.id === postId || post.Id === postId) {
+          return {
+            ...post,
+            likesCount: payload.likesCount ?? payload.LikesCount ?? (post.likesCount || post.LikesCount || 0),
+            LikedByUserIds: Array.isArray(payload.LikedByUserIds) ? payload.LikedByUserIds : (post.LikedByUserIds || [])
+          };
+        }
+        return post;
+      }));
+    };
+
+    window.addEventListener('signalr:post-created', handlePostCreated);
+    window.addEventListener('signalr:post-deleted', handlePostDeleted);
+    window.addEventListener('signalr:post-liked', handlePostLiked);
+    window.addEventListener('signalr:post-unliked', handlePostUnliked);
+
+    return () => {
+      window.removeEventListener('signalr:post-created', handlePostCreated);
+      window.removeEventListener('signalr:post-deleted', handlePostDeleted);
+      window.removeEventListener('signalr:post-liked', handlePostLiked);
+      window.removeEventListener('signalr:post-unliked', handlePostUnliked);
+    };
+  }, [userId]);
 
   const handleAddFriend = async () => {
     if (!currentUser || !user || isFriend) return;

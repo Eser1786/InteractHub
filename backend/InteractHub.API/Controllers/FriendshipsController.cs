@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using InteractHub.Application.Interfaces;
 using InteractHub.Application.Entities;
 using InteractHub.Application.Entities.Enums;
@@ -8,6 +9,7 @@ using InteractHub.Application.Helpers;
 using InteractHub.API.DTOs;
 using InteractHub.API.DTOs.Response;
 using InteractHub.API.Extensions;
+using InteractHub.Infrastructure.Hubs;
 using System.Security.Claims;
 
 namespace InteractHub.API.Controllers;
@@ -20,15 +22,18 @@ public class FriendshipsController : ControllerBase
     private readonly IFriendshipService _friendshipService;
     private readonly IMessageService _messageService;
     private readonly IUserPresenceService _userPresenceService;
+    private readonly IHubContext<NotificationHub> _notificationHub;
 
     public FriendshipsController(
         IFriendshipService friendshipService,
         IMessageService messageService,
-        IUserPresenceService userPresenceService)
+        IUserPresenceService userPresenceService,
+        IHubContext<NotificationHub> notificationHub)
     {
         _friendshipService = friendshipService;
         _messageService = messageService;
         _userPresenceService = userPresenceService;
+        _notificationHub = notificationHub;
     }
 
     /// <summary>
@@ -145,6 +150,20 @@ public class FriendshipsController : ControllerBase
             var friendship = await _friendshipService.SendFriendRequestAsync(userId, requestDto.FriendId);
             var friendshipDto = MapToFriendshipResponseDto(friendship);
 
+            // 🔔 Emit friend request received event via SignalR to the receiver
+            // Group format: "notifications-{userId}"
+            await _notificationHub.Clients.Group($"notifications-{requestDto.FriendId}")
+                .SendAsync("FriendRequestReceived", new
+                {
+                    Id = friendship.Id,
+                    UserId = userId,
+                    FriendId = requestDto.FriendId,
+                    Status = friendship.Status.ToString(),
+                    CreatedAt = friendship.CreatedAt
+                });
+            
+            Console.WriteLine($"[FriendshipsController] 📡 Emitted FriendRequestReceived to {requestDto.FriendId}");
+
             return this.CreatedResponse(friendshipDto);
         }
         catch (InvalidOperationException ex)
@@ -172,6 +191,20 @@ public class FriendshipsController : ControllerBase
 
             var friendship = await _friendshipService.AcceptFriendRequestAsync(id, currentUserId);
             var friendshipDto = MapToFriendshipResponseDto(friendship);
+            
+            // 🔔 Emit friend request accepted event to the requester
+            await _notificationHub.Clients.Group($"notifications-{friendship.UserId}")
+                .SendAsync("FriendRequestAccepted", new
+                {
+                    Id = friendship.Id,
+                    UserId = friendship.UserId,
+                    FriendId = friendship.FriendId,
+                    Status = friendship.Status.ToString(),
+                    UpdatedAt = friendship.UpdatedAt
+                });
+            
+            Console.WriteLine($"[FriendshipsController] 📡 Emitted FriendRequestAccepted to {friendship.UserId}");
+            
             return this.SuccessResponse(friendshipDto);
         }
         catch (InvalidOperationException ex)
@@ -201,6 +234,23 @@ public class FriendshipsController : ControllerBase
             { 
                 ErrorHelper.CreateValidationError("friendship", "Cannot decline this request") 
             });
+
+        // 🔔 Emit friend request declined event via SignalR to the requester
+        // Get friendship details to find the requester
+        var friendship = await _friendshipService.GetByIdAsync(id);
+        if (friendship != null)
+        {
+            await _notificationHub.Clients.Group($"notifications-{friendship.UserId}")
+                .SendAsync("FriendRequestDeclined", new
+                {
+                    Id = friendship.Id,
+                    UserId = friendship.UserId,
+                    FriendId = friendship.FriendId,
+                    Status = friendship.Status.ToString()
+                });
+            
+            Console.WriteLine($"[FriendshipsController] 📡 Emitted FriendRequestDeclined to {friendship.UserId}");
+        }
 
         return this.SuccessResponse(message: "Friend request declined");
     }

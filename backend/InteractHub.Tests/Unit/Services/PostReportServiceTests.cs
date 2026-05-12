@@ -1,4 +1,5 @@
 using InteractHub.Application.Entities;
+using InteractHub.Application.Entities.Enums;
 using InteractHub.Infrastructure.Service;
 using InteractHub.Tests.Common;
 
@@ -15,8 +16,8 @@ public class PostReportServiceTests
         var report = new PostReport 
         { 
             PostId = 1, 
-            UserId = "u1", 
-            Reason = "spam",
+            ReporterUserId = "u1", 
+            Reason = ReportReason.Spam,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -51,8 +52,8 @@ public class PostReportServiceTests
         var report = await service.CreateAsync(new PostReport 
         { 
             PostId = 1, 
-            UserId = "u1", 
-            Reason = "spam",
+            ReporterUserId = "u1", 
+            Reason = ReportReason.Spam,
             CreatedAt = DateTime.UtcNow
         });
 
@@ -63,3 +64,4 @@ public class PostReportServiceTests
         Assert.True(deleted);
     }
 }
+

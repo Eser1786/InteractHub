@@ -6,11 +6,23 @@ using InteractHub.Tests.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Moq;
+using Microsoft.AspNetCore.SignalR;
+using InteractHub.Infrastructure.Hubs;
 
 namespace InteractHub.Tests.Unit.Controllers;
 
 public class UsersControllerTests
 {
+    private UsersController CreateController(Mock<IUserService> userServiceMock)
+    {
+        var userHubMock = new Mock<IHubContext<UserHub>>();
+        var mockClients = new Mock<IHubClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClients.Setup(c => c.All).Returns(mockClientProxy.Object);
+        userHubMock.Setup(h => h.Clients).Returns(mockClients.Object);
+        return new UsersController(userServiceMock.Object, userHubMock.Object);
+    }
+
     // GetById tests trường hợp người dùng không tồn tại
     [Fact]
     public async Task GetById_ShouldReturnNotFound_WhenUserMissing()
@@ -18,7 +30,7 @@ public class UsersControllerTests
         // Arrange
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetByIdAsync("missing")).ReturnsAsync((User?)null);
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
 
         // Act
         var result = await controller.GetById("missing");
@@ -36,7 +48,7 @@ public class UsersControllerTests
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetByIdAsync("u1"))
         .ReturnsAsync(new User { Id = "u1"});
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // Act
@@ -53,7 +65,7 @@ public class UsersControllerTests
     {
         // Arrange
         var userServiceMock = new Mock<IUserService>();
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // Act
@@ -73,7 +85,7 @@ public class UsersControllerTests
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetByIdAsync("u1")).ReturnsAsync(user);
         userServiceMock.Setup(s => s.UpdateAsync(It.IsAny<User>())).ReturnsAsync(true);
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -92,7 +104,7 @@ public class UsersControllerTests
         // given
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetByIdAsync("u1")).ReturnsAsync((User?)null);
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -117,7 +129,7 @@ public class UsersControllerTests
 
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetUsersAsync()).ReturnsAsync(users);
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -143,7 +155,7 @@ public class UsersControllerTests
 
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetUsersAsync()).ReturnsAsync(users);
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -163,7 +175,7 @@ public class UsersControllerTests
         var users = new List<User>();
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetUsersAsync()).ReturnsAsync(users);
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -188,7 +200,7 @@ public class UsersControllerTests
 
         var userServiceMock = new Mock<IUserService>();
         userServiceMock.Setup(s => s.GetUsersAsync()).ReturnsAsync(users);
-        var controller = new UsersController(userServiceMock.Object);
+        var controller = CreateController(userServiceMock);
         ControllerTestHelper.SetUser(controller, "u1");
 
         // when
@@ -200,3 +212,4 @@ public class UsersControllerTests
         Assert.NotNull(objectResult.Value);
     }
 }
+

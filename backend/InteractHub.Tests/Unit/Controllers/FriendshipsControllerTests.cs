@@ -6,6 +6,8 @@ using InteractHub.Application.Interfaces;
 using InteractHub.Tests.Common;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using Microsoft.AspNetCore.SignalR;
+using InteractHub.Infrastructure.Hubs;
 
 namespace InteractHub.Tests.Unit.Controllers;
 
@@ -16,10 +18,16 @@ public class FriendshipsControllerTests
         Mock<IMessageService> messageMock,
         Mock<IUserPresenceService> presenceMock)
     {
+        var notificationHubMock = new Mock<IHubContext<NotificationHub>>();
+        var mockClients = new Mock<IHubClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
+        notificationHubMock.Setup(h => h.Clients).Returns(mockClients.Object);
         return new FriendshipsController(
             friendshipMock.Object,
             messageMock.Object,
-            presenceMock.Object);
+            presenceMock.Object,
+            notificationHubMock.Object);
     }
 
     // GetById tests - trả về friendship khi tồn tại

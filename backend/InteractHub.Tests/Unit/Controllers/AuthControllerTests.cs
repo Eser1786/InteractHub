@@ -468,6 +468,7 @@ public class AuthControllerTests
         var user = new User { Id = "u1", UserName = "john", Email = "john@mail.com", FullName = "John" };
         var userManagerMock = IdentityMockFactory.CreateUserManagerMock();
         userManagerMock.Setup(m => m.FindByNameAsync("john")).ReturnsAsync(user);
+        userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { RoleConstants.User });
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
         signInManagerMock
             .Setup(m => m.CheckPasswordSignInAsync(user, "bad-pass", false))
@@ -506,9 +507,9 @@ public class AuthControllerTests
         Assert.NotNull(objectResult.Value);
     }
 
-    // Login tests - đăng nhập thành công với role Admin
+    // Login tests - ngăn Admin đăng nhập qua endpoint này
     [Fact]
-    public async Task Login_ShouldReturnOkWithAdminRole_WhenUserIsAdmin()
+    public async Task Login_ShouldReturnUnauthorized_WhenUserIsAdmin()
     {
         // given
         var user = new User { Id = "u1", UserName = "admin", Email = "admin@mail.com", FullName = "Admin User" };
@@ -516,9 +517,6 @@ public class AuthControllerTests
         userManagerMock.Setup(m => m.FindByNameAsync("admin")).ReturnsAsync(user);
         userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { RoleConstants.Admin, RoleConstants.User });
         var signInManagerMock = IdentityMockFactory.CreateSignInManagerMock(userManagerMock.Object);
-        signInManagerMock
-            .Setup(m => m.CheckPasswordSignInAsync(user, "AdminPass123!", false))
-            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
         var controller = new AuthController(userManagerMock.Object, signInManagerMock.Object, BuildJwtConfiguration());
 
         // when
@@ -526,8 +524,7 @@ public class AuthControllerTests
 
         // then
         var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(200, objectResult.StatusCode);
-        Assert.NotNull(objectResult.Value);
+        Assert.Equal(401, objectResult.StatusCode);
     }
 
     private static IConfiguration BuildJwtConfiguration()
